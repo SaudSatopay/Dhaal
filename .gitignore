@@ -1,0 +1,19 @@
+# deps / builds
+node_modules/
+.next/
+dist/
+build/
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# secrets — values never enter git
+.env
+.env.*
+!.env.example
+
+# misc
+.DS_Store
+*.log
+.vercel/
