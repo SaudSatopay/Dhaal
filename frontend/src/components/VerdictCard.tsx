@@ -3,7 +3,7 @@
 // The product's money shot: verdict + the exact reasons, Hindi-first.
 // Reused by /check now and the guardian screens later — keep it payload-driven.
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Check } from "@/lib/types";
 import { CATEGORY_UI, SOURCE_UI, VERDICT_UI } from "@/lib/labels";
 
@@ -21,9 +21,11 @@ function WeightBar({ weight }: { weight: number }) {
 export default function VerdictCard({
   check,
   actions,
+  autoSpeak = false,
 }: {
   check: Check;
   actions?: React.ReactNode; // e.g. the Report button (wired in the intel task)
+  autoSpeak?: boolean; // voice-path beat 4: Dhaal speaks the warning back unprompted
 }) {
   const v = VERDICT_UI[check.verdict];
   const cat = check.scam_category ? CATEGORY_UI[check.scam_category] : null;
@@ -45,6 +47,23 @@ export default function VerdictCard({
       audioRef.current.play().catch(() => setSpeaking(false));
     }
   }
+
+  // Auto-play the spoken warning once when a voice-path result mounts. The tap
+  // that ran the check counts as the user gesture, so autoplay is allowed.
+  const audio = check.tts_audio_b64;
+  useEffect(() => {
+    if (!autoSpeak || !audio) return;
+    const el = new Audio(`data:audio/wav;base64,${audio}`);
+    audioRef.current = el;
+    el.onended = () => setSpeaking(false);
+    setSpeaking(true);
+    el.play().catch(() => setSpeaking(false));
+    return () => {
+      el.pause();
+      setSpeaking(false);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoSpeak, audio]);
 
   return (
     <section

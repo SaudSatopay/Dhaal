@@ -79,6 +79,7 @@ export default function CheckPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [result, setResult] = useState<Check | null>(null);
+  const [resultFromVoice, setResultFromVoice] = useState(false);
   const resultRef = useRef<HTMLDivElement | null>(null);
 
   // paste tab
@@ -128,6 +129,7 @@ export default function CheckPage() {
         }),
       });
       setResult(res);
+      setResultFromVoice(type === "voice_transcript");
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -451,6 +453,7 @@ export default function CheckPage() {
           {result && !busy && (
             <VerdictCard
               check={result}
+              autoSpeak={resultFromVoice}
               actions={
                 <ReportButton
                   key={result._id}
