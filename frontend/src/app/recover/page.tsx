@@ -3,10 +3,12 @@
 // First-hour recovery kit. The reader just got scammed and is panicking —
 // calm tone, ONE giant action (call 1930 — the golden hour), then ready-made
 // scripts they can copy instead of composing while shaking.
+// The 1930 button wears danger red deliberately: the user IS in a danger state.
 
 import { useState } from "react";
 import { api } from "@/lib/api";
 import TopBar from "@/components/TopBar";
+import { ICheck, IPhone } from "@/components/icons";
 
 type Kit = {
   call_script_1930: string;
@@ -32,10 +34,10 @@ const CHANNELS = [
 function CopyBlock({ title_hi, title_en, text }: { title_hi: string; title_en: string; text: string }) {
   const [copied, setCopied] = useState(false);
   return (
-    <section className="rounded-2xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
+    <section className="border-2 border-ink bg-paper p-4">
       <div className="flex items-center justify-between gap-2">
         <h3 className="font-bold">
-          {title_hi} <span className="text-xs font-normal text-neutral-500">· {title_en}</span>
+          {title_hi} <span className="plate ml-1 font-normal text-inksoft">{title_en}</span>
         </h3>
         <button
           onClick={() => {
@@ -47,12 +49,12 @@ function CopyBlock({ title_hi, title_en, text }: { title_hi: string; title_en: s
               () => {}
             );
           }}
-          className="shrink-0 rounded-full border border-neutral-300 px-3 py-1 text-xs font-medium hover:bg-neutral-100 dark:border-neutral-700 dark:hover:bg-neutral-800"
+          className="plate shrink-0 border-2 border-ink px-2.5 py-1 hover:bg-paper2"
         >
-          {copied ? "✓ copied" : "📋 copy"}
+          {copied ? "✓ COPIED" : "COPY"}
         </button>
       </div>
-      <p className="mt-2 whitespace-pre-wrap rounded-xl bg-neutral-50 p-3 text-sm leading-relaxed dark:bg-neutral-950/60">
+      <p className="mt-2 whitespace-pre-wrap border border-line bg-paper2 p-3 text-sm leading-relaxed">
         {text}
       </p>
     </section>
@@ -93,42 +95,49 @@ export default function RecoverPage() {
   }
 
   return (
-    <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950">
-      <TopBar title_hi="पहला घंटा" title_en="I got scammed — first hour" />
+    <div className="min-h-screen bg-paper">
+      <TopBar title_hi="पहला घंटा" title_en="I GOT SCAMMED — FIRST HOUR" />
 
       <main className="mx-auto max-w-xl space-y-4 p-4 pb-16">
-        <p className="rounded-2xl bg-blue-50 p-4 text-sm leading-relaxed text-blue-900 dark:bg-blue-950/40 dark:text-blue-200">
+        <p className="border-2 border-ink bg-paper2 p-4 text-sm leading-relaxed">
           <span className="font-bold">घबराइए मत — साँस लीजिए।</span> पहला घंटा सबसे कीमती
           है: जल्दी complaint होने पर पैसा freeze होने की उम्मीद कई गुना बढ़ जाती है। ·
           Breathe. Acting within the first hour multiplies the chance of freezing the money.
         </p>
 
-        {/* the ONE action */}
+        {/* the ONE action — emergency red, earned */}
         <a
           href="tel:1930"
-          className="block rounded-2xl bg-red-600 p-5 text-center text-white shadow-lg hover:bg-red-700"
+          className="block border-[3px] border-ink bg-danger p-5 text-paper shadow-poster transition-transform active:translate-x-[3px] active:translate-y-[3px] active:shadow-none"
         >
-          <span className="block text-3xl font-extrabold">📞 1930 पर अभी call करें</span>
-          <span className="mt-1 block text-sm opacity-90">
-            National Cyber Crime Helpline · सरकारी, मुफ़्त, 24×7
+          <span className="flex items-center gap-4">
+            <IPhone className="h-10 w-10 shrink-0" />
+            <span>
+              <span className="block font-display text-3xl font-extrabold leading-none">
+                1930 पर अभी call करें
+              </span>
+              <span className="plate mt-1.5 block opacity-85">
+                NATIONAL CYBER CRIME HELPLINE · सरकारी · मुफ़्त · 24×7
+              </span>
+            </span>
           </span>
         </a>
 
         {/* details form */}
-        <section className="rounded-2xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
+        <section className="border-[3px] border-ink bg-paper p-4 shadow-poster-sm">
           <h2 className="font-bold">
-            2 सवाल — आपका kit तैयार होगा{" "}
-            <span className="text-xs font-normal text-neutral-500">· get your ready-made kit</span>
+            2 सवाल — आपका kit तैयार होगा
+            <span className="plate mt-0.5 block font-normal text-inksoft">
+              GET YOUR READY-MADE KIT
+            </span>
           </h2>
 
           <div className="mt-3 space-y-2">
             {WHAT_OPTIONS.map((o) => (
               <label
                 key={o.id}
-                className={`flex cursor-pointer items-center gap-3 rounded-xl border-2 p-3 ${
-                  what === o.id
-                    ? "border-blue-600 bg-blue-50 dark:bg-blue-950/40"
-                    : "border-neutral-200 dark:border-neutral-800"
+                className={`flex cursor-pointer items-center gap-3 border-2 p-3 ${
+                  what === o.id ? "border-ink bg-paper2" : "border-line hover:border-ink"
                 }`}
               >
                 <input
@@ -136,33 +145,33 @@ export default function RecoverPage() {
                   name="what"
                   checked={what === o.id}
                   onChange={() => setWhat(o.id)}
-                  className="accent-blue-600"
+                  className="accent-ink"
                 />
                 <span>
-                  <span className="block font-medium">{o.hi}</span>
-                  <span className="block text-xs text-neutral-500">{o.en}</span>
+                  <span className="block font-semibold">{o.hi}</span>
+                  <span className="block text-xs text-inksoft">{o.en}</span>
                 </span>
               </label>
             ))}
           </div>
 
           <div className="mt-3 grid grid-cols-3 gap-2">
-            <label className="col-span-1 block text-xs font-medium text-neutral-500">
-              कितने ₹?
+            <label className="plate col-span-1 block text-inksoft">
+              कितने ₹
               <input
                 inputMode="numeric"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value.replace(/[^\d]/g, ""))}
                 placeholder="15000"
-                className="mt-1 w-full rounded-xl border border-neutral-300 bg-white p-2.5 dark:border-neutral-700 dark:bg-neutral-950"
+                className="mt-1 w-full border-2 border-ink bg-paper p-2.5 font-mono text-base tracking-normal placeholder:text-inksoft/50"
               />
             </label>
-            <label className="col-span-1 block text-xs font-medium text-neutral-500">
-              कैसे गए?
+            <label className="plate col-span-1 block text-inksoft">
+              कैसे गए
               <select
                 value={channel}
                 onChange={(e) => setChannel(e.target.value)}
-                className="mt-1 w-full rounded-xl border border-neutral-300 bg-white p-2.5 dark:border-neutral-700 dark:bg-neutral-950"
+                className="mt-1 w-full border-2 border-ink bg-paper p-2.5 font-sans text-base normal-case tracking-normal"
               >
                 {CHANNELS.map((c) => (
                   <option key={c.id} value={c.id}>
@@ -171,24 +180,24 @@ export default function RecoverPage() {
                 ))}
               </select>
             </label>
-            <label className="col-span-1 block text-xs font-medium text-neutral-500">
+            <label className="plate col-span-1 block text-inksoft">
               बैंक
               <input
                 value={bank}
                 onChange={(e) => setBank(e.target.value)}
                 placeholder="SBI"
-                className="mt-1 w-full rounded-xl border border-neutral-300 bg-white p-2.5 dark:border-neutral-700 dark:bg-neutral-950"
+                className="mt-1 w-full border-2 border-ink bg-paper p-2.5 font-sans text-base normal-case tracking-normal placeholder:text-inksoft/50"
               />
             </label>
           </div>
 
-          {error && <p className="mt-3 text-sm font-medium text-red-600">{error}</p>}
+          {error && <p className="mt-3 text-sm font-bold text-saffdeep">{error}</p>}
           <button
             onClick={getKit}
             disabled={busy}
-            className="mt-4 w-full rounded-xl bg-blue-600 px-6 py-3 font-bold text-white hover:bg-blue-700 disabled:opacity-40"
+            className="mt-4 w-full border-[3px] border-ink bg-saffron px-6 py-3 font-display text-lg font-bold shadow-poster-sm transition-transform active:translate-x-[2px] active:translate-y-[2px] active:shadow-none disabled:opacity-40"
           >
-            {busy ? "बन रहा है…" : "🧰 मेरा kit बनाओ · Build my kit"}
+            {busy ? "बन रहा है…" : "मेरा kit बनाओ · Build my kit"}
           </button>
         </section>
 
@@ -196,37 +205,37 @@ export default function RecoverPage() {
           <div className="space-y-4">
             <CopyBlock
               title_hi="1930 पर क्या बोलें"
-              title_en="what to say on 1930"
+              title_en="WHAT TO SAY ON 1930"
               text={kit.call_script_1930}
             />
             <CopyBlock
               title_hi="Cybercrime.gov.in complaint"
-              title_en="online complaint draft"
+              title_en="ONLINE COMPLAINT DRAFT"
               text={kit.complaint_draft}
             />
             <CopyBlock
               title_hi="बैंक के लिए चिट्ठी"
-              title_en="letter to your bank"
+              title_en="LETTER TO YOUR BANK"
               text={kit.bank_letter}
             />
 
-            <section className="rounded-2xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
+            <section className="border-2 border-ink bg-paper p-4">
               <h3 className="font-bold">
-                Checklist <span className="text-xs font-normal text-neutral-500">· एक-एक करके</span>
+                Checklist <span className="plate ml-1 font-normal text-inksoft">एक-एक करके</span>
               </h3>
-              <ul className="mt-2 space-y-2">
+              <ul className="mt-2 divide-y divide-line">
                 {kit.checklist.map((item, i) => (
                   <li key={i}>
-                    <label className="flex cursor-pointer items-start gap-3 rounded-xl p-2 hover:bg-neutral-50 dark:hover:bg-neutral-800/60">
+                    <label className="flex cursor-pointer items-start gap-3 py-2.5 hover:bg-paper2">
                       <input
                         type="checkbox"
                         checked={!!ticked[i]}
                         onChange={() => setTicked((t) => ({ ...t, [i]: !t[i] }))}
-                        className="mt-1 h-4 w-4 accent-emerald-600"
+                        className="mt-1 h-4 w-4 accent-ink"
                       />
                       <span
                         className={`text-sm leading-relaxed ${
-                          ticked[i] ? "text-neutral-400 line-through" : ""
+                          ticked[i] ? "text-inksoft line-through" : ""
                         }`}
                       >
                         {item}
@@ -235,6 +244,11 @@ export default function RecoverPage() {
                   </li>
                 ))}
               </ul>
+              {Object.values(ticked).filter(Boolean).length === kit.checklist.length && (
+                <p className="plate mt-2 flex items-center gap-1.5 text-cleardeep">
+                  <ICheck className="h-3.5 w-3.5" /> सब हो गया — शाबाश
+                </p>
+              )}
             </section>
           </div>
         )}
