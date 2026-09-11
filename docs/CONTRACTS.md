@@ -72,10 +72,10 @@ API shapes, data models, env names. **Owning lane pushes the contract change BEF
 ```json
 {"type": "text|url|upi|qr_text|voice_transcript", "payload": "...", "lang": "hi-IN", "speak": false, "ward_link_id": null}
 ```
-→ full `check` object. If `speak:true`, include `tts_audio_b64`. If `ward_link_id` set and verdict ≠ `no_known_risk`, backend auto-creates a `guardian_request` and includes `"guardian_request_id"` in the response.
+→ full `check` object. If `speak:true`, `tts_audio_b64` = base64 WAV of `explanation_hi` (Bulbul), cached on the stored check; TTS failure ⇒ `null`, never an error. If `ward_link_id` set and verdict ≠ `no_known_risk`, backend auto-creates a `guardian_request` and includes `"guardian_request_id"` in the response.
 
-### `POST /api/transcribe` — stubbed
-multipart `audio` + `lang_hint`, or JSON `{"typed_text": "..."}` → `{"transcript": "...", "lang": "hi-IN", "mocked": false}` (then frontend calls `/api/check` with `voice_transcript`)
+### `POST /api/transcribe` — **live** (Saarika ASR, auto-detects code-mixed hi/en)
+multipart `audio` + `lang_hint`, or JSON `{"typed_text": "..."}` → `{"transcript": "...", "lang": "hi-IN", "mocked": false}` (then frontend calls `/api/check` with `voice_transcript`). Sarvam down / no key / MOCK_MODE ⇒ fixture transcript with `mocked: true` — never an error.
 
 ### Guardian — live (store-backed)
 - `POST /api/guardian/links` `{"ward_name","guardian_name"}` → link with `pair_code`
@@ -84,13 +84,13 @@ multipart `audio` + `lang_hint`, or JSON `{"typed_text": "..."}` → `{"transcri
 - `GET /api/guardian/requests/{id}` → ward polls decision
 - `POST /api/guardian/requests/{id}/decision` `{"decision":"allowed|blocked","note":""}` → updated request
 
-### Intel — stubbed
+### Intel — live (store-backed; trends = fixture baseline + live per-category/city/day overlay)
 - `POST /api/reports` `{"payload","category","note","city"}` → report (status pending)
 - `GET /api/reports?status=pending` → moderation queue
 - `POST /api/reports/{id}/verify` `{"action":"verify|reject"}` → verified ⇒ indicator upserted into blocklist **immediately live for every /api/check**
 - `GET /api/intel/trends` → `{"total_reports": n, "by_category": [...], "by_day": [...], "top_indicators": [...], "cities": [...]}`
 
-### `POST /api/recovery/kit` — stubbed
+### `POST /api/recovery/kit` — template-live (Claude personalisation lands H10–H12)
 ```json
 {"what": "paid | shared_otp | clicked_link", "amount": 15000, "channel": "upi", "bank": "SBI", "lang": "hi-IN"}
 ```

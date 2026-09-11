@@ -46,7 +46,7 @@ def _get_client() -> anthropic.Anthropic:
     global _client
     if _client is None:
         _client = anthropic.Anthropic(
-            api_key=os.getenv("ANTHROPIC_API_KEY", ""), timeout=8.0, max_retries=0
+            api_key=os.getenv("ANTHROPIC_API_KEY", ""), timeout=8.0, max_retries=1
         )
     return _client
 
@@ -78,8 +78,9 @@ def narrate(payload, input_type, verdict, score, signals, category):
             raise ValueError("missing explanations")
         cat = str(out.get("category") or "").strip().lower()
         out["category"] = cat if cat in CATEGORIES else None
-        print(f"[llm] narrate ok in {(time.perf_counter() - t0) * 1000:.0f}ms")
+        print(f"[latency] claude_ms={(time.perf_counter() - t0) * 1000:.0f} ok=1")
         return out
     except Exception as e:
-        print(f"[llm] narrate failed ({type(e).__name__}: {e}) — template fallback")
+        print(f"[latency] claude_ms={(time.perf_counter() - t0) * 1000:.0f} ok=0 "
+              f"err={type(e).__name__} — template fallback")
         return None

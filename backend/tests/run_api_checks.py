@@ -4,10 +4,17 @@ Runs with no keys and no Mongo -> exercises template fallback + memory store,
 i.e. exactly the venue-wifi-died configuration.
 """
 
+import os
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+# Pin the offline configuration BEFORE importing main — this suite must stay
+# deterministic even when .env carries live keys (set-but-empty beats dotenv).
+for var in ("MONGODB_URI", "ANTHROPIC_API_KEY", "SARVAM_API_KEY"):
+    os.environ[var] = ""
+os.environ["MOCK_MODE"] = "false"
 
 from fastapi.testclient import TestClient  # noqa: E402
 
@@ -98,6 +105,15 @@ chk2 = c.post("/api/check", json={"type": "text", "payload": FX.LEGIT_BANK_TEXT,
                                   "ward_link_id": gl["_id"]}).json()
 ok("no guardian ping on clean check", "guardian_request_id" not in chk2)
 
+# resolve-by-code: exact, lowercase, bare code, unknown
+code = gl["pair_code"]
+r1 = c.get(f"/api/guardian/links/resolve?pair_code={code}").json()
+r2 = c.get(f"/api/guardian/links/resolve?pair_code={code.lower()}").json()
+r3 = c.get(f"/api/guardian/links/resolve?pair_code={code.split('-', 1)[1]}").json()
+r4 = c.get("/api/guardian/links/resolve?pair_code=DHAAL-ZZZZ").json()
+ok("resolve by pair code", r1.get("_id") == gl["_id"] and r2.get("_id") == gl["_id"]
+   and r3.get("_id") == gl["_id"] and r4 == {"error": "code not found"})
+
 # recovery kit template path
 kit = c.post("/api/recovery/kit", json={"what": "paid", "amount": 15000,
                                         "channel": "upi", "bank": "SBI"}).json()
@@ -106,5 +122,18 @@ ok("recovery kit", "1930" in kit["call_script_1930"] and len(kit["checklist"]) >
 # transcribe typed fallback
 t = c.post("/api/transcribe", json={"typed_text": "hello", "lang_hint": "hi-IN"}).json()
 ok("transcribe typed fallback", t["transcript"] == "hello")
+
+# transcribe multipart with no Sarvam key -> fixture transcript, mocked: true
+t2 = c.post("/api/transcribe",
+            files={"audio": ("clip.webm", b"\x1aE\xdf\xa3fake-webm-bytes", "audio/webm")},
+            data={"lang_hint": "hi-IN"}).json()
+ok("transcribe multipart fallback", t2["transcript"] == FX.DIGITAL_ARREST_TRANSCRIPT
+   and t2["mocked"] is True)
+
+# speak:true offline -> null audio, never an error
+spk = c.post("/api/check", json={"type": "text", "payload": FX.KYC_SCAM_TEXT,
+                                 "speak": True}).json()
+ok("speak offline yields null audio", spk["verdict"] == "danger"
+   and spk["tts_audio_b64"] is None)
 
 print(f"\nALL {P} API CHECKS PASSED (store={h['store']})")

@@ -4,6 +4,7 @@ per-call failover so a mid-demo Atlas outage degrades instead of erroring.
 """
 
 import os
+import time
 import uuid
 from datetime import datetime, timezone
 
@@ -132,10 +133,14 @@ class FailoverStore:
             raise AttributeError(method)
 
         def call(*args, **kwargs):
+            t0 = time.perf_counter()
             try:
-                return getattr(self.primary, method)(*args, **kwargs)
+                out = getattr(self.primary, method)(*args, **kwargs)
+                print(f"[latency] atlas_ms={(time.perf_counter() - t0) * 1000:.0f} op={method}")
+                return out
             except Exception as e:
-                print(f"[store] atlas {method} failed ({type(e).__name__}) — memory fallback")
+                print(f"[latency] atlas_ms={(time.perf_counter() - t0) * 1000:.0f} "
+                      f"op={method} err={type(e).__name__} — memory fallback")
                 return getattr(self.shadow, method)(*args, **kwargs)
 
         return call

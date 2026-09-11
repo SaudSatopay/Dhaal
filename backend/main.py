@@ -18,9 +18,11 @@ load_dotenv()  # backend/.env; real env vars (Vercel) always win
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from starlette.concurrency import run_in_threadpool
 
 import fixtures as FX
 import llm
+import sarvam
 from engine import run_signal_engine
 from engine.urls import first_host
 from store import get_store
@@ -114,10 +116,14 @@ def check(body: CheckIn):
         "verdict": verdict, "score": score, "signals": signals,
         "explanation_hi": exp_hi, "explanation_en": exp_en,
         "scam_category": category,
-        "tts_audio_b64": None,  # Harsh H8-H10: Sarvam TTS when speak=true
+        "tts_audio_b64": None,
         "mocked": mocked,
         "created_at": _now(),
     }
+    # Bulbul speaks the Hindi explanation; cached on the stored check so a
+    # replay never re-synthesises. Failure -> null audio, never an error.
+    if body.speak and not MOCK_MODE:
+        doc["tts_audio_b64"] = sarvam.text_to_speech(exp_hi, lang="hi-IN")
     STORE.insert("checks", doc)
     if body.ward_link_id and verdict != "no_known_risk" \
             and STORE.get("guardian_links", body.ward_link_id):
@@ -133,14 +139,25 @@ def check(body: CheckIn):
 
 @app.post("/api/transcribe")
 async def transcribe(request: Request):
-    # JSON typed fallback OR multipart audio. Harsh H8-H10: Sarvam ASR for audio.
+    # JSON typed fallback OR multipart audio (webm/m4a/wav from MediaRecorder).
     ctype = request.headers.get("content-type", "")
     if ctype.startswith("application/json"):
         data = await request.json()
         typed = (data or {}).get("typed_text", "")
         return {"transcript": typed, "lang": (data or {}).get("lang_hint", "hi-IN"), "mocked": False}
     form = await request.form()
-    _audio = form.get("audio")  # stub ignores bytes, returns fixture transcript
+    audio = form.get("audio")
+    lang_hint = str(form.get("lang_hint") or "hi-IN")
+    if audio is not None and not isinstance(audio, str) and not MOCK_MODE:
+        blob = await audio.read()
+        out = await run_in_threadpool(
+            sarvam.speech_to_text, blob,
+            audio.filename or "audio.webm", audio.content_type or "audio/webm",
+        )
+        if out:
+            return {"transcript": out["transcript"],
+                    "lang": out["language_code"] or lang_hint, "mocked": False}
+    # Sarvam down / no key / MOCK_MODE — rehearsed fixture keeps the beat alive
     return {"transcript": FX.DIGITAL_ARREST_TRANSCRIPT, "lang": "hi-IN", "mocked": True}
 
 
@@ -156,6 +173,16 @@ def create_link(body: LinkIn):
         "pair_code": f"DHAAL-{uuid.uuid4().hex[:4].upper()}", "created_at": _now(),
     }
     return STORE.insert("guardian_links", doc)
+
+
+@app.get("/api/guardian/links/resolve")
+def resolve_link(pair_code: str):
+    code = pair_code.strip().upper()
+    for candidate in (code, f"DHAAL-{code}") if not code.startswith("DHAAL-") else (code,):
+        hits = STORE.list("guardian_links", {"pair_code": candidate})
+        if hits:
+            return hits[0]
+    return {"error": "code not found"}
 
 
 @app.get("/api/guardian/requests")
