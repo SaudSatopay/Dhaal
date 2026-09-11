@@ -9,6 +9,7 @@ import { useEffect, useRef, useState } from "react";
 import type { Check, Signal } from "@/lib/types";
 import { CATEGORY_UI, S_COMMON, S_VERDICT, SOURCE_UI, VERDICT_UI } from "@/lib/labels";
 import { pick, useLang, type Lang } from "@/lib/lang";
+import ScamXray from "@/components/ScamXray";
 import { ISpeaker, IStop } from "@/components/icons";
 
 const TONE = {
@@ -202,6 +203,17 @@ export default function VerdictCard({
             {listenButton}
           </div>
         </div>
+        {/* clean-but-noteworthy: awareness context, agent flows, destinations
+            still show their x-ray — honesty about what was and wasn't scored */}
+        {check.facts?.evidence && check.facts.evidence.length > 0 && (
+          <div className="border-t border-line">
+            <ScamXray
+              payload={check.input.payload}
+              evidence={check.facts.evidence}
+              lang={lang}
+            />
+          </div>
+        )}
         {check.signals.length > 0 && (
           <div className="border-t border-line px-4 pb-3">
             <ul className="divide-y divide-line">
@@ -320,6 +332,16 @@ export default function VerdictCard({
         <p className="mt-1.5 text-sm leading-relaxed text-inksoft">{explanation[1]}</p>
         {listenButton}
       </div>
+
+      {/* H15 SCAM X-RAY — the engine's evidence spans, highlighted in the
+          original message; tap to see why each phrase matters */}
+      {slammed && check.facts?.evidence && (
+        <ScamXray
+          payload={check.input.payload}
+          evidence={check.facts.evidence}
+          lang={lang}
+        />
+      )}
 
       {/* H12+ analysis — "what they want" ink-frame table */}
       {anHasContent && (

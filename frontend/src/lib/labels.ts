@@ -144,6 +144,94 @@ export const S_CHECK = {
   },
 } satisfies Record<string, LangText>;
 
+/* ---------------- scam x-ray (H15) ---------------- */
+// Highlight labels + one-line whys for evidence kinds. Spans are the engine's
+// own matches — these strings only NAME what was matched, never invent.
+export const S_XRAY = {
+  title: { hi: "जाल का X-RAY", en: "Scam X-ray" },
+  hint: { hi: "रंगीन हिस्से पर tap करें — वजह वहीं खुलेगी", en: "Tap a highlight to see why it matters" },
+  kCred: { hi: "OTP/PIN की माँग", en: "Asks for your code" },
+  wCred: {
+    hi: "यही असली निशाना है — OTP/PIN देते ही खाता उनके हाथ में। कोई बैंक कभी नहीं माँगता।",
+    en: "This is the real target — hand over the code and the account is theirs. No bank ever asks.",
+  },
+  kRemote: { hi: "Screen का access", en: "Remote access" },
+  wRemote: {
+    hi: "AnyDesk/screen-share से वे आपका phone लाइव देखते हैं — PIN समेत।",
+    en: "With screen access they watch your phone live — PIN included.",
+  },
+  kFee: { hi: "पहले पैसे माँगे", en: "Upfront money" },
+  wFee: {
+    hi: "इनाम/refund/नौकरी से पहले 'फीस' — असली में कभी नहीं होता। यही ठगी की कमाई है।",
+    en: "A 'fee' before your prize/refund/job — never real. This is where the scam collects.",
+  },
+  kCollect: { hi: "Approve कराने की चाल", en: "Approve-to-receive trick" },
+  wCollect: {
+    hi: "Collect request approve करने से पैसे आते नहीं, कटते हैं।",
+    en: "Approving a collect request sends money OUT, never in.",
+  },
+  kThreat: { hi: "धमकी", en: "Threat" },
+  wThreat: {
+    hi: "डर ही इनका औज़ार है — असली अधिकारी फोन पर धमकाकर पैसे नहीं माँगते।",
+    en: "Fear is the tool — real authorities don't threaten you into paying on a call.",
+  },
+  kFamily: { hi: "अपनों की इमरजेंसी", en: "Family emergency" },
+  wFamily: {
+    hi: "'अस्पताल/थाने में है, अभी भेजो' — पहले उनके जाने-पहचाने नंबर पर खुद call करें।",
+    en: "'In hospital/custody, send now' — first call them yourself on the number you already have.",
+  },
+  kApk: { hi: "App file (.apk)", en: "App file (.apk)" },
+  wApk: {
+    hi: "File से भेजी app, Play Store की जाँच से बची हुई — ऐसे ही screen-चोर malware आते हैं।",
+    en: "An app sent as a file skips Play Store checks — screen-reading malware ships this way.",
+  },
+  kUrgency: { hi: "जल्दबाज़ी", en: "Urgency" },
+  wUrgency: {
+    hi: "सोचने का समय न देना ही चाल है — असली काम 'अभी के अभी' नहीं होते।",
+    en: "Denying you thinking time IS the move — real processes are never 'right now or else'.",
+  },
+  kSecrecy: { hi: "अलग-थलग करना", en: "Isolation" },
+  wSecrecy: {
+    hi: "'किसी को मत बताना / call मत करना' — ताकि कोई आपको रोक न सके।",
+    en: "'Tell no one / don't call' — so nobody can stop you in time.",
+  },
+  kNewNum: { hi: "नया नंबर", en: "New number" },
+  wNewNum: {
+    hi: "पहचान बिना जाँचे पैसे माँगना — पुराने नंबर पर call करके ही मानें।",
+    en: "Money asked on an unverified identity — believe it only after calling the OLD number.",
+  },
+  kChain: { hi: "Forward कराना", en: "Chain forwarding" },
+  wChain: {
+    hi: "'10 groups में भेजो' — असली service कभी forward के बदले कुछ नहीं देती।",
+    en: "'Forward to 10 groups' — no real service unlocks anything for forwards.",
+  },
+  kReported: { hi: "जानकारी/चर्चा", en: "Awareness context" },
+  wReported: {
+    hi: "यह ठगी के बारे में बताना है, ठगी नहीं — इसीलिए इसे खतरा नहीं गिना गया।",
+    en: "This is ABOUT a scam, not a scam at you — which is exactly why it wasn't scored as one.",
+  },
+  kAgentOk: { hi: "असली delivery flow", en: "Legit agent flow" },
+  wAgentOk: {
+    hi: "सामने खड़े rider/delivery को OTP दिखाना platform का असली तरीका है — इसे flag नहीं किया गया।",
+    en: "Showing an OTP to the rider in front of you is the platform's real flow — not flagged.",
+  },
+  kDelivery: { hi: "OTP आपको मिला", en: "OTP delivered to you" },
+  wDelivery: {
+    hi: "यह OTP आपको भेजा गया है, माँगा नहीं गया — यही फ़र्क़ सुरक्षित रखता है।",
+    en: "This code was sent TO you, not asked FROM you — that difference is the safety line.",
+  },
+  kDest: { hi: "पता — कहाँ जाएगा", en: "Destination" },
+  wDest: {
+    hi: "पैसा/जवाब इसी पते पर जाएगा — जाँच इसी की हुई है। Community reports भी इसी से मिलाए जाते हैं।",
+    en: "Money/replies flow to THIS address — it's what got checked, and what community reports match against.",
+  },
+  kPattern: { hi: "जाना-पहचाना script", en: "Known scam script" },
+  wPattern: {
+    hi: "यही शब्द भारत भर में चल रहे ठगी-script से मिले — पूरे India का अनुभव आपकी ढाल है।",
+    en: "These exact words match scam scripts running across India — the country's experience is your shield.",
+  },
+} satisfies Record<string, LangText>;
+
 /* ---------------- verdict card ---------------- */
 export const S_VERDICT = {
   why: { hi: "ऐसा क्यों", en: "Why this verdict" },
