@@ -96,7 +96,7 @@
         <div style="margin-top:16px;font-size:15.5px;line-height:1.45"><b>Rules compute the verdict. AI only explains it</b> — and can never change it. Never “safe”, only <b>“no known risk”.</b></div>
       </div>
       <div style="flex:1">
-        <div class="irow"><div class="no">01</div><div class="hi">जाँच</div><div class="d">Verdict + <b>every weighted signal</b>, हिं/EN toggle — and <b>spoken aloud</b>.</div></div>
+        <div class="irow"><div class="no">01</div><div class="hi">जाँच</div><div class="d">Verdict + <b>every weighted signal</b>, spoken aloud. It asks your <b>intent</b> first — “expecting money IN” meeting a PAY-QR is caught with <b>zero scam words</b>.</div></div>
         <div class="irow"><div class="no">02</div><div class="hi">परिवार की ढाल</div><div class="d">Risky payment → family's 10-second <b>Allow/Block</b>. Risk shared, never transactions.</div></div>
         <div class="irow"><div class="no">03</div><div class="hi">धोखों का नक्शा</div><div class="d">Report → human verify → <b>everyone's live blocklist</b>. Burned in Jaipur ≠ works in Jodhpur.</div></div>
         <div class="irow"><div class="no">04</div><div class="hi">पहला घंटा</div><div class="d"><b>1930 script + complaint + bank letter</b>, auto-drafted in Hindi — the hour that gets money back.</div></div>
@@ -117,7 +117,7 @@
     <div style="display:flex;margin-top:26px">
       <div class="node" style="width:200px"><div class="t">INPUT</div><div class="s">text · URL · UPI<br>QR (on-device)<br>voice → ASR 0.6s</div></div>
       <div class="arr">→</div>
-      <div class="node hot" style="flex:1"><div class="t">SIGNAL ENGINE — DETERMINISTIC</div><div class="s">collect-vs-pay parser · lookalike domains (edit-distance vs official seed list) · 10 scam-script families incl. coercion, job &amp; loan-fee · bait-word + brand-impersonation VPA checks · community blocklist<br><b>SCORE ≥60 → खतरा · ≥30 → सावधान</b></div></div>
+      <div class="node hot" style="flex:1"><div class="t">SIGNAL ENGINE — DETERMINISTIC</div><div class="s">collect-vs-pay parser · <b>intent-mismatch</b> (your stated intent vs what the payload DOES) · lookalike domains (edit-distance vs official seed list) · 10 scam-script families incl. coercion, job &amp; loan-fee · bait-word + brand-impersonation VPA checks · community blocklist<br><b>SCORE ≥60 → खतरा · ≥30 → सावधान</b></div></div>
       <div class="arr">→</div>
       <div class="node" style="width:240px"><div class="t">EXPLAIN &amp; SPEAK</div><div class="s">Claude — narrates FROM signals, zero verdict weight<br>Bulbul — बोली हुई warning</div></div>
     </div>
@@ -126,7 +126,7 @@
       <div style="font-size:15px;line-height:1.5;flex:1"><b>Fails safe:</b> retry-once + deterministic fallback on every external call — dead Wi-Fi degrades prose, never protection. Mocked responses say <span class="mono" style="font-size:13px">mocked:true</span>.</div>
     </div>
     <div style="margin-top:22px;display:flex;gap:16px;align-items:baseline">
-      <span class="disp" style="font-size:30px">57</span><span class="mono" style="font-size:12px;color:var(--soft)">AUTOMATED CHECKS GREEN</span>
+      <span class="disp" style="font-size:30px">67</span><span class="mono" style="font-size:12px;color:var(--soft)">AUTOMATED CHECKS GREEN</span>
       <span class="disp" style="font-size:30px;color:var(--pp)">5.4s</span><span class="mono" style="font-size:12px;color:var(--soft)">P50 CHECK, LIVE PROD</span>
       <span class="disp" style="font-size:30px;color:var(--red)">ms</span><span class="mono" style="font-size:12px;color:var(--soft)">VERDICT ITSELF (RULES)</span>
     </div>
@@ -158,7 +158,7 @@
     <div class="eyebrow">Feasibility &amp; Viability</div>
     <div class="title">Not a concept — <span class="r">deployed tonight.</span></div>
     <div style="display:flex;gap:20px;margin-top:24px">
-      <div class="tile" style="flex:1"><div class="n">49</div><div class="l">AUTOMATED CHECKS<br>GREEN</div></div>
+      <div class="tile" style="flex:1"><div class="n">51/60</div><div class="l">HELD-OUT BATTERY vs PROD<br>PUBLISHED UNEDITED</div></div>
       <div class="tile" style="flex:1"><div class="n" style="color:var(--pp)">5.4s</div><div class="l">P50 FULL CHECK<br>LIVE PROD</div></div>
       <div class="tile" style="flex:1"><div class="n" style="color:var(--pp)">450+</div><div class="l">REPORTS IN ATLAS<br>(SEEDED PILOT + LIVE)</div></div>
       <div class="tile" style="flex:1"><div class="n" style="color:var(--red)">₹0</div><div class="l">INFRA — RUNS ON<br>FREE TIERS</div></div>
@@ -166,7 +166,7 @@
     <div class="h6">Risks, already engineered away</div>
     <ul class="cl">
       <li><b>API outage</b> → deterministic fallbacks — the demo survives dead venue Wi-Fi.</li>
-      <li><b>False positives</b> → delivery-vs-request context rules; real bank OTP/debit SMS score <b>0</b> (tested).</li>
+      <li><b>False positives</b> → context-gated rules; real bank OTP/debit SMS score <b>0</b>; misses published unedited in <b>docs/EVAL.md</b> — we grade ourselves before judges do.</li>
       <li><b>Blocklist poisoning</b> → human verification before any indicator goes live.</li>
       <li><b>Scale</b> → stateless serverless + Atlas; TTS caching; marginal cost per check ≈ a fraction of a paisa.</li>
     </ul>
