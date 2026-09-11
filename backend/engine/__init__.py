@@ -21,6 +21,43 @@ _FACT_ENUMS = {
     "parse_status": {"valid", "incomplete", "unsupported", "malformed", "multiple", None},
 }
 
+# Offset convention (H16, documented contract): evidence `start`/`end` are
+# UTF-16 CODE UNITS into the raw payload — i.e. plain JavaScript string
+# indices (`payload.slice(start, end)` is exact), because every consumer is a
+# JS surface. Python computes them from char offsets via the utf-16-le length
+# trick below; astral-plane emoji count as 2 units on both sides, so Hindi,
+# emoji and mixed text stay aligned.
+
+
+def _u16(s: str, char_idx: int) -> int:
+    return len(s[:char_idx].encode("utf-16-le")) // 2
+
+
+# evidence kind -> (linked signal id, factual). factual=True marks records
+# that are identifiers/context — NOT accusations of wrongdoing by themselves.
+_EV_META: dict[str, tuple[str | None, bool]] = {
+    "credential_request": ("credential_request", False),
+    "credential_self_query": (None, True),
+    "credential_agent_flow": (None, True),
+    "credential_delivery": (None, True),
+    "code_delivery_context": (None, True),
+    "remote_access": ("credential_request", False),
+    "advance_fee": ("advance_fee_refund", False),
+    "fee_demand": ("fee_demand", False),
+    "collect_approve": ("collect_to_receive_bait", False),
+    "extortion_disclosure": ("extortion_disclosure", False),
+    "threat_framing": ("threat_framing", False),
+    "coercion_extortion": ("coercion_extortion", False),
+    "urgency_framing": ("urgency_framing", False),
+    "secrecy_pressure": ("secrecy_pressure", False),
+    "family_emergency": ("family_emergency_pressure", False),
+    "new_number_request": ("unverified_family_request", False),
+    "chain_forward": ("chain_forward_bait", False),
+    "apk_file": ("apk_sideload", False),
+    "reported_speech": ("reported_or_educational", True),
+    "destination": (None, True),
+}
+
 _EV_TO_ACTION = {
     "credential_request": "disclose_credential",
     "remote_access": "grant_remote_access",
@@ -34,8 +71,8 @@ _EV_TO_ACTION = {
 }
 
 
-def _build_facts(input_type, expected_intent, upi_info, url_info, evidence,
-                 signals) -> dict:
+def _build_facts(text, input_type, expected_intent, upi_info, url_info,
+                 evidence, signals) -> dict:
     parse = upi_info.get("parse")
     executable = parse is not None and parse.get("status") == "valid" \
         and parse.get("action") in ("pay", "collect")
@@ -83,15 +120,30 @@ def _build_facts(input_type, expected_intent, upi_info, url_info, evidence,
                 if ev["kind"] in ("urgency_framing", "secrecy_pressure",
                                   "threat_framing", "coercion_extortion")]
 
+    # H16 §4C: an amount PROMISED to the user (refund/cashback/prize "you'll
+    # get ₹X") — extracted from prose only, never from inside a upi:// URI, so
+    # the reality check can contrast promised-IN with requested-OUT.
+    import re as _re
+    prose = _re.sub(r"upi://[^\s\"'<>]*", " ", text)
+    promised = None
+    for pm in _re.finditer(r"(?:₹|rs\.?\s?)\s?([\d,]{2,9})", prose, _re.I):
+        window = prose[max(0, pm.start() - 45):pm.end() + 45].lower()
+        if _re.search(r"refund|रिफंड|cashback|कैशबैक|prize|इनाम|jeet|जीत|"
+                      r"milega|मिलेगा|milenge|मिलेंगे|wapas|वापस|credited|"
+                      r"aayega|आएगा", window):
+            promised = pm.group(1).replace(",", "")
+            break
+
     facts = {
         "input_kind": input_type,
         "parse": parse,
+        "promised_incoming": promised,
         "expectation": expected_intent if expected_intent in ("pay", "receive", "verify")
         else "unknown",
         "money_direction": money_direction,
         "claimed_identity": claimed,
         "requested_actions": requested[:8],
-        "evidence": evidence[:24],
+        "evidence": evidence[:24],  # finalized (ids/offsets) by the caller
         "pressure": pressure,
         "missing": missing,
     }
@@ -120,6 +172,39 @@ def run_signal_engine(
     community_cat = blocklist.detect(
         text, url_info["hosts"], upi_info["vpas"], indicators or {}, signals
     )
+
+    # destinations — visible identifiers the money/replies would flow to.
+    # FACTUAL records: extraction is not an accusation and never implies the
+    # identifier is malicious or verified. (upi:// URIs are skipped — the
+    # parse block already carries their payee precisely.)
+    if not text.lower().startswith("upi://"):
+        from engine.common import _PHONE_RUN, _VPA
+        from engine.urls import FULL_URL_RE
+        n_dest = 0
+        for rx in (FULL_URL_RE, _VPA, _PHONE_RUN):
+            for m in rx.finditer(text):
+                if n_dest >= 6:
+                    break
+                if len(m.group(0)) < 6:
+                    continue
+                evidence.append({"kind": "destination", "span": m.group(0)[:120],
+                                 "sentence": None, "start": m.start(),
+                                 "end": m.end()})
+                n_dest += 1
+
+    # finalize evidence: stable ids, UTF-16 offsets, signal links, factual flag
+    for n, ev in enumerate(evidence, 1):
+        ev["id"] = f"ev{n}"
+        sig_link, factual = _EV_META.get(
+            ev["kind"],
+            (f"script_{ev['kind'][9:]}", False) if ev["kind"].startswith("category:")
+            else (None, False))
+        ev["signal"] = sig_link
+        ev["factual"] = factual
+        if ev.get("start") is not None:
+            ev["quote"] = text[ev["start"]:ev["end"]][:160]
+            ev["start"] = _u16(text, ev["start"])
+            ev["end"] = _u16(text, ev["end"])
 
     # Dedup by signal id (H12): identical signals never stack; distinct
     # evidence spans are preserved in facts.evidence even when scoring dedups.
@@ -154,7 +239,7 @@ def run_signal_engine(
     elif script_cats:
         category = script_cats[0]
 
-    facts = _build_facts(input_type, expected_intent, upi_info, url_info,
+    facts = _build_facts(text, input_type, expected_intent, upi_info, url_info,
                          evidence, signals)
 
     signals.sort(key=lambda s: s["weight"], reverse=True)

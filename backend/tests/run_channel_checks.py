@@ -325,4 +325,65 @@ inbox3 = c.get("/api/guardian/requests",
 ok("enrichment never duplicates the guardian ping",
    sum(1 for r in inbox3 if r["check_id"] == fchk["_id"]) == 1)
 
+# H16 §4B: targeted clarification — controlled tree, additive-only context ---
+nc1 = c.post("/api/check", json={"type": "text", "payload": "9822110033",
+                                 "fast": True}).json()
+ok("clarify: question ships its option tree",
+   nc1["assessment"] == "needs_context"
+   and {o["id"] for o in nc1["needs_context"]["options"]} >= {"asked_money", "dont_know"})
+cl1 = c.post(f"/api/check/{nc1['_id']}/clarify", json={"answer_id": "asked_money"}).json()
+ok("clarify: answer converts to source-labelled context signal + verdict",
+   cl1["assessment"] == "assessed" and cl1["verdict"] in ("suspicious", "danger")
+   and any(s["source"] == "user_context" for s in cl1["signals"])
+   and cl1["what_changed"]["after"]["verdict"] == cl1["verdict"])
+ok("clarify: original message preserved alongside structured answer",
+   cl1["input"]["payload"] == "9822110033"
+   and cl1["user_context"][0]["answer_id"] == "asked_money")
+r409 = c.post(f"/api/check/{nc1['_id']}/clarify", json={"answer_id": "asked_otp"})
+ok("clarify: one round only", r409.status_code == 409)
+
+nc2 = c.post("/api/check", json={"type": "text", "payload": "9822110044",
+                                 "fast": True}).json()
+cl2 = c.post(f"/api/check/{nc2['_id']}/clarify", json={"answer_id": "dont_know"}).json()
+ok("clarify: 'I don't know' keeps honest uncertainty + next step",
+   cl2["assessment"] == "needs_context" and cl2["verdict"] is None
+   and "1930" in cl2["explanation_hi"])
+
+nc3 = c.post("/api/check", json={"type": "text", "payload": "9822110055",
+                                 "fast": True}).json()
+cl3 = c.post(f"/api/check/{nc3['_id']}/clarify",
+             json={"text": "unhone bola apna OTP batao warna account band ho jayega"}).json()
+ok("clarify: free-text answer scored via engine, relabelled user_context",
+   cl3["verdict"] in ("suspicious", "danger")
+   and any(s["id"].startswith("user_context_") for s in cl3["signals"]))
+
+# engine evidence survives a low-information answer (never subtracted)
+ncv = c.post("/api/check", json={"type": "text", "payload": "refunds.help55@superpay",
+                                 "fast": True}).json()
+clv = c.post(f"/api/check/{ncv['_id']}/clarify", json={"answer_id": "just_contact"}).json()
+ok("clarify: reassuring answer never erases engine signals",
+   any(s["id"] == "suspicious_vpa" for s in clv["signals"]))
+
+assessed = c.post("/api/check", json={"type": "text", "payload": FX.KYC_SCAM_TEXT,
+                                      "fast": True}).json()
+ok("clarify: assessed checks have nothing to clarify (409)",
+   c.post(f"/api/check/{assessed['_id']}/clarify",
+          json={"answer_id": "asked_money"}).status_code == 409)
+ok("clarify: unknown answer id rejected",
+   c.post(f"/api/check/{nc2['_id']}/clarify",
+          json={"answer_id": "nonsense"}).status_code in (409, 422))
+
+# guardian request FOLLOWS clarification in place — no duplicate ping
+glc = c.post("/api/guardian/links", json={"ward_name": "C", "guardian_name": "D"}).json()
+wtc = c.post("/api/guardian/links/claim", json={"pair_code": glc["pair_code"]}).json()
+ncg = c.post("/api/check", json={"type": "text", "payload": "9822110066",
+                                 "fast": True, "ward_token": wtc["ward_token"]}).json()
+c.post(f"/api/check/{ncg['_id']}/clarify", json={"answer_id": "asked_otp"})
+inbc = c.get("/api/guardian/requests",
+             headers={"X-Guardian-Token": glc["guardian_token"]}).json()["requests"]
+mine = [r for r in inbc if r["check_id"] == ncg["_id"]]
+ok("clarify: guardian request updated in place (noted->pending), never duplicated",
+   len(mine) == 1 and mine[0]["status"] == "pending"
+   and mine[0]["verdict"] in ("suspicious", "danger"))
+
 print(f"\nALL {P} CHANNEL CHECKS PASSED")

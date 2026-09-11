@@ -1,15 +1,17 @@
 "use client";
 
-// SCAM X-RAY (H15) — the message itself becomes the exhibit. Every evidence
-// span the engine matched is highlighted IN PLACE in the original text; tap a
-// highlight and Dhaal explains why that exact phrase matters. Nothing here is
-// generated: spans come verbatim from facts.evidence (the deterministic
-// engine's matches), destinations from visible identifiers in the text. A
-// message about scams (reported speech) highlights as INFO, not as a threat —
-// honesty is part of the show.
+// SCAM X-RAY (H16, precision rework) — the message itself becomes the
+// exhibit. Every finding highlights at its EXACT backend-reported position:
+// evidence start/end are UTF-16 code units, i.e. native JS string indices, so
+// payload.slice(start, end) is the ground truth — no client-side searching,
+// no first-occurrence guessing, Hindi and emoji included. Overlapping
+// findings are preserved: a segment can carry several findings and the tap
+// sheet lists every one. `factual` records (destinations, delivery context,
+// legit flows) render as neutral information — extraction is never an
+// accusation, and a destination is never claimed verified or malicious.
 
 import { useMemo, useState } from "react";
-import type { Facts } from "@/lib/types";
+import type { Evidence } from "@/lib/types";
 import { S_XRAY } from "@/lib/labels";
 import { pick, type Lang, type LangText } from "@/lib/lang";
 
@@ -24,6 +26,7 @@ const KIND_UI: Record<string, KindUI> = {
   advance_fee: { label: S_XRAY.kFee, why: S_XRAY.wFee, tone: "danger" },
   collect_approve: { label: S_XRAY.kCollect, why: S_XRAY.wCollect, tone: "danger" },
   coercion_extortion: { label: S_XRAY.kThreat, why: S_XRAY.wThreat, tone: "danger" },
+  extortion_disclosure: { label: S_XRAY.kBlackmail, why: S_XRAY.wBlackmail, tone: "danger" },
   threat_framing: { label: S_XRAY.kThreat, why: S_XRAY.wThreat, tone: "danger" },
   family_emergency: { label: S_XRAY.kFamily, why: S_XRAY.wFamily, tone: "danger" },
   apk_file: { label: S_XRAY.kApk, why: S_XRAY.wApk, tone: "danger" },
@@ -34,10 +37,13 @@ const KIND_UI: Record<string, KindUI> = {
   reported_speech: { label: S_XRAY.kReported, why: S_XRAY.wReported, tone: "info" },
   credential_agent_flow: { label: S_XRAY.kAgentOk, why: S_XRAY.wAgentOk, tone: "info" },
   credential_delivery: { label: S_XRAY.kDelivery, why: S_XRAY.wDelivery, tone: "info" },
+  credential_self_query: { label: S_XRAY.kSelfQ, why: S_XRAY.wSelfQ, tone: "info" },
+  code_delivery_context: { label: S_XRAY.kDelivery, why: S_XRAY.wDelivery, tone: "info" },
   destination: { label: S_XRAY.kDest, why: S_XRAY.wDest, tone: "caution" },
   category: { label: S_XRAY.kPattern, why: S_XRAY.wPattern, tone: "danger" },
 };
 
+const TONE_RANK: Record<Tone, number> = { danger: 3, caution: 2, info: 1 };
 const TONE_MARK: Record<Tone, string> = {
   danger: "bg-dangertint border-b-2 border-danger text-dangerdeep",
   caution: "bg-cautiontint border-b-2 border-caution text-cautiondeep",
@@ -52,52 +58,47 @@ const TONE_CHIP: Record<Tone, string> = {
 function kindUI(kind: string): KindUI | null {
   if (KIND_UI[kind]) return KIND_UI[kind];
   if (kind.startsWith("category:")) return KIND_UI.category;
-  return null; // unknown evidence kinds simply don't highlight — never guess
+  return null; // unknown kinds simply don't highlight — never guess
 }
 
-type Seg = { text: string; kind?: string };
-type Match = { start: number; end: number; kind: string };
+type Seg = { text: string; evs: Evidence[] };
 
-// visible identifiers the money/answer would flow to — factual, not accusatory
-const DEST_RE =
-  /https?:\/\/[^\s"'<>]+|\b[a-z0-9][a-z0-9.\-_]{1,60}@[a-z][a-z0-9]{1,64}\b|(?<!\d)\+?\d[\d\s-]{8,14}\d(?!\d)/gi;
-
-function buildSegments(payload: string, evidence: Facts["evidence"]): Seg[] {
-  const matches: Match[] = [];
-  const low = payload.toLowerCase();
-  for (const ev of evidence) {
-    if (!ev.span || !kindUI(ev.kind)) continue;
-    // spans may be composites like "a + b" from the engine — try parts too
-    for (const piece of [ev.span, ...ev.span.split(" + ")]) {
-      const needle = piece.trim().toLowerCase();
-      if (needle.length < 2) continue;
-      const idx = low.indexOf(needle);
-      if (idx >= 0) {
-        matches.push({ start: idx, end: idx + needle.length, kind: ev.kind });
-        break;
-      }
-    }
+// Boundary segmentation: overlapping findings SHARE segments instead of one
+// silently swallowing the other — every finding stays reachable via tap.
+function buildSegments(payload: string, evidence: Evidence[]): Seg[] {
+  const usable = evidence.filter(
+    (e) =>
+      e.start !== null &&
+      e.end !== null &&
+      e.start >= 0 &&
+      e.end <= payload.length &&
+      e.end > e.start &&
+      kindUI(e.kind)
+  );
+  if (usable.length === 0) return [{ text: payload, evs: [] }];
+  const points = new Set<number>([0, payload.length]);
+  for (const e of usable) {
+    points.add(e.start!);
+    points.add(e.end!);
   }
-  for (const m of payload.matchAll(DEST_RE)) {
-    if (m.index !== undefined && m[0].length >= 6) {
-      matches.push({ start: m.index, end: m.index + m[0].length, kind: "destination" });
-    }
-  }
-  // earlier + longer wins; overlaps dropped so the text renders exactly once
-  matches.sort((a, b) => a.start - b.start || b.end - a.end);
-  const flat: Match[] = [];
-  for (const m of matches) {
-    if (!flat.length || m.start >= flat[flat.length - 1].end) flat.push(m);
-  }
+  const sorted = [...points].sort((a, b) => a - b);
   const segs: Seg[] = [];
-  let pos = 0;
-  for (const m of flat) {
-    if (m.start > pos) segs.push({ text: payload.slice(pos, m.start) });
-    segs.push({ text: payload.slice(m.start, m.end), kind: m.kind });
-    pos = m.end;
+  for (let i = 0; i < sorted.length - 1; i++) {
+    const [a, b] = [sorted[i], sorted[i + 1]];
+    if (a === b) continue;
+    const evs = usable.filter((e) => e.start! <= a && e.end! >= b);
+    segs.push({ text: payload.slice(a, b), evs });
   }
-  if (pos < payload.length) segs.push({ text: payload.slice(pos) });
   return segs;
+}
+
+function segTone(evs: Evidence[]): Tone {
+  let best: Tone = "info";
+  for (const e of evs) {
+    const t = kindUI(e.kind)!.tone;
+    if (TONE_RANK[t] > TONE_RANK[best]) best = t;
+  }
+  return best;
 }
 
 export default function ScamXray({
@@ -106,19 +107,19 @@ export default function ScamXray({
   lang,
 }: {
   payload: string;
-  evidence: Facts["evidence"];
+  evidence: Evidence[];
   lang: Lang;
 }) {
-  const [active, setActive] = useState<string | null>(null);
-  const segs = useMemo(
-    () => buildSegments(payload, evidence ?? []),
-    [payload, evidence]
-  );
-  const marked = segs.filter((s) => s.kind);
-  // a QR/URI-only payload has no prose to x-ray; skip rather than decorate
+  const [activeKey, setActiveKey] = useState<string | null>(null);
+  const segs = useMemo(() => buildSegments(payload, evidence ?? []), [payload, evidence]);
+  const marked = segs.filter((s) => s.evs.length > 0);
   if (marked.length === 0 || /^upi:\/\//i.test(payload.trim())) return null;
 
-  const activeUI = active ? kindUI(active) : null;
+  // active segment's findings, deduped by kind for the tap sheet
+  const active = activeKey
+    ? segs.find((_, i) => `seg${i}` === activeKey)?.evs ?? []
+    : [];
+  const activeKinds = [...new Map(active.map((e) => [e.kind, e])).values()];
 
   return (
     <div className="border-b-2 border-line p-4">
@@ -126,23 +127,27 @@ export default function ScamXray({
         {pick(lang, S_XRAY.title)[0]} · {pick(lang, S_XRAY.title)[1]}
       </h3>
       <div className="mt-2 border-2 border-ink bg-paper2 p-3">
-        <p className="max-h-52 overflow-y-auto whitespace-pre-wrap break-words text-[15px] leading-relaxed">
+        <p className="max-h-52 overflow-y-auto whitespace-pre-wrap break-words text-[15px] leading-loose">
           {segs.map((s, i) =>
-            s.kind ? (
+            s.evs.length > 0 ? (
               <mark
                 key={i}
                 role="button"
                 tabIndex={0}
-                onClick={() => setActive(active === s.kind ? null : s.kind!)}
+                aria-expanded={activeKey === `seg${i}`}
+                aria-label={s.evs
+                  .map((e) => pick(lang, kindUI(e.kind)!.label)[0])
+                  .join(", ")}
+                onClick={() => setActiveKey(activeKey === `seg${i}` ? null : `seg${i}`)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" || e.key === " ") {
                     e.preventDefault();
-                    setActive(active === s.kind ? null : s.kind!);
+                    setActiveKey(activeKey === `seg${i}` ? null : `seg${i}`);
                   }
                 }}
-                className={`cursor-pointer rounded-none px-0.5 font-semibold ${TONE_MARK[kindUI(s.kind)!.tone]} ${
-                  active === s.kind ? "outline outline-2 outline-ink" : ""
-                }`}
+                className={`-my-0.5 cursor-pointer rounded-none px-0.5 py-0.5 font-semibold ${TONE_MARK[segTone(s.evs)]} ${
+                  activeKey === `seg${i}` ? "outline outline-2 outline-ink" : ""
+                } focus-visible:outline focus-visible:outline-2 focus-visible:outline-ink`}
               >
                 {s.text}
               </mark>
@@ -152,19 +157,30 @@ export default function ScamXray({
           )}
         </p>
       </div>
-      {/* tap-to-explain caption — the evidence speaks */}
-      {activeUI ? (
-        <div
-          className={`mt-2 border-2 bg-paper p-2.5 ${TONE_CHIP[activeUI.tone]}`}
-          aria-live="polite"
-        >
-          <p className="plate">{pick(lang, activeUI.label)[0]} · {pick(lang, activeUI.label)[1]}</p>
-          <p className="mt-1 text-sm font-semibold leading-snug">
-            {pick(lang, activeUI.why)[0]}
-          </p>
-          <p className="mt-0.5 text-xs leading-snug text-inksoft">
-            {pick(lang, activeUI.why)[1]}
-          </p>
+      {/* tap-to-explain sheet — EVERY finding under the tapped segment */}
+      {activeKinds.length > 0 ? (
+        <div className="mt-2 space-y-2" aria-live="polite">
+          {activeKinds.map((e) => {
+            const ui = kindUI(e.kind)!;
+            return (
+              <div key={e.id} className={`border-2 bg-paper p-2.5 ${TONE_CHIP[ui.tone]}`}>
+                <p className="plate">
+                  {pick(lang, ui.label)[0]} · {pick(lang, ui.label)[1]}
+                  {e.factual && (
+                    <span className="ml-2 border border-line px-1 text-inksoft">
+                      {pick(lang, S_XRAY.factualTag)[0]}
+                    </span>
+                  )}
+                </p>
+                <p className="mt-1 text-sm font-semibold leading-snug">
+                  {pick(lang, ui.why)[0]}
+                </p>
+                <p className="mt-0.5 text-xs leading-snug text-inksoft">
+                  {pick(lang, ui.why)[1]}
+                </p>
+              </div>
+            );
+          })}
         </div>
       ) : (
         <p className="plate mt-1.5 text-inksoft">{pick(lang, S_XRAY.hint)[0]}</p>

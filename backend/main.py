@@ -202,6 +202,47 @@ _REFERENT_RE = re.compile(  # "send IT", "yeh sahi hai na" — pronoun, no objec
     re.I)
 
 
+# H16 §4B: per-reason clarification options — a CONTROLLED decision tree, not
+# a chatbot. Each option maps to a deterministic, source-labelled context
+# signal (weight applied ADDITIVELY — user answers can add risk or leave it,
+# never subtract engine evidence). "dont_know" keeps the question open with a
+# next step instead of fake certainty.
+_CLARIFY_OPTIONS: dict[str, list[dict]] = {
+    "bare_identifier": [
+        {"id": "asked_money", "hi": "पैसे माँगे गए", "en": "They asked for money"},
+        {"id": "asked_otp", "hi": "OTP/PIN माँगा", "en": "They asked for an OTP/PIN"},
+        {"id": "says_refund", "hi": "Refund/इनाम देने की बात है", "en": "They promise a refund/prize"},
+        {"id": "just_contact", "hi": "बस call/message आया, कुछ माँगा नहीं", "en": "Just a call/message, no ask"},
+        {"id": "dont_know", "hi": "पता नहीं", "en": "I don't know"},
+    ],
+    "threat_no_ask": [
+        {"id": "asked_money", "hi": "पैसे माँगे", "en": "They demanded money"},
+        {"id": "asked_otp", "hi": "OTP/password माँगा", "en": "They demanded an OTP/password"},
+        {"id": "no_demand", "hi": "कुछ नहीं माँगा (अभी)", "en": "No demand (yet)"},
+        {"id": "dont_know", "hi": "पता नहीं", "en": "I don't know"},
+    ],
+    "no_referent": [],
+    "too_short": [],
+    "unreadable_payment_code": [],
+}
+
+_CLARIFY_SIGNALS: dict[str, tuple[int, str, str, str, str]] = {
+    "asked_money": (30, "You reported: money was demanded", "आपने बताया: पैसे माँगे गए",
+                    "A demand for money from an unknown contact is the core scam move — do not send anything.",
+                    "अनजान से पैसों की माँग ही ठगी की असली चाल है — कुछ न भेजें।"),
+    "asked_otp": (35, "You reported: OTP/PIN was demanded", "आपने बताया: OTP/PIN माँगा गया",
+                  "Nobody legitimate asks for your OTP/PIN — refuse and disconnect.",
+                  "OTP/PIN कोई भी सही संस्था नहीं माँगती — मना करें, call काटें।"),
+    "says_refund": (25, "You reported: a refund/prize is promised", "आपने बताया: refund/इनाम का वादा",
+                    "Refund/prize promises from unknown identifiers are bait — real refunds arrive without your help.",
+                    "अनजान पते से refund/इनाम का वादा चारा है — असली refund अपने-आप आता है।"),
+}
+
+
+def _clarify_options(reason: str) -> list[dict]:
+    return list(_CLARIFY_OPTIONS.get(reason, []))
+
+
 def _assess(payload: str, score: int, facts: dict):
     """Assessment outcome (H14, first-class): assessed | needs_context |
     unsupported_input. A green verdict must never sit on an input that was
@@ -289,6 +330,9 @@ def check(body: CheckIn):
     assessment, needs_context = _assess(payload, score, facts)
     if assessment != "assessed":
         verdict = None
+        if needs_context is not None:  # H16: the smallest useful question,
+            # with a controlled option tree where one exists
+            needs_context["options"] = _clarify_options(needs_context["reason"])
 
     # Claude narrates FROM the detected signals (zero verdict weight); any
     # failure or MOCK_MODE -> grounded rule-composed fallback (never generic
@@ -368,6 +412,122 @@ def check(body: CheckIn):
     elif body.ward_token or body.ward_link_id:
         doc["guardian_delivery"] = "unlinked"  # token invalid/revoked/legacy → re-pair
     return doc
+
+
+class ClarifyIn(BaseModel):
+    answer_id: str | None = None  # one of needs_context.options[].id
+    text: str | None = None       # or a free-text answer
+
+
+@app.post("/api/check/{cid}/clarify")
+def clarify_check(cid: str, body: ClarifyIn):
+    """H16 §4B targeted clarification. The original message is preserved; the
+    answer is stored as STRUCTURED user-provided context and scored as
+    source="user_context" signals — additive only. Engine evidence from the
+    original text always persists (a reassuring answer never erases a direct
+    dangerous demand). One round only; "dont_know" keeps honest uncertainty
+    with a next step instead of a verdict."""
+    doc = STORE.get("checks", cid)
+    if not doc:
+        return JSONResponse({"error": "check not found"}, status_code=404)
+    if doc.get("assessment") != "needs_context":
+        return JSONResponse({"error": "nothing to clarify on this check"},
+                            status_code=409)
+    if doc.get("user_context"):
+        return JSONResponse(
+            {"error": "already clarified — run a fresh check with the full message"},
+            status_code=409)
+    answer_id = (body.answer_id or "").strip()
+    free_text = (body.text or "").strip()[:500]
+    if not answer_id and not free_text:
+        return JSONResponse({"error": "answer_id or text required"}, status_code=422)
+    reason = (doc.get("needs_context") or {}).get("reason", "")
+    valid_ids = {o["id"] for o in _clarify_options(reason)}
+    if answer_id and answer_id not in valid_ids:
+        return JSONResponse({"error": "unknown answer_id for this question"},
+                            status_code=422)
+
+    # re-run the engine on the ORIGINAL payload — original evidence persists
+    payload = doc["input"]["payload"]
+    verdict, score, signals, category, facts = run_signal_engine(
+        payload, doc["input"]["type"], STORE.indicators_map(),
+        allow_network=not MOCK_MODE, expected_intent=doc.get("expected_intent"))
+
+    ctx_signals = []
+    if answer_id in _CLARIFY_SIGNALS:
+        w, t_en, t_hi, d_en, d_hi = _CLARIFY_SIGNALS[answer_id]
+        ctx_signals.append({"id": f"user_context_{answer_id}",
+                            "source": "user_context", "weight": w,
+                            "title_en": t_en, "title_hi": t_hi,
+                            "detail_en": d_en, "detail_hi": d_hi})
+    elif free_text:
+        # the user's own description is genuine added evidence: run the engine
+        # over the ANSWER alone and carry its findings, relabelled by source —
+        # never pretending they appeared in the original message.
+        _v2, _s2, ans_signals, _c2, _f2 = run_signal_engine(
+            free_text, "text", STORE.indicators_map(), allow_network=not MOCK_MODE)
+        for s in ans_signals:
+            if s["weight"] > 0:
+                ctx_signals.append({**s, "id": f"user_context_{s['id']}",
+                                    "source": "user_context"})
+
+    new_score = min(100, score + sum(s["weight"] for s in ctx_signals))
+    all_signals = sorted(signals + ctx_signals,
+                         key=lambda s: s["weight"], reverse=True)
+
+    if answer_id in ("dont_know",):
+        assessment, verdict2 = "needs_context", None
+        exp_hi = ("ठीक है — बिना पूरी बात के हम अंदाज़ा नहीं लगाएँगे। सबसे सुरक्षित कदम: "
+                  "कुछ भी न भेजें, और जो message/call आया था वह किसी भरोसेमंद को दिखाएँ "
+                  "या पूरा paste करके दुबारा जाँचें। शक बना रहे तो 1930 है।")
+        exp_en = ("Okay — without the full story we won't guess. Safest step: send "
+                  "nothing, show the message/call to someone you trust, or paste the "
+                  "full text and re-check. If worry stays, 1930 exists.")
+    else:
+        assessment = "assessed"
+        verdict2 = ("danger" if new_score >= engine_mod.DANGER_AT
+                    else "suspicious" if new_score >= engine_mod.SUSPICIOUS_AT
+                    else "no_known_risk")
+        top_ctx = ctx_signals[0] if ctx_signals else None
+        base_hi, base_en = _grounded_explanation(assessment, verdict2,
+                                                 all_signals, facts, None)
+        if top_ctx:
+            exp_hi = f"आपके जवाब के बाद ({top_ctx['title_hi']}): {base_hi}"
+            exp_en = f"After your answer ({top_ctx['title_en']}): {base_en}"
+        else:
+            exp_hi = f"आपके जवाब के बाद भी नई जानकारी नहीं मिली। {base_hi}"
+            exp_en = f"Your answer added no new evidence. {base_en}"
+
+    user_context = [{"question_reason": reason, "answer_id": answer_id or None,
+                     "text": free_text or None, "at": _now()}]
+    what_changed = {
+        "before": {"assessment": "needs_context", "verdict": None},
+        "after": {"assessment": assessment, "verdict": verdict2, "score": new_score},
+        "because_hi": (ctx_signals[0]["title_hi"] if ctx_signals
+                       else "जवाब से कोई नया संकेत नहीं जुड़ा"),
+        "because_en": (ctx_signals[0]["title_en"] if ctx_signals
+                       else "the answer added no new signal"),
+    }
+    updates = {
+        "assessment": assessment, "verdict": verdict2, "score": new_score,
+        "signals": all_signals, "explanation_hi": exp_hi, "explanation_en": exp_en,
+        "explanation_source": "rules", "user_context": user_context,
+        "needs_context": (doc.get("needs_context") if assessment == "needs_context"
+                          else None),
+        "what_changed": what_changed, "clarified_at": _now(),
+    }
+    STORE.update("checks", cid, updates)
+    # guardian view follows the clarified state — UPDATE the existing request
+    # (never a duplicate notification)
+    if doc.get("_id") and assessment == "assessed":
+        for gr in STORE.list("guardian_requests", {"check_id": cid}):
+            STORE.update("guardian_requests", gr["_id"], {
+                "verdict": verdict2, "score": new_score, "assessment": assessment,
+                "status": ("pending" if verdict2 != "no_known_risk"
+                           and gr.get("status") == "noted" else gr.get("status")),
+                "summary_hi": exp_hi[:140],
+            })
+    return {**doc, **updates}
 
 
 class NarrateIn(BaseModel):

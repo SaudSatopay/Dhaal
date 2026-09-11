@@ -54,14 +54,32 @@ export type ParseFacts = {
   uri_count: number;
 } | null;
 
+// H16 evidence contract: start/end are UTF-16 code units into the raw
+// payload — i.e. NATIVE JavaScript string indices (payload.slice(start, end)
+// is exact, Hindi and emoji included). factual=true marks identifiers/context
+// records that are NOT accusations; signal links a record to the scoring
+// signal it supports (null for factual records).
+export type Evidence = {
+  id: string;
+  kind: string;
+  span: string;
+  quote?: string;
+  sentence: number | null;
+  start: number | null;
+  end: number | null;
+  signal: string | null;
+  factual: boolean;
+};
+
 export type Facts = {
   input_kind: string;
   parse: ParseFacts;
+  promised_incoming?: string | null; // H16 §4C: amount promised TO the user in prose
   expectation: "pay" | "receive" | "verify" | "unknown";
   money_direction: "out_of_your_account" | "none_detected" | "unknown";
   claimed_identity: string | null;
   requested_actions: string[];
-  evidence: { kind: string; span: string; sentence: number | null }[];
+  evidence: Evidence[];
   pressure: string[];
   missing: string[];
 };
@@ -81,7 +99,21 @@ export type Check = {
   facts?: Facts;
   analysis?: Analysis | null;
   expected_intent?: ExpectedIntent;
-  needs_context?: { reason: string; question_hi: string; question_en: string } | null;
+  needs_context?: {
+    reason: string;
+    question_hi: string;
+    question_en: string;
+    options?: { id: string; hi: string; en: string }[];
+  } | null;
+  // H16 §4B: structured clarification — answers live NEXT TO the original
+  // message, never inside it
+  user_context?: { question_reason: string; answer_id: string | null; text: string | null; at: string }[];
+  what_changed?: {
+    before: { assessment: string; verdict: string | null };
+    after: { assessment: string; verdict: string | null; score: number };
+    because_hi: string;
+    because_en: string;
+  };
   tts_audio_b64: string | null;
   mocked: boolean;
   community_data?: "live" | "degraded";

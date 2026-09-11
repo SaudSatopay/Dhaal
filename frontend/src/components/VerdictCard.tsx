@@ -7,7 +7,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { Check, Signal } from "@/lib/types";
-import { CATEGORY_UI, S_COMMON, S_VERDICT, SOURCE_UI, VERDICT_UI } from "@/lib/labels";
+import { CATEGORY_UI, S_COMMON, S_REALITY, S_VERDICT, SOURCE_UI, VERDICT_UI } from "@/lib/labels";
 import { pick, useLang, type Lang } from "@/lib/lang";
 import ScamXray from "@/components/ScamXray";
 import { ISpeaker, IStop } from "@/components/icons";
@@ -341,6 +341,63 @@ export default function VerdictCard({
           evidence={check.facts.evidence}
           lang={lang}
         />
+      )}
+
+      {/* H16 §4C payment reality check — a VALID parsed request only; precise
+          mechanics wording; promised-in vs requested-out when both exist */}
+      {slammed && check.facts?.parse?.status === "valid" && (
+        <div className="border-b-2 border-line p-4">
+          <h3 className="plate text-inksoft">
+            {pick(lang, S_REALITY.title)[0]} · {pick(lang, S_REALITY.title)[1]}
+          </h3>
+          <div className="mt-2 divide-y-2 divide-line border-2 border-ink">
+            <div className="flex items-baseline justify-between gap-3 p-2.5">
+              <span className="plate shrink-0 text-inksoft">{pick(lang, S_REALITY.expected)[0]}</span>
+              <span className="text-sm font-bold">
+                {check.facts.expectation === "pay"
+                  ? pick(lang, S_REALITY.expPay)[0]
+                  : check.facts.expectation === "receive"
+                    ? pick(lang, S_REALITY.expReceive)[0]
+                    : pick(lang, S_REALITY.expUnknown)[0]}
+              </span>
+            </div>
+            <div className="flex items-baseline justify-between gap-3 p-2.5">
+              <span className="plate shrink-0 text-inksoft">{pick(lang, S_REALITY.opens)[0]}</span>
+              <span className="text-right font-mono text-sm font-bold">
+                {check.facts.parse.action === "collect"
+                  ? pick(lang, S_REALITY.collectReq)[0]
+                  : pick(lang, S_REALITY.payReq)[0]}
+                {check.facts.parse.amount && (
+                  <span className="ml-1.5 text-dangerdeep">₹{check.facts.parse.amount}</span>
+                )}
+                {check.facts.parse.payee_vpa && (
+                  <span className="block text-xs font-normal text-inksoft">
+                    {pick(lang, S_REALITY.toPayee)[0]}: {check.facts.parse.payee_vpa}
+                  </span>
+                )}
+              </span>
+            </div>
+            {check.facts.promised_incoming && (
+              <div className="p-2.5">
+                <div className="flex items-baseline justify-between gap-3">
+                  <span className="plate text-inksoft">{pick(lang, S_REALITY.promised)[0]}</span>
+                  <span className="font-mono text-sm font-bold text-cleardeep">
+                    ₹{check.facts.promised_incoming} {pick(lang, S_REALITY.inYou)[0]}
+                  </span>
+                </div>
+                <div className="mt-1 flex items-baseline justify-between gap-3">
+                  <span className="plate text-inksoft">{pick(lang, S_REALITY.requested)[0]}</span>
+                  <span className="font-mono text-sm font-bold text-dangerdeep">
+                    {pick(lang, S_REALITY.outYou)[0]} ₹{check.facts.parse.amount ?? "?"}
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+          <p className="mt-2 text-xs leading-snug text-inksoft">
+            {pick(lang, S_REALITY.unverified)[0]}
+          </p>
+        </div>
       )}
 
       {/* H12+ analysis — "what they want" ink-frame table */}

@@ -132,6 +132,8 @@ export const S_CHECK = {
   ctxAction: { hi: "पूरा message ऊपर paste करें", en: "Paste the full message above" },
   // H15 verdict-first: narration upgrades the card after the verdict lands
   narrating: { hi: "✦ AI विवरण आ रहा है — verdict final है, बदलेगा नहीं", en: "✦ AI detail incoming — the verdict is already final" },
+  // H16 §4B: clarification changed the assessment — say WHY
+  answerChanged: { hi: "आपके जवाब से जाँच बदली:", en: "Your answer changed the assessment:" },
   // H14: unreadable/malformed payment code — distinct from "need context"
   unsupTitle: { hi: "पढ़ा नहीं जा सका", en: "Could not read this" },
   unsupAction: { hi: "दुबारा scan करें", en: "Rescan" },
@@ -224,8 +226,40 @@ export const S_XRAY = {
   },
   kDest: { hi: "पता — कहाँ जाएगा", en: "Destination" },
   wDest: {
-    hi: "पैसा/जवाब इसी पते पर जाएगा — जाँच इसी की हुई है। Community reports भी इसी से मिलाए जाते हैं।",
-    en: "Money/replies flow to THIS address — it's what got checked, and what community reports match against.",
+    hi: "पैसा/जवाब इसी पते पर जाएगा — यह सिर्फ़ पहचान है, अपने-आप में गलत होने का सबूत नहीं। मालिक कौन है, यह यहाँ verify नहीं होता।",
+    en: "Money/replies would flow to THIS address — an identifier, not proof of wrongdoing by itself. Ownership is NOT verified here.",
+  },
+  kBlackmail: { hi: "ब्लैकमेल", en: "Blackmail" },
+  wBlackmail: {
+    hi: "बदनामी की धमकी देकर पैसे माँगना जुर्म है — जुर्म UNKA। पैसे न दें, सबूत रखें, 1930 पर रिपोर्ट करें।",
+    en: "Demanding money under threat of exposure is extortion — THEIR crime. Don't pay, keep evidence, report on 1930.",
+  },
+  kSelfQ: { hi: "आपका अपना सवाल", en: "Your own question" },
+  wSelfQ: {
+    hi: "आप अपने ही app में code डालने की बात पूछ रहे हैं — यह किसी की माँग नहीं है, इसलिए flag नहीं हुआ।",
+    en: "You're asking about entering a code in a flow YOU opened — nobody is demanding it, so it isn't flagged.",
+  },
+  factualTag: { hi: "जानकारी", en: "info" },
+} satisfies Record<string, LangText>;
+
+/* ---------------- payment reality check (H16 §4C) ---------------- */
+export const S_REALITY = {
+  title: { hi: "पैसे की असलियत", en: "Payment reality check" },
+  expected: { hi: "आपको उम्मीद थी", en: "You expected" },
+  expPay: { hi: "पैसे भेजने की", en: "to pay" },
+  expReceive: { hi: "पैसे आने की", en: "to receive money" },
+  expUnknown: { hi: "— (बताया नहीं)", en: "— (not stated)" },
+  opens: { hi: "यह QR/link खोलता है", en: "This QR/link opens" },
+  payReq: { hi: "payment request", en: "a payment request" },
+  collectReq: { hi: "collect request", en: "a collect request" },
+  toPayee: { hi: "payee", en: "payee" },
+  promised: { hi: "वादा (message में)", en: "Promised (in message)" },
+  requested: { hi: "माँग (payment code में)", en: "Requested (by the code)" },
+  inYou: { hi: "→ आपको", en: "→ to YOU" },
+  outYou: { hi: "आपसे बाहर →", en: "OUT of you →" },
+  unverified: {
+    hi: "यहाँ verify नहीं होता: payee का असली registered नाम सिर्फ़ आपके UPI app में authorize से पहले दिखेगा। Code पढ़ने से पैसा नहीं कटता — authorize करने से कटता है।",
+    en: "NOT verified here: the payee's real registered name shows only in your UPI app before you authorize. Parsing a code moves no money — authorizing does.",
   },
   kPattern: { hi: "जाना-पहचाना script", en: "Known scam script" },
   wPattern: {

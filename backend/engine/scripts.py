@@ -63,8 +63,11 @@ _NEG_STRIP = [
 
 
 def _strip_negated(sentence: str) -> str:
+    """LENGTH-PRESERVING (H16): negated demand spans become same-length
+    spaces, so every offset found in stripped text is valid in the raw text —
+    the evidence-position contract depends on this."""
     for p in _NEG_STRIP:
-        sentence = p.sub(" ", sentence)
+        sentence = p.sub(lambda m: " " * len(m.group(0)), sentence)
     return sentence
 
 
@@ -259,7 +262,8 @@ _BAIT_SEND = _rx(["paise bhejo", "पैसे भेजो", "paise bhej", "प
                   "pay delivery charge", "delivery charge",
                   "shipping charge"]) + [
     # money-scoped sends — "documents bhejo" must never count (H16 precision)
-    re.compile(r"(?:₹|\brs\.?\b|paise|पैसे|\d{2,7})\s*(?:[^.।!?]{0,12})?"
+    re.compile(r"(?:₹|\brs\.?\b|paise|पैसे|fee|फीस|charge|शुल्क|\d{2,7})"
+               r"[^.।!?]{0,20}?"
                r"(?:bhej(?:o|iye|ein|en|\s+do)?|भेज(?:ो|िए|ें|\s+दो)?)", re.I),
     re.compile(r"(?:bhej(?:o|iye|ein|en)?|भेज(?:ो|िए|ें)?)\s*(?:karne\s+par)?"
                r"[^.।!?]{0,12}(?:₹|\brs\.?\b|\d{3,7})", re.I),
@@ -340,9 +344,14 @@ _APK = re.compile(r"\b[\w-]{2,}\.apk\b|apk\s+(?:file|download|install)|"
 _MAX_SPAN = 120
 
 
-def _ev(evidence: list | None, kind: str, span: str, sentence: int | None = None):
+def _ev(evidence: list | None, kind: str, span: str, sentence: int | None = None,
+        start: int | None = None, end: int | None = None):
+    """Evidence record. start/end are PYTHON character offsets into the raw
+    payload (the engine converts to UTF-16 code units at assembly — see
+    engine/__init__). span text is capped; offsets are not."""
     if evidence is not None and len(evidence) < 24:
-        evidence.append({"kind": kind, "span": span[:_MAX_SPAN], "sentence": sentence})
+        evidence.append({"kind": kind, "span": span[:_MAX_SPAN],
+                         "sentence": sentence, "start": start, "end": end})
 
 
 def _first_span(patterns, text) -> str | None:
@@ -353,18 +362,66 @@ def _first_span(patterns, text) -> str | None:
     return None
 
 
+def _first_match(patterns, text):
+    """First regex Match across a pattern list — offsets come from .start/.end.
+    Works identically on negation-stripped text because the strip is
+    length-preserving."""
+    for p in patterns:
+        m = p.search(text)
+        if m:
+            return m
+    return None
+
+
+def _all_matches(patterns, text, cap: int = 3):
+    """Up to `cap` non-overlapping matches across a pattern list — repeated
+    phrases each get their own evidence fragment."""
+    out, taken = [], []
+    for p in patterns:
+        for m in p.finditer(text):
+            if any(m.start() < e and s < m.end() for s, e in taken):
+                continue
+            out.append(m)
+            taken.append((m.start(), m.end()))
+            if len(out) >= cap:
+                return out
+    return out
+
+
+def _sentences_with_pos(text: str) -> list[tuple[str, int]]:
+    """(sentence, absolute start offset) pairs — the offset backbone."""
+    out, pos = [], 0
+    for m in _SENT_SPLIT.finditer(text):
+        seg = text[pos:m.start()]
+        if seg.strip():
+            lead = len(seg) - len(seg.lstrip())
+            out.append((seg.strip(), pos + lead))
+        pos = m.end()
+    seg = text[pos:]
+    if seg.strip():
+        lead = len(seg) - len(seg.lstrip())
+        out.append((seg.strip(), pos + lead))
+    return out
+
+
 def detect(text: str, signals: list, evidence: list | None = None) -> list[str]:
     """Adds pattern signals; returns matched categories, strongest first.
-    Appends evidence spans (kind + exact matched text) to `evidence`."""
-    sentences = _sentences(text)
-    stripped_sents = [_strip_negated(s) for s in sentences]
-    stripped_all = " । ".join(stripped_sents)
+    Evidence records carry exact Python-char offsets into `text` (the strip
+    being length-preserving makes stripped-text offsets raw-text offsets)."""
+    sent_pos = _sentences_with_pos(text)
+    sentences = [s for s, _ in sent_pos]
+    stripped_all = _strip_negated(text)  # same length as text — offsets shared
+    stripped_sents = [stripped_all[p:p + len(s)] for s, p in sent_pos]
 
     # ---- directive evidence (per sentence, negation-scoped) ----
     cred_request_span = None
     cred_delivery = any(p.search(text) for p in _CRED_DELIVERY)
-    code_delivered = bool(_CODE_DELIVERED.search(text))
-    for i, (raw_s, st_s) in enumerate(zip(sentences, stripped_sents)):
+    delivered_m = _CODE_DELIVERED.search(text)
+    code_delivered = bool(delivered_m)
+    if delivered_m:  # factual context: where the referent was established
+        _ev(evidence, "code_delivery_context", delivered_m.group(0),
+            None, delivered_m.start(), delivered_m.end())
+    for i, ((raw_s, s_off), st_s) in enumerate(zip(sent_pos, stripped_sents)):
         has_mention = any(p.search(raw_s) for p in _CRED_MENTION)
         # H16 cross-sentence referent: an earlier sentence delivered "the
         # code"; this one may demand it without naming it.
@@ -375,7 +432,8 @@ def detect(text: str, signals: list, evidence: list | None = None) -> list[str]:
         # H16 self-initiated flow: a first-person QUESTION about where/how *I*
         # enter my code is the user's own action — never a counterparty ask.
         if _SELF_QUERY.search(raw_s) and not _CHAT_DIRECTION.search(raw_s):
-            _ev(evidence, "credential_self_query", raw_s, i)
+            _ev(evidence, "credential_self_query", raw_s, i,
+                s_off, s_off + len(raw_s))
             continue
         m = referent_m or _CRED_REQ_A.search(st_s) or _CRED_REQ_B.search(st_s)
         if not m:
@@ -383,36 +441,47 @@ def detect(text: str, signals: list, evidence: list | None = None) -> list[str]:
         # in-person platform flow: OTP told/shown to a present agent — exempt
         # unless the ask redirects to the requester's own chat/number.
         if _AGENT_CTX.search(raw_s) and not _CHAT_DIRECTION.search(raw_s):
-            _ev(evidence, "credential_agent_flow", raw_s, i)
+            _ev(evidence, "credential_agent_flow", raw_s, i,
+                s_off, s_off + len(raw_s))
             continue
         cred_request_span = m.group(0)
-        _ev(evidence, "credential_request", raw_s, i)
+        _ev(evidence, "credential_request", text[s_off + m.start():s_off + m.end()],
+            i, s_off + m.start(), s_off + m.end())
         break
 
-    remote_span = _first_span(_REMOTE_ACCESS, text)
-    if remote_span:
-        _ev(evidence, "remote_access", remote_span)
+    remote_m = _first_match(_REMOTE_ACCESS, text)
+    if remote_m:
+        _ev(evidence, "remote_access", remote_m.group(0), None,
+            remote_m.start(), remote_m.end())
 
-    bait_send_span = _first_span(_BAIT_SEND, stripped_all)
-    bait_get_span = _first_span(_BAIT_GET, text)
+    bait_send_m = _first_match(_BAIT_SEND, stripped_all)
+    bait_send_span = bait_send_m.group(0) if bait_send_m else None
+    bait_get_m = _first_match(_BAIT_GET, text)
+    bait_get_span = bait_get_m.group(0) if bait_get_m else None
     fee_pats = next(c for c in _CROSS if c[0] == "fee_demand")[6]
     fee_span = _first_span(fee_pats, stripped_all)
-    collect_approve = bool(_COLLECT_PHRASE.search(text) and _APPROVE_WORD.search(stripped_all))
-    family_trouble_span = _first_span(_FAMILY_TROUBLE, text)
-    new_number_span = _first_span(_NEW_NUMBER, text)
-    chain_span = _first_span(_CHAIN_FWD, text)
+    collect_phrase_m = _COLLECT_PHRASE.search(text)
+    approve_m = _APPROVE_WORD.search(stripped_all)
+    collect_approve = bool(collect_phrase_m and approve_m)
+    family_m = _first_match(_FAMILY_TROUBLE, text)
+    family_trouble_span = family_m.group(0) if family_m else None
+    newnum_m = _first_match(_NEW_NUMBER, text)
+    new_number_span = newnum_m.group(0) if newnum_m else None
+    chain_m = _first_match(_CHAIN_FWD, text)
     apk_m = _APK.search(text)
+    send_dir_m = _first_match(_SEND_DIRECTIVE, stripped_all)
 
     directive_evidence = any((cred_request_span, bait_send_span, fee_span,
-                              remote_span, collect_approve,
-                              (family_trouble_span and _first_span(_SEND_DIRECTIVE, stripped_all)),
-                              (new_number_span and _first_span(_SEND_DIRECTIVE, stripped_all))))
+                              remote_m, collect_approve,
+                              (family_trouble_span and send_dir_m),
+                              (new_number_span and send_dir_m)))
 
     # ---- reported/educational framing: describing a scam ≠ receiving one ----
     aware_m = _AWARENESS.search(text)
     reported = bool(aware_m) and not directive_evidence
     if reported:
-        _ev(evidence, "reported_speech", aware_m.group(0))
+        _ev(evidence, "reported_speech", aware_m.group(0), None,
+            aware_m.start(), aware_m.end())
         signals.append(make_signal(
             "reported_or_educational", "deterministic", 0,
             "Reads as reporting/teaching about scams",
@@ -423,18 +492,21 @@ def detect(text: str, signals: list, evidence: list | None = None) -> list[str]:
         return []
 
     has_ctx = any(p.search(text) for p in _CTX)
-    matched: list[tuple[str, int, list[str]]] = []
+    matched: list[tuple[str, int, list]] = []
     for cat, (weight, strong, weak) in CATEGORIES.items():
-        strong_hits = [p.search(text).group(0) for p in strong if p.search(text)]
-        weak_hits = [p.search(text).group(0) for p in weak if p.search(text)]
-        fires = bool(strong_hits) or (len(weak_hits) >= 2 and has_ctx)
+        strong_ms = [p.search(text) for p in strong if p.search(text)]
+        weak_ms = [p.search(text) for p in weak if p.search(text)]
+        fires = bool(strong_ms) or (len(weak_ms) >= 2 and has_ctx)
         if fires:
-            matched.append((cat, weight, strong_hits + weak_hits))
+            matched.append((cat, weight, strong_ms + weak_ms))
     matched.sort(key=lambda m: m[1], reverse=True)
 
-    for cat, weight, hits in matched:
+    for cat, weight, hit_ms in matched:
         pretty = cat.replace("_", " ")
-        _ev(evidence, f"category:{cat}", " · ".join(hits[:3]))
+        # each matched phrase is its own fragment of the same finding
+        for hm in hit_ms[:3]:
+            _ev(evidence, f"category:{cat}", hm.group(0), None,
+                hm.start(), hm.end())
         signals.append(make_signal(
             f"script_{cat}", "deterministic", weight,
             f"Known scam script: {pretty}", "जाना-पहचाना ठगी का तरीका",
@@ -446,12 +518,13 @@ def detect(text: str, signals: list, evidence: list | None = None) -> list[str]:
         # demand-type cross signals respect negation scope; threat grammar
         # (coercion/secrecy/urgency/threat wording) matches raw text.
         target = stripped_all if sid == "fee_demand" else text
-        span = _first_span(patterns, target)
-        if span:
-            _ev(evidence, sid, span)
+        cross_ms = _all_matches(patterns, target, cap=3)
+        if cross_ms:
+            for cm in cross_ms:  # repeated phrases each become a fragment
+                _ev(evidence, sid, cm.group(0), None, cm.start(), cm.end())
             signals.append(make_signal(sid, "deterministic", weight, t_en, t_hi, d_en, d_hi))
 
-    if cred_request_span or remote_span:
+    if cred_request_span or remote_m:
         signals.append(make_signal(
             "credential_request", "deterministic", 30,
             "Asks for OTP/PIN/access", "OTP/PIN/access माँगा जा रहा है",
@@ -459,11 +532,18 @@ def detect(text: str, signals: list, evidence: list | None = None) -> list[str]:
             "कोई बैंक या अधिकारी कभी OTP, PIN, CVV, पासवर्ड या screen access नहीं माँगता।",
         ))
     elif cred_delivery:
-        _ev(evidence, "credential_delivery", _first_span(_CRED_DELIVERY, text) or "")
+        dm = _first_match(_CRED_DELIVERY, text)
+        if dm:
+            _ev(evidence, "credential_delivery", dm.group(0), None,
+                dm.start(), dm.end())
 
-    # advance-fee bait: a refund/prize you must SEND money to receive
+    # advance-fee bait: a refund/prize you must SEND money to receive —
+    # composite finding, TWO fragments (the bait and the demand)
     if bait_get_span and bait_send_span:
-        _ev(evidence, "advance_fee", f"{bait_get_span} + {bait_send_span}")
+        _ev(evidence, "advance_fee", bait_get_m.group(0), None,
+            bait_get_m.start(), bait_get_m.end())
+        _ev(evidence, "advance_fee", bait_send_m.group(0), None,
+            bait_send_m.start(), bait_send_m.end())
         signals.append(make_signal(
             "advance_fee_refund", "deterministic", 30,
             "Pay-to-receive 'refund/prize'", "'Refund/इनाम' के लिए पहले पैसे",
@@ -471,9 +551,13 @@ def detect(text: str, signals: list, evidence: list | None = None) -> list[str]:
             "असली refund या इनाम के लिए कभी पहले पैसे नहीं भेजने पड़ते।",
         ))
 
-    # OLX/army mechanic: "approve my collect request to RECEIVE money"
+    # OLX/army mechanic: "approve my collect request to RECEIVE money" —
+    # composite finding, two fragments
     if collect_approve:
-        _ev(evidence, "collect_approve", "collect request + approve")
+        _ev(evidence, "collect_approve", collect_phrase_m.group(0), None,
+            collect_phrase_m.start(), collect_phrase_m.end())
+        _ev(evidence, "collect_approve", approve_m.group(0), None,
+            approve_m.start(), approve_m.end())
         signals.append(make_signal(
             "collect_to_receive_bait", "deterministic", 25,
             "Asked to APPROVE to receive money", "पैसे 'पाने' के लिए approve करने को कहा",
@@ -485,12 +569,14 @@ def detect(text: str, signals: list, evidence: list | None = None) -> list[str]:
     # High-precision relation (threat-set + demand-verb + money context), so a
     # single hit is danger-grade — blackmail is unambiguous. Without the money
     # context ("recorded your presentation, transfer the file") it never fires.
-    disclosure_span = _first_span(_DISCLOSURE_THREAT, text)
+    disclosure_m = _first_match(_DISCLOSURE_THREAT, text)
+    disclosure_span = disclosure_m.group(0) if disclosure_m else None
     money_ctx = re.search(r"₹|\brs\.?\s?\d|rupee|हज़ार|hazaa?r|lakh|लाख|\b\d{3,7}\b",
                           text, re.I)
     if disclosure_span and money_ctx and (
             bait_send_span or _first_span(_DEMAND_VERBS, stripped_all)):
-        _ev(evidence, "extortion_disclosure", disclosure_span)
+        _ev(evidence, "extortion_disclosure", disclosure_span, None,
+            disclosure_m.start(), disclosure_m.end())
         signals.append(make_signal(
             "extortion_disclosure", "deterministic", 60,
             "Blackmail: pay or be exposed", "Blackmail: पैसे दो वरना बदनाम",
@@ -500,7 +586,8 @@ def detect(text: str, signals: list, evidence: list | None = None) -> list[str]:
     elif disclosure_span:
         # threat held over the user but no demand stated YET — this must reach
         # the threat_no_ask clarification, never a green card
-        _ev(evidence, "threat_framing", disclosure_span)
+        _ev(evidence, "threat_framing", disclosure_span, None,
+            disclosure_m.start(), disclosure_m.end())
         signals.append(make_signal(
             "threat_framing", "deterministic", 15,
             "Threat of exposure/harm", "बदनामी/नुकसान की धमकी",
@@ -509,8 +596,9 @@ def detect(text: str, signals: list, evidence: list | None = None) -> list[str]:
         ))
 
     # family emergency + send-money (held-out v2 misses s04/s30)
-    if family_trouble_span and _first_span(_SEND_DIRECTIVE, stripped_all):
-        _ev(evidence, "family_emergency", family_trouble_span)
+    if family_trouble_span and send_dir_m:
+        _ev(evidence, "family_emergency", family_trouble_span, None,
+            family_m.start(), family_m.end())
         signals.append(make_signal(
             "family_emergency_pressure", "deterministic", 30,
             "Emergency + send money NOW", "इमरजेंसी बताकर तुरंत पैसे",
@@ -521,8 +609,9 @@ def detect(text: str, signals: list, evidence: list | None = None) -> list[str]:
     # "new number" identity claim + money ask: never auto-confirm as fraud —
     # this signal asks for verification, not conviction (weight lands in
     # suspicious, and the advice is to call the OLD stored number).
-    if new_number_span and _first_span(_SEND_DIRECTIVE, stripped_all):
-        _ev(evidence, "new_number_request", new_number_span)
+    if new_number_span and send_dir_m:
+        _ev(evidence, "new_number_request", new_number_span, None,
+            newnum_m.start(), newnum_m.end())
         signals.append(make_signal(
             "unverified_family_request", "deterministic", 30,
             "Unverified 'new number' asking for money", "बिना पहचान पक्की किए पैसे की माँग",
@@ -530,8 +619,9 @@ def detect(text: str, signals: list, evidence: list | None = None) -> list[str]:
             "नया नंबर खुद को अपना बताकर पैसे माँगे तो पहले उनके पुराने नंबर पर call करके पक्का करें — उसके बिना कुछ न भेजें।",
         ))
 
-    if chain_span:
-        _ev(evidence, "chain_forward", chain_span)
+    if chain_m:
+        _ev(evidence, "chain_forward", chain_m.group(0), None,
+            chain_m.start(), chain_m.end())
         signals.append(make_signal(
             "chain_forward_bait", "deterministic", 25,
             "Forward-to-groups chain bait", "ग्रुप-में-forward वाला चारा",
@@ -540,7 +630,8 @@ def detect(text: str, signals: list, evidence: list | None = None) -> list[str]:
         ))
 
     if apk_m:
-        _ev(evidence, "apk_file", apk_m.group(0))
+        _ev(evidence, "apk_file", apk_m.group(0), None,
+            apk_m.start(), apk_m.end())
         signals.append(make_signal(
             "apk_sideload", "deterministic", 30,
             "Asks to install an app file (.apk)", "सीधे app file (.apk) install कराना",

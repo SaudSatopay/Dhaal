@@ -177,6 +177,24 @@ export default function CheckPage() {
   // grounded rules explanation, no LLM/TTS wait); AI narration + audio then
   // upgrade the SAME card in place. The verdict never changes after render.
   const [narrating, setNarrating] = useState(false);
+  const [clarifying, setClarifying] = useState(false);
+
+  // H16 §4B: send the tapped answer; the SAME check upgrades in place with a
+  // what-changed line. Stale-guard: only apply to the check it belongs to.
+  async function clarify(cid: string, answerId: string) {
+    setClarifying(true);
+    try {
+      const upd = await api<Check>(`/api/check/${cid}/clarify`, {
+        method: "POST",
+        body: JSON.stringify({ answer_id: answerId }),
+      });
+      setResult((r) => (r && r._id === cid ? upd : r));
+    } catch {
+      // question stays on screen — the user can paste more instead
+    } finally {
+      setClarifying(false);
+    }
+  }
 
   async function runCheck(
     type: InputType,
@@ -713,6 +731,28 @@ export default function CheckPage() {
                     ))}
                 </ul>
               )}
+              {/* H16 §4B: one-tap answers — a controlled tree, "I don't know"
+                  included; the answer becomes labelled context, never fake
+                  message text */}
+              {result.needs_context?.options &&
+                result.needs_context.options.length > 0 &&
+                !result.user_context && (
+                  <div className="mt-3 grid gap-1.5">
+                    {result.needs_context.options.map((o) => (
+                      <button
+                        key={o.id}
+                        disabled={clarifying}
+                        onClick={() => clarify(result._id, o.id)}
+                        className="border-2 border-ink bg-paper px-3 py-2 text-left text-sm font-semibold hover:bg-saffron disabled:opacity-40"
+                      >
+                        {lang === "en" ? o.en : o.hi}
+                        <span className="plate ml-2 font-normal text-inksoft">
+                          {lang === "en" ? o.hi : o.en}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
               <button
                 onClick={() => {
                   setResult(null);
@@ -748,6 +788,17 @@ export default function CheckPage() {
                     checkVerdict={result.verdict}
                   />
                 </div>
+              )}
+              {/* H16 §4B: what the answer changed — evidence-labelled */}
+              {result && !busy && result.what_changed && (
+                <p className="mb-2 border-2 border-ink bg-cautiontint px-3 py-2 text-sm font-semibold">
+                  {pick(lang, S_CHECK.answerChanged)[0]}{" "}
+                  <span className="font-normal">
+                    {lang === "en"
+                      ? result.what_changed.because_en
+                      : result.what_changed.because_hi}
+                  </span>
+                </p>
               )}
               {result && !busy && narrating && (
                 <p className="mb-2 animate-pulse border border-line bg-paper2 px-3 py-1.5 text-center font-mono text-xs text-inksoft">

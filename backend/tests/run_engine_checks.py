@@ -352,4 +352,46 @@ check("H16 innocent trigger words (passport verification + court) stay clean",
       "Kal police station gaye the passport verification ke liye, sab theek ho gaya. Parso court me chacha ke property case ki date hai.",
       "no_known_risk", indicators={}, forbid_signal="script_digital_arrest")
 
+# --- H16 evidence-offset contract (UTF-16 code units == JS string indices) --
+def _u16_slice(t, a, b):
+    return t.encode("utf-16-le")[a * 2:b * 2].decode("utf-16-le")
+
+
+def ev_check(name, cond):
+    global PASS
+    print(("ok  " if cond else "FAIL"), name)
+    if not cond:
+        sys.exit(f"FAILED: {name}")
+    PASS += 1
+
+
+_t_emoji = ("🚨 भाई तुरंत सुनो!! Refund chahiye to pehle ₹99 bhejo. तुरंत karo, "
+            "तुरंत! 💸 refund.help@okaxis par bhejna hai 9822110033")
+_v, _s, _sig, _c, _f = run_signal_engine(_t_emoji, "text", {})
+_evs = _f["evidence"]
+ev_check("evidence: every offset record slices back to its own quote (emoji+Hindi)",
+         all(_u16_slice(_t_emoji, e["start"], e["end"]) == e["quote"]
+             for e in _evs if e.get("start") is not None))
+ev_check("evidence: ids unique and stable-shaped",
+         len({e["id"] for e in _evs}) == len(_evs)
+         and all(e["id"].startswith("ev") for e in _evs))
+ev_check("evidence: composite advance-fee carries BOTH fragments (bait + demand)",
+         sum(1 for e in _evs if e["kind"] == "advance_fee") >= 2)
+ev_check("evidence: repeated phrase yields multiple fragments",
+         sum(1 for e in _evs if e["kind"] == "urgency_framing") >= 2)
+ev_check("evidence: destinations extracted, marked factual, never signal-linked",
+         any(e["kind"] == "destination" and e["factual"] and e["signal"] is None
+             for e in _evs))
+ev_check("evidence: risk records link to their signal ids",
+         all((e["signal"] in {s2["id"] for s2 in _sig}) for e in _evs
+             if e["signal"] is not None and not e["factual"]))
+# overlap: a span may sit inside another (category phrase inside a sentence
+# record) — both must survive, neither silently dropped
+_t_over = ("An OTP has been sent to your phone just now. Send it here to "
+           "continue, warna account band ho jayega.")
+_v2, _s2, _sig2, _c2, _f2 = run_signal_engine(_t_over, "text", {})
+_kinds2 = [e["kind"] for e in _f2["evidence"]]
+ev_check("evidence: overlapping findings all preserved (context + request + threat)",
+         "code_delivery_context" in _kinds2 and "credential_request" in _kinds2)
+
 print(f"\nALL {PASS} CHECKS PASSED")
