@@ -130,6 +130,8 @@ export const S_CHECK = {
   intentJust: { hi: "बस जाँचना है", en: "Just checking" },
   ctxTitle: { hi: "और जानकारी चाहिए", en: "Need more context" },
   ctxAction: { hi: "पूरा message ऊपर paste करें", en: "Paste the full message above" },
+  // H15 verdict-first: narration upgrades the card after the verdict lands
+  narrating: { hi: "✦ AI विवरण आ रहा है — verdict final है, बदलेगा नहीं", en: "✦ AI detail incoming — the verdict is already final" },
   // H14: unreadable/malformed payment code — distinct from "need context"
   unsupTitle: { hi: "पढ़ा नहीं जा सका", en: "Could not read this" },
   unsupAction: { hi: "दुबारा scan करें", en: "Rescan" },

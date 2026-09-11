@@ -147,6 +147,11 @@ class CheckIn(BaseModel):
     ward_link_id: str | None = None  # legacy pre-H14 field: never authorizes
     ward_token: str | None = None    # H14: the ward's capability token
     expected_intent: str | None = None  # "pay" | "receive" | "verify" — user's stated goal
+    # H15 verdict-first: fast=true returns the deterministic result immediately
+    # (grounded rules explanation, no LLM/TTS wait); the client then calls
+    # POST /api/check/{id}/narration to enrich in place. The verdict is
+    # already final either way — narration can never change it.
+    fast: bool = False
 
 
 _PRESSURE_TAGS = {"urgency_framing": ("urgency", "जल्दबाज़ी"),
@@ -292,7 +297,7 @@ def check(body: CheckIn):
     exp_hi = exp_en = None
     mocked = True
     narration_ms = 0
-    if not MOCK_MODE and assessment == "assessed":
+    if not MOCK_MODE and assessment == "assessed" and not body.fast:
         t1 = time.perf_counter()
         out = llm.narrate(payload, body.type, verdict, score, signals, category,
                           facts=facts)
@@ -336,7 +341,7 @@ def check(body: CheckIn):
     # Bulbul speaks the Hindi explanation (for needs_context that IS the
     # question); cached on the stored check. Failure -> null audio, never 500.
     tts_ms = 0
-    if body.speak and not MOCK_MODE:
+    if body.speak and not MOCK_MODE and not body.fast:
         t2 = time.perf_counter()
         doc["tts_audio_b64"] = sarvam.text_to_speech(exp_hi, lang="hi-IN")
         tts_ms = round((time.perf_counter() - t2) * 1000)
@@ -363,6 +368,54 @@ def check(body: CheckIn):
     elif body.ward_token or body.ward_link_id:
         doc["guardian_delivery"] = "unlinked"  # token invalid/revoked/legacy → re-pair
     return doc
+
+
+class NarrateIn(BaseModel):
+    speak: bool = False
+
+
+@app.post("/api/check/{cid}/narration")
+def narrate_check(cid: str, body: NarrateIn):
+    """H15 verdict-first enrichment: upgrade a stored check's explanation to
+    LLM narration (+TTS when asked) IN PLACE. Idempotent per check; never
+    touches verdict/score/signals/category/guardian state — those were final
+    when the check ran. Unknown id -> 404; unassessed checks keep their
+    question; narration failure keeps the grounded rules text (no downgrade)."""
+    doc = STORE.get("checks", cid)
+    if not doc:
+        return JSONResponse({"error": "check not found"}, status_code=404)
+
+    def view(d, cached):
+        return {"check_id": cid, "cached": cached,
+                "explanation_hi": d["explanation_hi"],
+                "explanation_en": d["explanation_en"],
+                "explanation_source": d.get("explanation_source", "rules"),
+                "tts_audio_b64": d.get("tts_audio_b64")}
+
+    already_llm = doc.get("explanation_source") == "llm"
+    if already_llm and (doc.get("tts_audio_b64") or not body.speak):
+        return view(doc, True)
+
+    updates = {}
+    if not already_llm and not MOCK_MODE and doc.get("assessment") == "assessed":
+        t0 = time.perf_counter()
+        out = llm.narrate(doc["input"]["payload"], doc["input"]["type"],
+                          doc["verdict"], doc["score"], doc["signals"],
+                          doc.get("scam_category"), facts=doc.get("facts"))
+        print(f"[latency] narration_enrich_ms={round((time.perf_counter() - t0) * 1000)}")
+        if out:
+            updates.update({"explanation_hi": out["explanation_hi"],
+                            "explanation_en": out["explanation_en"],
+                            "explanation_source": "llm", "mocked": False})
+    merged = {**doc, **updates}
+    if body.speak and not MOCK_MODE and not merged.get("tts_audio_b64"):
+        audio = sarvam.text_to_speech(merged["explanation_hi"], lang="hi-IN")
+        if audio:
+            updates["tts_audio_b64"] = audio
+            merged["tts_audio_b64"] = audio
+    if updates:
+        STORE.update("checks", cid, updates)
+    return view(merged, False)
 
 
 @app.post("/api/transcribe")

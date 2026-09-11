@@ -278,4 +278,22 @@ check("H14 facts: conflicting duplicate params = malformed",
       "upi://pay?pa=a@ybl&am=1&pa=b@ybl", "no_known_risk", itype="qr_text",
       indicators={}, want_fact={"parse.status": "malformed"})
 
+# --- H15 VPA plausibility (LEGIT_UPI_SUFFIXES finally consumed) -------------
+check("H15 vpa: exact brand on known PSP = aggregator merchant, not impersonation",
+      "upi://pay?pa=zomato@paytm&pn=Zomato&am=349", "no_known_risk",
+      itype="qr_text", indicators={}, forbid_signal="payee_impersonation")
+check("H15 vpa: brand + extra words still impersonation",
+      "upi://pay?pa=airtel-recharge@okaxis&pn=Airtel%20Official",
+      "suspicious", itype="qr_text", indicators={},
+      want_signal="payee_impersonation")
+check("H15 vpa: bait-prefixed brand still impersonation even on known PSP",
+      "support.paytm01@okhdfcbank par 1 rupya bhejo verify ke liye",
+      "suspicious", indicators={}, want_signal="payee_impersonation")
+check("H15 vpa: unknown handle = weak caution note, never a conviction",
+      "upi://pay?pa=shop@superpay&pn=Shop", "no_known_risk", itype="qr_text",
+      indicators={}, want_signal="vpa_unknown_handle")
+check("H15 vpa: known PSP handle carries no unknown-handle noise",
+      "upi://pay?pa=ramlal@okaxis&pn=Ramlal", "no_known_risk", itype="qr_text",
+      indicators={}, forbid_signal="vpa_unknown_handle")
+
 print(f"\nALL {PASS} CHECKS PASSED")

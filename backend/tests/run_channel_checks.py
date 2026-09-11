@@ -257,4 +257,35 @@ benign_q = c.post("/api/check", json={"type": "text",
 ok("rich benign text unaffected by new gates",
    benign_q["assessment"] == "assessed" and benign_q["verdict"] == "no_known_risk")
 
+# H15 verdict-first: fast path + in-place narration enrichment ---------------
+fast = c.post("/api/check", json={"type": "text", "payload": FX.KYC_SCAM_TEXT,
+                                  "fast": True, "speak": True}).json()
+ok("fast check skips narration AND tts (verdict final, instant)",
+   fast["verdict"] == "danger" and fast["explanation_source"] == "rules"
+   and fast["timings"]["narration_ms"] == 0 and fast["timings"]["tts_ms"] == 0
+   and fast["tts_audio_b64"] is None)
+n1 = c.post(f"/api/check/{fast['_id']}/narration", json={"speak": False})
+ok("narration enrich answers offline without downgrade",
+   n1.status_code == 200 and n1.json()["explanation_source"] == "rules"
+   and n1.json()["explanation_hi"] == fast["explanation_hi"])
+ok("narration on unknown id -> 404",
+   c.post("/api/check/chk_nope/narration", json={}).status_code == 404)
+nc_doc = c.post("/api/check", json={"type": "text", "payload": "9876512345",
+                                    "fast": True}).json()
+n2 = c.post(f"/api/check/{nc_doc['_id']}/narration", json={"speak": False}).json()
+ok("narration keeps the context question on unassessed checks",
+   nc_doc["assessment"] == "needs_context"
+   and n2["explanation_hi"] == nc_doc["explanation_hi"])
+# guardian request must be created ONCE by the fast call, never by enrichment
+gl3 = c.post("/api/guardian/links", json={"ward_name": "F", "guardian_name": "G"}).json()
+wt3 = c.post("/api/guardian/links/claim", json={"pair_code": gl3["pair_code"]}).json()
+fchk = c.post("/api/check", json={"type": "text", "payload": FX.KYC_SCAM_TEXT,
+                                  "fast": True, "ward_token": wt3["ward_token"]}).json()
+c.post(f"/api/check/{fchk['_id']}/narration", json={"speak": False})
+c.post(f"/api/check/{fchk['_id']}/narration", json={"speak": False})
+inbox3 = c.get("/api/guardian/requests",
+               headers={"X-Guardian-Token": gl3["guardian_token"]}).json()["requests"]
+ok("enrichment never duplicates the guardian ping",
+   sum(1 for r in inbox3 if r["check_id"] == fchk["_id"]) == 1)
+
 print(f"\nALL {P} CHANNEL CHECKS PASSED")

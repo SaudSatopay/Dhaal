@@ -16,8 +16,18 @@ Parse statuses (mutually exclusive per URI):
 import re
 from urllib.parse import parse_qs, unquote_plus, urlparse
 
-from data.brands import BRAND_OWN_SUFFIXES, SUSPICIOUS_VPA_WORDS
+from data.brands import BRAND_OWN_SUFFIXES, LEGIT_UPI_SUFFIXES, SUSPICIOUS_VPA_WORDS
 from engine.common import brand_token_match, extract_vpas, host_tokens, make_signal
+
+
+def _plausible_merchant(local: str, suffix: str, brand: str) -> bool:
+    """H15 (VPA plausibility): `zomato@paytm` — the EXACT brand name as the
+    whole local part on a known PSP handle — is how aggregator-issued merchant
+    VPAs actually look, so it is plausible, not impersonation. Anything with
+    extra words (`support.zomato`, `airtel-recharge`) keeps flagging: real
+    merchant handles don't carry bait prefixes. Fixes published v2-comparison
+    regression b04 generically, no per-brand suffix lists needed."""
+    return local == brand and ("@" + suffix) in LEGIT_UPI_SUFFIXES
 
 UPI_URI_RE = re.compile(r"upi://[^\s\"'<>]*", re.I)
 _REFUND_WORDS = ("refund", "रिफंड", "cashback", "कैशबैक", "वापसी", "reward")
@@ -138,13 +148,15 @@ def detect(text: str, input_type: str, signals: list,
         # payee claiming to be a brand (name or VPA local part)
         pn_l = (u["payee_name"] or "").lower()
         pa_l = u["payee_vpa"] or ""
+        pa_local, _, pa_suffix = pa_l.partition("@")
         brand = brand_token_match(host_tokens(pn_l)) or (
-            pa_l and brand_token_match(host_tokens(pa_l.split("@")[0]))
+            pa_l and brand_token_match(host_tokens(pa_local))
         )
         if brand:
             own = BRAND_OWN_SUFFIXES.get(str(brand), ())
-            suffix = "@" + pa_l.partition("@")[2] if pa_l else ""
-            if not (suffix and suffix in own):
+            suffix = "@" + pa_suffix if pa_l else ""
+            if not (suffix and suffix in own) \
+                    and not (pa_l and _plausible_merchant(pa_local, pa_suffix, str(brand))):
                 info["claimed_brand"] = str(brand)
                 signals.append(make_signal(
                     "payee_impersonation", "deterministic", 30,
@@ -153,6 +165,16 @@ def detect(text: str, input_type: str, signals: list,
                     f"Payee name/ID imitates {str(brand).upper()} but is not a verified merchant handle.",
                     f"Payee का नाम/ID {str(brand).upper()} जैसा है पर verified merchant नहीं है।",
                 ))
+
+        # VPA plausibility (H15): a payee handle no known PSP issues is a weak
+        # caution — never proof (the PSP list is a seed, not the registry).
+        if pa_l and pa_suffix and ("@" + pa_suffix) not in LEGIT_UPI_SUFFIXES:
+            signals.append(make_signal(
+                "vpa_unknown_handle", "deterministic", 12,
+                "Unrecognized UPI handle", "अनजाना UPI handle",
+                f"'@{pa_suffix}' is not a handle from the known PSP list — verify the payee name extra carefully.",
+                f"'@{pa_suffix}' जाने-पहचाने PSP handles में नहीं है — नाम-पता और भी ध्यान से जाँचें।",
+            ))
 
     # INTENT MISMATCH — only against an EXECUTABLE payment request (valid
     # parse). Every valid upi:// request, pay or collect, moves money OUT of
@@ -191,7 +213,8 @@ def detect(text: str, input_type: str, signals: list,
         brand = brand_token_match(host_tokens(local))
         if brand:
             own = BRAND_OWN_SUFFIXES.get(str(brand), ())
-            if ("@" + suffix) not in own:
+            if ("@" + suffix) not in own \
+                    and not _plausible_merchant(local, suffix, str(brand)):
                 info["claimed_brand"] = info["claimed_brand"] or str(brand)
                 signals.append(make_signal(
                     "payee_impersonation", "deterministic", 30,

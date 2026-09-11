@@ -173,6 +173,11 @@ export default function CheckPage() {
     }
   }, [result]);
 
+  // H15 verdict-first: the deterministic verdict renders in ~1s (fast:true —
+  // grounded rules explanation, no LLM/TTS wait); AI narration + audio then
+  // upgrade the SAME card in place. The verdict never changes after render.
+  const [narrating, setNarrating] = useState(false);
+
   async function runCheck(
     type: InputType,
     text: string,
@@ -191,13 +196,37 @@ export default function CheckPage() {
           type,
           payload: text,
           lang: apiLang(lang),
-          speak,
+          speak: false,
+          fast: true,
           expected_intent: expectedIntent,
           ward_token: wardPair?.ward_token ?? null,
         }),
       });
       setResult(res);
       setResultFromVoice(type === "voice_transcript");
+      if (res.assessment === "assessed") {
+        setNarrating(true);
+        api<Partial<Check> & { check_id: string }>(
+          `/api/check/${res._id}/narration`,
+          { method: "POST", body: JSON.stringify({ speak }) }
+        )
+          .then((n) =>
+            setResult((r) =>
+              r && r._id === n.check_id
+                ? {
+                    ...r,
+                    explanation_hi: n.explanation_hi ?? r.explanation_hi,
+                    explanation_en: n.explanation_en ?? r.explanation_en,
+                    explanation_source: n.explanation_source ?? r.explanation_source,
+                    tts_audio_b64: n.tts_audio_b64 ?? r.tts_audio_b64,
+                    mocked: n.explanation_source === "llm" ? false : r.mocked,
+                  }
+                : r
+            )
+          )
+          .catch(() => {}) // rules text already on screen — never downgrade
+          .finally(() => setNarrating(false));
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -719,6 +748,11 @@ export default function CheckPage() {
                     checkVerdict={result.verdict}
                   />
                 </div>
+              )}
+              {result && !busy && narrating && (
+                <p className="mb-2 animate-pulse border border-line bg-paper2 px-3 py-1.5 text-center font-mono text-xs text-inksoft">
+                  {pick(lang, S_CHECK.narrating)[0]}
+                </p>
               )}
               {result && !busy && (
                 <VerdictCard
