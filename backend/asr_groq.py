@@ -14,7 +14,12 @@ _client = httpx.Client(timeout=httpx.Timeout(25.0, connect=5.0))
 
 
 def _key() -> str:
-    return os.getenv("GROQ_API_KEY", "").strip()
+    # keys travel through consoles and shells that smuggle BOMs/CRLF into the
+    # stored value; a non-latin-1 char in the Authorization header makes httpx
+    # raise UnicodeEncodeError before any network happens. Keep printable
+    # ASCII only — API keys are ASCII by construction.
+    raw = os.getenv("GROQ_API_KEY", "")
+    return "".join(ch for ch in raw if 32 < ord(ch) < 127)
 
 
 def available() -> bool:
