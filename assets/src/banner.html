@@ -1,0 +1,35 @@
+<!doctype html><meta charset="utf-8">
+<style>
+  :root { --paper:#F7F3E8; --ink:#14181F; --saffron:#E8A13B; --red:#C62828; --dim:#6E6551; }
+  * { margin:0; box-sizing:border-box; }
+  body { width:1600px; height:420px; background:var(--paper); font-family:"Nirmala UI",sans-serif; overflow:hidden; }
+  .tape { height:24px; background:repeating-linear-gradient(45deg, var(--saffron) 0 30px, var(--ink) 30px 60px); }
+  .row { height:372px; display:flex; align-items:center; padding:0 84px; gap:56px; }
+  .mark { display:flex; align-items:center; gap:44px; }
+  .word .big { font-size:200px; font-weight:700; color:var(--ink); line-height:.9; letter-spacing:-4px; }
+  .word .sub { font-family:Consolas,monospace; font-size:26px; color:var(--dim); letter-spacing:6px; margin-top:18px; }
+  .tag { margin-left:auto; text-align:left; }
+  .tag .l1 { font-size:58px; font-weight:700; color:var(--ink); line-height:1.25; }
+  .tag .l1 b { color:var(--red); }
+  .tag .l2 { font-family:Consolas,monospace; font-size:28px; color:var(--ink); margin-top:22px; font-weight:700; }
+  .tag .l3 { font-family:Consolas,monospace; font-size:23px; color:var(--dim); margin-top:10px; }
+</style>
+<div class="tape"></div>
+<div class="row">
+  <div class="mark">
+    <svg width="170" height="210" viewBox="0 0 170 210">
+      <polygon points="8,8 162,8 162,128 85,202 8,128" fill="none" stroke="#14181F" stroke-width="12"/>
+      <polygon points="40,40 130,40 130,116 85,160 40,116" fill="#E8A13B"/>
+    </svg>
+    <div class="word">
+      <div class="big">ढाल</div>
+      <div class="sub">DHAAL — डिजिटल ठगी के ख़िलाफ़</div>
+    </div>
+  </div>
+  <div class="tag">
+    <div class="l1">पैसे भेजने से पहले —<br><b>एक जाँच।</b></div>
+    <div class="l2">The pre-payment scam shield for every Indian.</div>
+    <div class="l3">message · QR · link · number · voice → verdict, in your language</div>
+  </div>
+</div>
+<div class="tape"></div>
