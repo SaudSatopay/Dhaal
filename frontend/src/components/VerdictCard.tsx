@@ -98,7 +98,12 @@ export default function VerdictCard({
       timers.push(setTimeout(() => setRevealed(i), 200 + i * 150));
     }
     const total = 200 + n * 150 + 300;
-    timers.push(setTimeout(() => setSlammed(true), total));
+    timers.push(
+      setTimeout(() => {
+        setSlammed(true);
+        setShownScore(check.score); // throttled tabs must never slam with a stale count
+      }, total)
+    );
     let s = 0;
     const step = Math.max(1, check.score / Math.max(1, total / 40));
     const si = setInterval(() => {
