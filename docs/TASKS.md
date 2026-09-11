@@ -44,12 +44,13 @@ Claim: `[ ]` → `[WIP-saud]` / `[WIP-parva]` / `[WIP-harsh]`, **push immediatel
 - [x] FOR saud, FROM harsh — `backend/data/brands.py` is seeded (~30 official domains, brand tokens, shorteners, scam TLDs); extend it during your fixtures pass (H3–H5). After ANY edit to `backend/engine/` or `backend/data/`, run `backend/tests/run_engine_checks.py` — all golden-path beats are asserted there. *(done — extended at H3–H5, both suites run on every backend-touching change since)*
 - [x] FOR saud, FROM harsh — deploy latest backend + env keys → **deploys are CURRENT** (backend w/ engine + Claude/Atlas fallback paths, frontend w/ real /check) and reseeded; all 4 beats verified live (mocked=true explanations as expected). Env keys themselves = Blocker below.
 
-- [ ] FOR saud, FROM parva — **frontend redeploy when convenient**: report flow + `/intel` + `/guardian` + `/recover` + landing hero all landed after your last deploy (`vercel --prod --yes` in `frontend/`). All flows E2E-tested locally against the engine; flywheel beat 6 verified 43→44.
+- [x] FOR saud, FROM parva — **frontend redeploy** — DONE, all your surfaces are live on dhaal-delta.vercel.app (landing verified in browser, "shield online").
+- [ ] FOR harsh, FROM saud — **SARVAM_API_KEY is live** in root `.env` (local) and backend Vercel prod env (key validated: 200 on /translate). Your H8–H10 ASR/TTS layer is fully unblocked — ship it and it works with zero env steps.
 - [ ] FOR harsh, FROM parva — guardian pairing UX: frontend hands the ward a link/QR carrying `link_id` (works today, demo-safe, live on `/guardian`). For the product-grade "ward types the code" flow, add `GET /api/guardian/links/resolve?pair_code=DHAAL-XXXX` → link object (contract change yours to push). NOT demo-blocking — fold into your P1 H10–H12 guardian pass if there's room.
 
 ## Blockers (Saud clears these first)
 
-- [ ] **KEYS — 2 of 3 remaining (human-only — Saud):** `ANTHROPIC_API_KEY` (console.anthropic.com) + `SARVAM_API_KEY` (sponsor desk / dashboard.sarvam.ai) → root `.env` + `vercel env add <NAME> production` in `backend/`, then redeploy. Until then explanations stay canned (`mocked:true`) and voice ASR/TTS stays fixture-only.
+- [x] ~~KEYS~~ **ALL 3 KEYS DONE** — `MONGODB_URI` (Atlas live, `store:"atlas"`), `ANTHROPIC_API_KEY` (**Claude narration live in prod**, `mocked:false`, ~5.5s warm, explanations cite detected signals), `SARVAM_API_KEY` (validated 200, staged in prod env — activates the moment Harsh's ASR/TTS code lands). Local `.env` + Vercel prod env both complete. 🔐 rotate all three after the event (they passed through chat).
 - [x] ~~MONGODB_URI~~ **ATLAS IS LIVE + DURABLE** (`store:"atlas"` on prod health): M0 cluster, 0.0.0.0/0 active, sample dataset dropped (quota freed), full seed done — flywheel number carries **86 verified reports**, 245 live intel reports feeding trends. ⚠️ **Do NOT re-run `scripts/seed.py` against prod** — it is not idempotent; counts inflate on every run. Local dev (memory store) reseeding is fine.
 
 ## Done
