@@ -28,9 +28,9 @@ Paste any message, link, UPI ID, or QR photo — or just **speak** — and Dhaal
 
 ---
 
-| The poster, not a SaaS dashboard | The war room, live from the community |
+| The poster, not a SaaS dashboard | The verdict, not a black box |
 |:--:|:--:|
-| <img src="assets/shot-landing.png" alt="Landing — suraksha poster" width="330"/> | <img src="assets/shot-intel.png" alt="Community intel war room" width="620"/> |
+| <img src="assets/shot-landing.png" alt="Landing — suraksha poster with the live scam radar" width="360"/> | <img src="assets/shot-check.png" alt="Verdict card — DO THIS NOW triage, Scam X-Ray, weighted signals" width="360"/> |
 
 ---
 
@@ -69,8 +69,6 @@ flowchart LR
     C --> V
     Q -- "yes" --> V["⚖️ VERDICT + REALITY CHECK<br/>promised-IN vs requested-OUT<br/>what stays unverified"]
 ```
-
-<div align="center"><img src="assets/shot-check.png" alt="Check flow — X-Ray, question, verdict" width="640"/></div>
 
 - **🔬 X-Ray is surgically precise.** Evidence comes from the backend with stable ids and **UTF-16 code-unit offsets** (a documented convention that stays exact between Python and JavaScript — Hindi and emoji included; the frontend never re-searches text). Multiple fragments per finding, repeated phrases, and **overlapping findings all survive**; tapping a highlight explains what *that* phrase supports. Extracted numbers/UPI IDs/links are tagged **जानकारी (info)** — identifiers on record, explicitly *not* accusations, ownership explicitly *not* verified.
 - **❓ The question is targeted, not chatty.** "OTP आपसे कोई माँग रहा है, या आप खुद app में डाल रहे हैं?" · "पैसे भेजने थे या आने थे?" One round, smallest useful question, chips + free text + *I don't know*. The answer is stored **next to** the message as `user_context` — the card then shows **"आपके जवाब से जाँच बदली"** with before → after. A reassuring answer can never erase direct evidence of a dangerous demand.
@@ -168,6 +166,8 @@ one victim reports  →  human moderator verifies  →  indicator joins the bloc
 ```
 
 A scam script burned in Jaipur today can't work in Jodhpur tomorrow. The blocklist is durable (Atlas), human-verified (no rumour poisoning), ledgered (exactly-once contributions, reconcilable), and visible (the war-room board shows the week's battle live).
+
+<div align="center"><img src="assets/shot-intel.png" alt="War desk — live trends, demo-tagged seed data, moderator desk gated behind a key" width="900"/></div>
 
 ## Voice, both directions
 
