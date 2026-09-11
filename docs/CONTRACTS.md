@@ -37,7 +37,7 @@ API shapes, data models, env names. **Owning lane pushes the contract change BEF
   ],
   "explanation_hi": "यह message बैंक से नहीं है…",
   "explanation_en": "…",
-  "scam_category": "kyc_expiry | lottery | digital_arrest | fake_collect | electricity | olx_army | customer_care | other | null",
+  "scam_category": "kyc_expiry | lottery | digital_arrest | fake_collect | electricity | olx_army | customer_care | job_scam | loan_fee | other | null",
   "tts_audio_b64": null,
   "mocked": false,
   "created_at": "ISO8601"
