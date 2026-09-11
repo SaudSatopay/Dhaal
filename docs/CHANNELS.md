@@ -39,6 +39,32 @@ message up to **5 verified recipient numbers** — enough for the demo + judges.
 8. Test: from a verified phone, message the test number any scam text → the
    verdict reply lands in the same chat.
 
+### Delivery semantics (H16 — read this before claiming guarantees)
+
+- Inbound: EVERY message across all entries/changes is **persisted before the
+  webhook acks** (atomic insert on Meta's message id = first-writer-wins
+  dedupe). Receipts (`statuses`) are never analyzed.
+- Outbound: every reply lives in a per-event **outbox** with full attempt
+  history, classified failures (2xx sent · 429/5xx/transport → backoff
+  60s→3h, max 6 · 401/403 config → slow retry · other 4xx → permanent) and a
+  CAS **lease** so concurrent drains never double-send.
+- **Delivery is AT-LEAST-ONCE:** a transport timeout is ambiguous (Meta may
+  have sent it), we retry, and a rare duplicate reply is the accepted cost of
+  never silently dropping one. No exactly-once claim is made.
+- Retries are driven by: the immediate in-request attempt → opportunistic
+  drains piggybacked on webhook traffic → `GET/POST /api/wa/outbox/drain`
+  (auth: mod key, or Vercel Cron's `Authorization: Bearer $CRON_SECRET`).
+  vercel.json ships a **daily** cron — Vercel Hobby's floor. Minute-level
+  retry cadence honestly requires an external pinger (e.g. cron-job.org
+  hitting the drain URL) or a paid cron; without one, a failed send waits for
+  the next inbound message or the daily cron. Set `CRON_SECRET` in env.
+- Crash recovery: drains also rewind stale `sending` leases and (re)analyze
+  events stuck in `accepted`/`analyzing` — abandoned work completes instead
+  of vanishing.
+- Clarification over WhatsApp: a needs-context question arms a 30-minute
+  sender-scoped state; the sender's next short answer routes into the SAME
+  check (chips keywords or free text), then the state clears.
+
 ### What the endpoint does (already deployed behavior)
 
 - `GET /api/wa/webhook` — Meta's handshake (verify token → echo challenge).
