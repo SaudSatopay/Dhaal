@@ -23,7 +23,8 @@ def _rx(words: list[str]) -> list[re.Pattern]:
 
 CATEGORIES: dict[str, tuple[int, list]] = {
     "digital_arrest": (35, _rx([
-        "digital arrest", "गिरफ", "arrest", "cyber crime", "साइबर", "cbi",
+        "digital arrest", "digitally arrest", "digitally arrested", "गिरफ",
+        "arrest", "arrested", "cyber crime", "साइबर", "cbi", "jail", "जेल",
         "narcotics", "money laundering", "parcel", "पार्सल", "courier pakda",
         "customs", "पुलिस", "police", "कोर्ट", "court warrant", "ed notice",
     ])),
@@ -82,6 +83,19 @@ _CROSS = [
      _rx(["processing fee", "verification fee", "वेरिफिकेशन फीस", "फीस भेज",
           "registration fee", "token amount", "security deposit",
           "शुल्क भेज", "फीस जमा"])),
+    # Victim-voiced coercion — judges type DESCRIPTIONS of the threat, not the
+    # scammer's script ("I was told to send money or I'd be arrested"). H11 miss.
+    ("coercion_extortion", 30, "Money demanded under threat", "धमकी देकर पैसे माँगे जा रहे हैं",
+     "Anyone conditioning your safety on a payment is running a scam — real authorities never do.",
+     "जो 'पैसे भेजो वरना…' कहे वह ठग है — असली अधिकारी कभी ऐसा नहीं करते।",
+     _rx(["if i don't send", "if i dont send", "if i don't pay", "if i dont pay",
+          "if i wouldn't send", "if i wouldnt send", "wouldn't send them money",
+          "send them money or", "send money or", "pay or else", "or else",
+          "told me to send money", "told to send money", "told to pay",
+          "asking me to pay", "asking me for money", "demanding money",
+          "threaten", "threatened", "धमकी", "वरना", "warna", "नहीं भेजे तो",
+          "नहीं भेजा तो", "नहीं दिए तो", "पैसे माँग रह", "paise maang",
+          "मजबूर कर", "डरा कर पैसे", "डरा रहे"])),
     ("threat_framing", 15, "Threat of penalty/action", "डराने-धमकाने की भाषा",
      "Fear of fines, arrest or disconnection is the pressure lever.",
      "जुर्माना, गिरफ़्तारी या कटौती का डर दिखाना ही इनका हथियार है।",

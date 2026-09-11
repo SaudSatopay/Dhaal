@@ -100,10 +100,13 @@ ward = c.get(f"/api/guardian/requests/{grid}").json()
 ok("guardian decision persists", dec["status"] == "blocked"
    and ward["status"] == "blocked" and ward["guardian_note"] == "beta, mat bhejo")
 
-# no-risk check with ward link must NOT ping the guardian
+# contract v2 (H11, PO): EVERY ward check reaches the guardian — clean ones as
+# informational "noted" rows (no decision needed), risky ones stay "pending".
 chk2 = c.post("/api/check", json={"type": "text", "payload": FX.LEGIT_BANK_TEXT,
                                   "ward_link_id": gl["_id"]}).json()
-ok("no guardian ping on clean check", "guardian_request_id" not in chk2)
+gr2 = c.get(f"/api/guardian/requests/{chk2.get('guardian_request_id', 'missing')}").json()
+ok("clean ward check appears as 'noted'", "guardian_request_id" in chk2
+   and gr2.get("status") == "noted" and gr2.get("verdict") == "no_known_risk")
 
 # resolve-by-code: exact, lowercase, bare code, unknown
 code = gl["pair_code"]

@@ -1,115 +1,135 @@
 <!doctype html><meta charset="utf-8">
 <title>Dhaal — pitch deck</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anek+Devanagari:wght@300;500;600;700;800&family=Mukta:wght@400;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
 <style>
-  :root { --paper:#F7F3E8; --ink:#14181F; --saffron:#E8A13B; --red:#C62828; --green:#2E7D32; --dim:#6E6551; }
+  :root { --paper:#F7F3E8; --ink:#14181F; --saffron:#E8A13B; --red:#C62828; --green:#2E7D32; --dim:#75695A; }
   * { margin:0; box-sizing:border-box; }
-  @page { size: 1280px 720px; margin:0; }
-  body { font-family:"Nirmala UI",sans-serif; color:var(--ink); }
+  @page { size:1280px 720px; margin:0; }
+  body { font-family:"Anek Devanagari","Nirmala UI",sans-serif; color:var(--ink); }
   .slide { width:1280px; height:720px; background:var(--paper); position:relative; overflow:hidden;
-           page-break-after:always; padding:64px 84px 56px; }
-  .tape { position:absolute; left:0; right:0; height:16px;
-          background:repeating-linear-gradient(45deg, var(--saffron) 0 26px, var(--ink) 26px 52px); }
-  .tape.top { top:0; } .tape.bot { bottom:0; }
-  .eyebrow { font-family:Consolas,monospace; font-size:20px; letter-spacing:6px; color:var(--dim); text-transform:uppercase; }
-  .foot { position:absolute; bottom:30px; left:84px; right:84px; display:flex; justify-content:space-between;
-          font-family:Consolas,monospace; font-size:16px; color:var(--dim); letter-spacing:3px; }
-  h1 { font-size:64px; font-weight:700; line-height:1.12; margin-top:10px; }
-  .accent { color:var(--red); }
-  .mono { font-family:Consolas,monospace; }
+           page-break-after:always; padding:70px 90px; }
+  .slide.ink { background:var(--ink); color:var(--paper); }
+  .tape { position:absolute; left:0; right:0; height:14px;
+          background:repeating-linear-gradient(45deg, var(--saffron) 0 24px, var(--ink) 24px 48px); }
+  .slide.ink .tape { background:repeating-linear-gradient(45deg, var(--saffron) 0 24px, var(--paper) 24px 48px); }
+  .tape.top{top:0} .tape.bot{bottom:0}
+  .mono { font-family:"IBM Plex Mono",Consolas,monospace; }
+  .eyebrow { font-family:"IBM Plex Mono",monospace; font-weight:600; font-size:19px; letter-spacing:8px;
+             text-transform:uppercase; color:var(--red); }
+  .slide.ink .eyebrow { color:var(--saffron); }
+  .foot { position:absolute; bottom:28px; left:90px; right:90px; display:flex; justify-content:space-between;
+          font-family:"IBM Plex Mono",monospace; font-size:15px; letter-spacing:4px; color:var(--dim); }
+  .slide.ink .foot { color:#8f8672; }
+  .rule { border:none; border-top:5px solid var(--ink); margin:26px 0 0; }
+  .stamp { position:absolute; width:190px; height:190px; border:7px solid var(--red); border-radius:50%;
+           display:flex; flex-direction:column; justify-content:center; text-align:center;
+           transform:rotate(-11deg); color:var(--red); }
+  .stamp .a { font-family:"IBM Plex Mono",monospace; font-weight:600; font-size:17px; letter-spacing:3px; }
+  .stamp .b { font-weight:800; font-size:44px; line-height:1.05; }
 
-  /* slide 1 */
-  .s1 { display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center; }
-  .s1 .word { font-size:230px; font-weight:700; line-height:.95; letter-spacing:-6px; }
-  .s1 .tag { font-size:54px; font-weight:700; margin-top:8px; }
-  .s1 .tag b { color:var(--red); }
-  .s1 .sub { font-family:Consolas,monospace; font-size:24px; color:var(--dim); margin-top:22px; letter-spacing:4px; }
-  .s1 .team { font-family:Consolas,monospace; font-size:20px; margin-top:34px; color:var(--ink); letter-spacing:2px; }
-  .s1 svg.shield { position:absolute; top:70px; left:92px; }
-  .s1 img.qr { position:absolute; top:70px; right:92px; width:120px; border:6px solid var(--ink); background:#fff; padding:6px; }
+  /* S1 */
+  .s1 { display:flex; flex-direction:column; justify-content:center; }
+  .s1 .word { font-size:330px; font-weight:800; line-height:.82; letter-spacing:-10px; }
+  .s1 .tagrow { display:flex; align-items:baseline; gap:26px; margin-top:8px; }
+  .s1 .tag { font-size:56px; font-weight:700; }
+  .s1 .tag b { color:var(--red); font-weight:800; }
+  .s1 .sub { font-family:"IBM Plex Mono",monospace; font-size:21px; letter-spacing:5px; color:var(--dim); margin-top:20px; }
+  .s1 .team { position:absolute; right:90px; bottom:76px; text-align:right;
+              font-family:"IBM Plex Mono",monospace; font-size:17px; line-height:2; letter-spacing:2px; }
+  .s1 .stamp { top:84px; right:110px; }
 
-  /* stat rows */
-  .stats { display:flex; gap:28px; margin-top:44px; }
-  .stat { flex:1; border:4px solid var(--ink); padding:26px 28px; background:#fff; }
-  .stat .n { font-size:58px; font-weight:700; line-height:1; }
-  .stat .l { font-family:Consolas,monospace; font-size:17px; color:var(--dim); margin-top:12px; letter-spacing:1px; }
-  .punch { margin-top:44px; font-size:40px; font-weight:700; }
-  .punch b { background:var(--ink); color:var(--paper); padding:2px 16px; }
+  /* S2 problem — editorial numerals */
+  .s2 h1 { font-size:66px; font-weight:800; line-height:1.1; margin-top:12px; }
+  .s2 h1 b { color:var(--red); }
+  .bigstat { margin-top:34px; }
+  .bigstat .n { font-weight:800; line-height:.95; letter-spacing:-3px; }
+  .bigstat .cap { font-family:"IBM Plex Mono",monospace; font-size:17px; letter-spacing:3px; color:var(--dim); margin-top:8px; }
+  .s2 .row { display:flex; gap:70px; align-items:flex-end; }
+  .s2 .punch { margin-top:40px; font-size:37px; font-weight:700; }
+  .s2 .punch b { background:var(--ink); color:var(--paper); padding:2px 18px; font-weight:800; }
 
-  /* surfaces slide */
-  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:24px; margin-top:40px; }
-  .card { border:4px solid var(--ink); background:#fff; padding:24px 28px; }
-  .card .hi { font-size:34px; font-weight:700; }
-  .card .en { font-family:Consolas,monospace; font-size:16px; color:var(--dim); margin-top:6px; }
-  .card .d { font-size:21px; margin-top:12px; line-height:1.45; }
+  /* S3 index rows */
+  .idx { margin-top:36px; }
+  .irow { display:flex; align-items:baseline; gap:34px; padding:21px 0; border-bottom:3px solid var(--ink); }
+  .irow:first-child { border-top:5px solid var(--ink); }
+  .irow .no { font-family:"IBM Plex Mono",monospace; font-weight:600; font-size:22px; color:var(--red); width:52px; }
+  .irow .hi { font-size:44px; font-weight:800; width:330px; line-height:1.1; }
+  .irow .d  { font-family:Mukta,sans-serif; font-size:21px; line-height:1.45; color:#3a3428; flex:1; }
+  .irow .d b { color:var(--ink); }
 
-  /* demo slide */
-  .s4 { display:flex; align-items:center; gap:64px; }
-  .s4 .live { font-size:120px; font-weight:700; line-height:1; }
-  .s4 .live small { display:block; font-size:40px; color:var(--red); }
-  .beats { font-size:23px; line-height:1.9; margin-top:26px; }
-  .beats b { font-family:Consolas,monospace; color:var(--red); margin-right:10px; }
-  .s4 img.qr { width:300px; border:10px solid var(--ink); background:#fff; padding:12px; }
+  /* S4 live demo — ink slide */
+  .s4 { display:flex; gap:56px; align-items:center; }
+  .s4 .colA { flex-shrink:0; }
+  .s4 .eyebrow { margin-bottom:18px; }
+  .s4 .live { font-size:140px; font-weight:800; line-height:.9; letter-spacing:-4px; }
+  .s4 .live small { display:block; font-size:34px; color:var(--saffron); font-weight:700; letter-spacing:0; margin-top:16px; }
+  .s4 .beats { font-family:"IBM Plex Mono",monospace; font-size:16.5px; line-height:2.35; flex:1; min-width:0; white-space:nowrap; }
+  .s4 .beats b { color:var(--saffron); margin-right:12px; font-weight:600; }
+  .s4 img.qr { width:230px; border:10px solid var(--paper); background:#fff; padding:10px; flex-shrink:0; }
 
-  /* architecture */
-  .arch { display:flex; align-items:stretch; gap:0; margin-top:48px; }
-  .abox { border:4px solid var(--ink); background:#fff; padding:22px 24px; }
-  .abox .t { font-weight:700; font-size:25px; }
-  .abox .s { font-family:Consolas,monospace; font-size:15px; color:var(--dim); margin-top:8px; line-height:1.6; }
-  .arrow { align-self:center; font-size:44px; padding:0 16px; font-weight:700; }
-  .lawline { margin-top:46px; font-size:38px; font-weight:700; text-align:center; }
-  .lawline b { color:var(--red); }
-  .failsafe { margin-top:22px; text-align:center; font-family:Consolas,monospace; font-size:20px; color:var(--dim); }
+  /* S5 architecture */
+  .arch { display:flex; align-items:stretch; margin-top:44px; }
+  .abox { border:5px solid var(--ink); padding:24px 26px; background:#fffdf7; }
+  .abox .t { font-weight:800; font-size:26px; }
+  .abox .s { font-family:"IBM Plex Mono",monospace; font-size:14.5px; color:var(--dim); margin-top:10px; line-height:1.75; }
+  .abox.hot { background:var(--red); border-color:var(--red); color:var(--paper); }
+  .abox.hot .s { color:#f3d9d9; }
+  .arr { align-self:center; font-size:52px; font-weight:800; padding:0 18px; }
+  .law { margin-top:44px; font-size:44px; font-weight:800; text-align:center; line-height:1.25; }
+  .law b { color:var(--red); }
+  .fail { margin-top:18px; text-align:center; font-family:"IBM Plex Mono",monospace; font-size:17px; color:var(--dim); letter-spacing:1px; }
 
-  /* flywheel */
-  .fly { display:flex; align-items:center; gap:26px; margin-top:46px; justify-content:center; }
-  .fnode { border:4px solid var(--ink); background:#fff; padding:20px 24px; font-size:24px; font-weight:700; text-align:center; }
-  .fnode small { display:block; font-family:Consolas,monospace; font-weight:400; font-size:14px; color:var(--dim); margin-top:6px; }
-  .numbers { display:flex; gap:22px; margin-top:52px; }
-  .num { flex:1; text-align:center; }
-  .num .n { font-size:46px; font-weight:700; }
-  .num .l { font-family:Consolas,monospace; font-size:15px; color:var(--dim); margin-top:8px; }
+  /* S6 numbers */
+  .s6 .fly { display:flex; align-items:center; justify-content:space-between; margin-top:30px;
+             font-size:29px; font-weight:700; }
+  .s6 .fly .a { color:var(--red); font-size:40px; font-weight:800; padding:0 8px; }
+  .s6 .fly small { display:block; font-family:"IBM Plex Mono",monospace; font-weight:400; font-size:13px; color:var(--dim); letter-spacing:1px; margin-top:4px; }
+  .nrow { display:flex; margin-top:48px; border-top:5px solid var(--ink); }
+  .ncell { flex:1; padding:26px 8px 0; border-right:3px solid var(--ink); text-align:center; }
+  .ncell:last-child { border-right:none; }
+  .ncell .n { font-size:88px; font-weight:800; line-height:.95; letter-spacing:-2px; }
+  .ncell.red .n { color:var(--red); } .ncell.grn .n { color:var(--green); }
+  .ncell .l { font-family:"IBM Plex Mono",monospace; font-size:13.5px; color:var(--dim); margin-top:12px; letter-spacing:1px; line-height:1.6; }
 
-  /* roadmap */
-  .road { margin-top:42px; font-size:30px; line-height:2; }
-  .road b { background:var(--saffron); padding:0 12px; }
-  .model { margin-top:36px; font-size:34px; font-weight:700; }
-  .model span { color:var(--green); }
+  /* S7 roadmap */
+  .s7 .irow .hi { width:auto; font-size:36px; }
+  .s7 .hl { background:var(--saffron); padding:0 12px; font-weight:800; }
+  .s7 .model { margin-top:38px; font-size:44px; font-weight:800; }
+  .s7 .model span { color:var(--green); }
 
-  /* close */
+  /* S8 close — ink */
   .s8 { display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center; }
-  .s8 .line { font-size:74px; font-weight:700; line-height:1.2; }
-  .s8 .line b { color:var(--red); }
-  .s8 img.qr { width:260px; border:10px solid var(--ink); background:#fff; padding:10px; margin-top:44px; }
-  .s8 .u { font-family:Consolas,monospace; font-size:28px; font-weight:700; margin-top:20px; letter-spacing:2px; }
+  .s8 .line { font-size:96px; font-weight:800; line-height:1.12; letter-spacing:-2px; }
+  .s8 .line b { color:var(--saffron); }
+  .s8 img.qr { width:230px; border:10px solid var(--paper); background:#fff; padding:10px; margin-top:40px; }
+  .s8 .u { font-family:"IBM Plex Mono",monospace; font-size:26px; font-weight:600; margin-top:20px; letter-spacing:3px; color:var(--saffron); }
+  .s8 .stamp { border-color:var(--saffron); color:var(--saffron); top:70px; right:100px; }
 </style>
 
 <!-- 1 · TITLE -->
 <section class="slide s1">
   <div class="tape top"></div>
-  <svg class="shield" width="120" height="148" viewBox="0 0 170 210">
-    <polygon points="8,8 162,8 162,128 85,202 8,128" fill="none" stroke="#14181F" stroke-width="14"/>
-    <polygon points="40,40 130,40 130,116 85,160 40,116" fill="#E8A13B"/>
-  </svg>
-  <img class="qr" src="../assets/src/qr-plain.png" alt="QR">
+  <div class="stamp"><div class="a">DHAAL·ढाल</div><div class="b">एक<br>जाँच</div></div>
   <div class="word">ढाल</div>
-  <div class="tag">पैसे भेजने से पहले — <b>एक जाँच।</b></div>
+  <div class="tagrow"><div class="tag">पैसे भेजने से पहले — <b>एक जाँच।</b></div></div>
   <div class="sub">THE PRE-PAYMENT SCAM SHIELD FOR EVERY INDIAN</div>
-  <div class="team">SAUD SATOPAY · PARVA PANCHAL · HARSH MISHRA</div>
+  <div class="team">SAUD SATOPAY<br>PARVA PANCHAL<br>HARSH MISHRA</div>
   <div class="foot"><span>MUJ HACKX 4.0 · FINTECH PS#7</span><span>dhaal-delta.vercel.app</span></div>
   <div class="tape bot"></div>
 </section>
 
 <!-- 2 · PROBLEM -->
-<section class="slide">
+<section class="slide s2">
   <div class="tape top"></div>
   <div class="eyebrow">The problem</div>
-  <h1>किसी ने hack नहीं किया।<br><span class="accent">PAY खुद victim ने दबाया।</span></h1>
-  <div class="stats">
-    <div class="stat"><div class="n">24.51B</div><div class="l">UPI TXNS / MONTH · ₹29.82 LAKH CR (AUG 2026, NPCI)</div></div>
-    <div class="stat"><div class="n accent">₹22,495 Cr</div><div class="l">LOST TO CYBER FRAUD IN 2025 · 28.1 LAKH COMPLAINTS (I4C)</div></div>
-    <div class="stat"><div class="n">0</div><div class="l">UNAUTHORISED TXNS FOR BANK CONTROLS TO CATCH</div></div>
+  <h1 style="font-size:54px">किसी ने hack नहीं किया। <b>PAY खुद victim ने दबाया।</b></h1>
+  <div class="row" style="margin-top:6px">
+    <div class="bigstat"><div class="n" style="font-size:148px; color:var(--red); white-space:nowrap">₹22,495<span style="font-size:62px"> Cr</span></div>
+      <div class="cap">LOST TO CYBER FRAUD IN 2025 · 28.1 LAKH COMPLAINTS (I4C)</div></div>
+    <div class="bigstat" style="padding-bottom:6px"><div class="n" style="font-size:84px; white-space:nowrap">24.51B <span style="-webkit-text-stroke:4px var(--ink); color:transparent;">+0</span></div>
+      <div class="cap">UPI TXNS/MONTH (NPCI AUG '26) · ZERO UNAUTHORISED TXNS FOR BANKS TO CATCH</div></div>
   </div>
-  <div class="punch">इसलिए shield बैंक में नहीं — <b>हाथ में</b> चाहिए। PAY से पहले।</div>
+  <div class="punch" style="margin-top:34px">इसलिए shield बैंक में नहीं — <b>हाथ में</b> चाहिए। PAY से पहले।</div>
   <div class="foot"><span>ढाल · DHAAL</span><span>02</span></div>
   <div class="tape bot"></div>
 </section>
@@ -117,35 +137,37 @@
 <!-- 3 · SOLUTION -->
 <section class="slide">
   <div class="tape top"></div>
-  <div class="eyebrow">The solution — one check</div>
-  <h1>Paste करो, photo लो, या <span class="accent">बोल दो</span> —<br>Dhaal बताता है <u>क्यों</u> यह scam है।</h1>
-  <div class="grid2">
-    <div class="card"><div class="hi">🔍 जाँच</div><div class="en">CHECK — TEXT · QR · VOICE</div><div class="d">Verdict + हर signal, वज़न समेत, आपकी भाषा में — और <b>बोल कर</b> भी। कभी "safe" नहीं कहता — सिर्फ़ "कोई <b>ज्ञात</b> खतरा नहीं"।</div></div>
-    <div class="card"><div class="hi">👨‍👩‍👧 परिवार की ढाल</div><div class="en">GUARDIAN MODE</div><div class="d">दादी की risky payment → पोते के phone पर 10-second Allow/Block. निगरानी नहीं — हिफ़ाज़त।</div></div>
-    <div class="card"><div class="hi">🗺️ धोखों का नक्शा</div><div class="en">COMMUNITY INTEL</div><div class="d">एक report → human verify → हर user की अगली जाँच में शामिल। Jaipur में आज जला, Jodhpur में कल नहीं जलेगा।</div></div>
-    <div class="card"><div class="hi">🚑 पहला घंटा</div><div class="en">RECOVERY KIT</div><div class="d">ठगे गए? 1930 script + cybercrime.gov.in complaint + bank letter — तैयार, हिंदी में। पहला घंटा ही पैसे लौटाता है।</div></div>
+  <div class="eyebrow">One check · चार सतहें</div>
+  <h1 style="font-size:58px; font-weight:800; margin-top:10px">Paste करो, photo लो, या <span style="color:var(--red)">बोल दो।</span></h1>
+  <div class="idx">
+    <div class="irow"><div class="no">01</div><div class="hi">जाँच</div>
+      <div class="d">Verdict + <b>हर signal, वज़न समेत</b>, आपकी भाषा में — और बोल कर भी। कभी "safe" नहीं — सिर्फ़ "कोई <b>ज्ञात</b> खतरा नहीं"।</div></div>
+    <div class="irow"><div class="no">02</div><div class="hi">परिवार की ढाल</div>
+      <div class="d">दादी की risky payment → पोते के phone पर 10-second <b>Allow/Block</b>. निगरानी नहीं — हिफ़ाज़त।</div></div>
+    <div class="irow"><div class="no">03</div><div class="hi">धोखों का नक्शा</div>
+      <div class="d">एक report → human verify → <b>हर user की अगली जाँच में शामिल।</b> Jaipur में आज जला, Jodhpur में कल नहीं जलेगा।</div></div>
+    <div class="irow"><div class="no">04</div><div class="hi">पहला घंटा</div>
+      <div class="d">ठगे गए? <b>1930 script + complaint + bank letter</b> — तैयार, हिंदी में। पहला घंटा ही पैसे लौटाता है।</div></div>
   </div>
   <div class="foot"><span>ढाल · DHAAL</span><span>03</span></div>
   <div class="tape bot"></div>
 </section>
 
-<!-- 4 · LIVE DEMO -->
-<section class="slide s4">
+<!-- 4 · LIVE DEMO (ink) -->
+<section class="slide ink s4">
   <div class="tape top"></div>
-  <div>
+  <div class="colA">
     <div class="eyebrow">Now, live</div>
     <div class="live">LIVE<br>DEMO<small>असली app · असली scams</small></div>
   </div>
-  <div>
-    <div class="beats">
-      <div><b>B1</b> KYC SMS → खतरा, हर signal के साथ</div>
-      <div><b>B2</b> QR photo → "collect request — पैसे कटेंगे"</div>
-      <div><b>B3</b> असली bank SMS → Dhaal चुप। No crying wolf.</div>
-      <div><b>B4</b> बोलिए → Dhaal <b>बोल कर</b> warning देता है</div>
-      <div><b>B5</b> Guardian: दादी की जेब, पोते की एक tap</div>
-      <div><b>B6</b> Flywheel: 1 report → हर phone पर DANGER</div>
-      <div><b>B8</b> आपका अपना inbox — live जाँचिए</div>
-    </div>
+  <div class="beats">
+    <div><b>B1</b>KYC SMS → खतरा, हर signal के साथ</div>
+    <div><b>B2</b>QR photo → collect request बेनक़ाब</div>
+    <div><b>B3</b>असली SMS → Dhaal चुप · no crying wolf</div>
+    <div><b>B4</b>बोलिए → Dhaal बोल कर जवाब देता है</div>
+    <div><b>B5</b>Guardian → दादी की जेब, पोते की tap</div>
+    <div><b>B6</b>Flywheel → 1 report, हर phone पर DANGER</div>
+    <div><b>B8</b>आपका अपना inbox — अभी, live</div>
   </div>
   <img class="qr" src="../assets/src/qr-plain.png" alt="QR">
   <div class="foot"><span>ढाल · DHAAL</span><span>04</span></div>
@@ -156,67 +178,71 @@
 <section class="slide">
   <div class="tape top"></div>
   <div class="eyebrow">Under the hood</div>
-  <h1 style="font-size:52px">Verdict = code. AI सिर्फ़ समझाता है।</h1>
   <div class="arch">
-    <div class="abox" style="flex:1"><div class="t">Input</div><div class="s">text · URL · UPI<br>QR (on-device decode)<br>voice (Saarika ASR)</div></div>
-    <div class="arrow">→</div>
-    <div class="abox" style="flex:1.6; border-color:var(--red)"><div class="t">SIGNAL ENGINE <span style="color:var(--red)">deterministic</span></div><div class="s">collect-vs-pay parser · lookalike domains<br>scam-script patterns (9 families)<br>community blocklist (Atlas, human-verified)<br><b>VERDICT: ≥60 खतरा · ≥30 सावधान</b></div></div>
-    <div class="arrow">→</div>
-    <div class="abox" style="flex:1.2"><div class="t">Explain &amp; speak</div><div class="s">Claude — narration from signals,<br><b>zero verdict weight</b><br>Bulbul TTS — बोली हुई warning</div></div>
+    <div class="abox" style="flex:1"><div class="t">Input</div>
+      <div class="s">text · URL · UPI<br>QR — on-device decode<br>voice — Saarika ASR</div></div>
+    <div class="arr">→</div>
+    <div class="abox hot" style="flex:1.55"><div class="t">SIGNAL ENGINE — deterministic</div>
+      <div class="s">collect-vs-pay parser · lookalike domains<br>10 scam-script families · coercion detection<br>community blocklist (human-verified)<br><b>VERDICT: ≥60 खतरा · ≥30 सावधान</b></div></div>
+    <div class="arr">→</div>
+    <div class="abox" style="flex:1.15"><div class="t">Explain &amp; speak</div>
+      <div class="s">Claude — narration from<br>signals, <b>zero verdict weight</b><br>Bulbul TTS — बोली warning</div></div>
   </div>
-  <div class="lawline">AI <b>कभी verdict नहीं बदल सकता</b> — na hallucinated danger, na missed one.</div>
-  <div class="failsafe">every external call → deterministic fallback · dead Wi-Fi survives · mocked responses say mocked:true on the wire</div>
+  <div class="law">AI <b>कभी verdict नहीं बदल सकता।</b><br>Na hallucinated danger, na missed one.</div>
+  <div class="fail">every call → deterministic fallback · dead wi-fi survives · mocked says mocked:true on the wire</div>
   <div class="foot"><span>ढाल · DHAAL</span><span>05</span></div>
   <div class="tape bot"></div>
 </section>
 
 <!-- 6 · FLYWHEEL + PROOF -->
-<section class="slide">
+<section class="slide s6">
   <div class="tape top"></div>
-  <div class="eyebrow">Why it compounds</div>
-  <h1 style="font-size:52px">एक report — <span class="accent">सबकी ढाल।</span></h1>
+  <div class="eyebrow">Why it compounds · asli numbers</div>
+  <h1 style="font-size:56px; font-weight:800; margin-top:8px">एक report — <span style="color:var(--red)">सबकी ढाल।</span></h1>
   <div class="fly">
-    <div class="fnode">1 victim reports<small>10 seconds</small></div>
-    <div class="arrow">→</div>
-    <div class="fnode">Human verifies<small>no rumour poisoning</small></div>
-    <div class="arrow">→</div>
-    <div class="fnode">Blocklist, instantly<small>durable · Atlas</small></div>
-    <div class="arrow">→</div>
-    <div class="fnode" style="border-color:var(--green)">हर अगली जाँच में<small>every phone, live</small></div>
+    <div>1 victim reports<small>10 SECONDS</small></div><div class="a">→</div>
+    <div>human verifies<small>NO RUMOUR POISONING</small></div><div class="a">→</div>
+    <div>blocklist, instantly<small>DURABLE · ATLAS</small></div><div class="a">→</div>
+    <div style="color:var(--green)">हर अगली जाँच में<small>EVERY PHONE, LIVE</small></div>
   </div>
-  <div class="numbers">
-    <div class="num"><div class="n">ms</div><div class="l">DETERMINISTIC VERDICT</div></div>
-    <div class="num"><div class="n">5.4s</div><div class="l">P50 WITH AI EXPLANATION (LIVE PROD)</div></div>
-    <div class="num"><div class="n">0.6s</div><div class="l">HINDI ASR PER CLIP</div></div>
-    <div class="num"><div class="n">26+23</div><div class="l">REGRESSION + CONTRACT CHECKS GREEN</div></div>
-    <div class="num"><div class="n">0</div><div class="l">FALSE ALARMS ON LEGIT OTP/BANK SMS (TESTED)</div></div>
+  <div class="nrow">
+    <div class="ncell"><div class="n">ms</div><div class="l">DETERMINISTIC<br>VERDICT</div></div>
+    <div class="ncell"><div class="n">5.4s</div><div class="l">P50 WITH AI EXPLANATION<br>LIVE PROD</div></div>
+    <div class="ncell"><div class="n">0.6s</div><div class="l">HINDI ASR<br>PER CLIP</div></div>
+    <div class="ncell"><div class="n">26+23</div><div class="l">REGRESSION + CONTRACT<br>CHECKS GREEN</div></div>
+    <div class="ncell grn"><div class="n">0</div><div class="l">FALSE ALARMS ON LEGIT<br>OTP/BANK SMS — TESTED</div></div>
   </div>
   <div class="foot"><span>ढाल · DHAAL</span><span>06</span></div>
   <div class="tape bot"></div>
 </section>
 
-<!-- 7 · ROADMAP + MODEL -->
-<section class="slide">
+<!-- 7 · ROADMAP -->
+<section class="slide s7">
   <div class="tape top"></div>
   <div class="eyebrow">Where this goes</div>
-  <h1 style="font-size:52px">Public infra बनने का रास्ता साफ़ है।</h1>
-  <div class="road">
-    <div>→ one-tap hand-off into <b>1930 / I4C</b> — ₹7,130+ Cr already saved by fast reporting</div>
-    <div>→ <b>SDK inside UPI apps</b> — the check runs before the PAY button renders</div>
-    <div>→ risk-API + blocklist licensing to <b>banks &amp; fintechs</b> — they reimburse this fraud today</div>
-    <div>→ same pipeline, <b>10+ Indic languages</b> (Sarvam) — swap one parameter</div>
+  <h1 style="font-size:56px; font-weight:800; margin-top:10px">Public infra बनने का रास्ता साफ़ है।</h1>
+  <div class="idx">
+    <div class="irow"><div class="no">→</div><div class="hi">one-tap <span class="hl">1930 / I4C</span> hand-off</div>
+      <div class="d">₹7,130+ Cr already saved by fast reporting — Dhaal पहला घंटा जेब में रखता है</div></div>
+    <div class="irow"><div class="no">→</div><div class="hi"><span class="hl">SDK</span> inside UPI apps</div>
+      <div class="d">the check runs <b>before the PAY button renders</b></div></div>
+    <div class="irow"><div class="no">→</div><div class="hi">risk-API for <span class="hl">banks</span></div>
+      <div class="d">blocklist + verdict licensing — they reimburse this fraud today</div></div>
+    <div class="irow"><div class="no">→</div><div class="hi"><span class="hl">10+ भाषाएँ</span></div>
+      <div class="d">same Sarvam pipeline — swap one parameter</div></div>
   </div>
   <div class="model">Citizens के लिए <span>हमेशा free।</span> Institutions pay.</div>
   <div class="foot"><span>ढाल · DHAAL</span><span>07</span></div>
   <div class="tape bot"></div>
 </section>
 
-<!-- 8 · CLOSE -->
-<section class="slide s8">
+<!-- 8 · CLOSE (ink) -->
+<section class="slide ink s8">
   <div class="tape top"></div>
+  <div class="stamp"><div class="a">DHAAL·ढाल</div><div class="b">एक<br>जाँच</div></div>
   <div class="line">हर report,<br><b>हर भारतीय की ढाल।</b></div>
   <img class="qr" src="../assets/src/qr-plain.png" alt="QR">
   <div class="u">dhaal-delta.vercel.app</div>
-  <div class="sub" style="font-family:Consolas,monospace; color:var(--dim); margin-top:26px; letter-spacing:5px">धन्यवाद · THANK YOU · MUJ HACKX 4.0</div>
+  <div class="foot"><span>धन्यवाद · THANK YOU</span><span>MUJ HACKX 4.0</span></div>
   <div class="tape bot"></div>
 </section>

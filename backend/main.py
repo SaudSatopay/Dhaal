@@ -125,12 +125,14 @@ def check(body: CheckIn):
     if body.speak and not MOCK_MODE:
         doc["tts_audio_b64"] = sarvam.text_to_speech(exp_hi, lang="hi-IN")
     STORE.insert("checks", doc)
-    if body.ward_link_id and verdict != "no_known_risk" \
-            and STORE.get("guardian_links", body.ward_link_id):
+    # Every ward check reaches the guardian (Saud/PO, H11): risky ones need a
+    # decision ("pending"); clean ones appear as info rows ("noted").
+    if body.ward_link_id and STORE.get("guardian_links", body.ward_link_id):
         gr = {
             "_id": _id("gr"), "link_id": body.ward_link_id, "check_id": doc["_id"],
-            "summary_hi": exp_hi[:140], "status": "pending", "guardian_note": "",
-            "created_at": _now(),
+            "summary_hi": exp_hi[:140], "verdict": verdict, "score": score,
+            "status": "pending" if verdict != "no_known_risk" else "noted",
+            "guardian_note": "", "created_at": _now(),
         }
         STORE.insert("guardian_requests", gr)
         doc["guardian_request_id"] = gr["_id"]

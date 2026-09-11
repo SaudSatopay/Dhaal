@@ -61,7 +61,11 @@ API shapes, data models, env names. **Owning lane pushes the contract change BEF
 ```json
 {"_id": "gl_xxx", "ward_name": "Sunita Devi", "guardian_name": "Rahul", "pair_code": "DHAAL-4821", "created_at": "…"}
 {"_id": "gr_xxx", "link_id": "gl_xxx", "check_id": "chk_xxx", "summary_hi": "₹15,000 collect request…",
- "status": "pending | allowed | blocked", "guardian_note": "", "created_at": "…"}
+ "verdict": "danger|suspicious|no_known_risk", "score": 87,
+ "status": "pending | allowed | blocked | noted", "guardian_note": "", "created_at": "…"}
+```
+**Guardian contract v2 (H11, PO decision):** EVERY ward check creates a request — risky verdicts arrive as `pending` (need Allow/Block), clean ones as `noted` (informational activity row, no decision). Guardian UI renders both groups.
+```json
 ```
 
 ## API endpoints (owner: Engine · all **stubbed** at kickoff → flip to `live` here as implemented)
