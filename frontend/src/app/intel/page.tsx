@@ -276,12 +276,9 @@ export default function IntelPage() {
   useEffect(() => {
     loadTrends();
     loadQueue();
-    const qt = setInterval(() => {
-      if (!document.hidden) loadQueue();
-    }, 3000);
-    const tt = setInterval(() => {
-      if (!document.hidden) loadTrends();
-    }, 15000);
+    // no hidden-guard: projector setups can misreport visibility (see WardGate)
+    const qt = setInterval(loadQueue, 3000);
+    const tt = setInterval(loadTrends, 15000);
     return () => {
       clearInterval(qt);
       clearInterval(tt);

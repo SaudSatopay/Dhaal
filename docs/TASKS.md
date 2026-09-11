@@ -15,8 +15,8 @@ Claim: `[ ]` → `[WIP-saud]` / `[WIP-parva]` / `[WIP-harsh]`, **push immediatel
 ### Product — Parva (`frontend/`)
 - [x] **P0 H1–H3** `/check`: input card with 3 tabs — paste text/URL/UPI · QR image upload (**decode client-side with `jsqr`**, send `qr_text`) · mic (MediaRecorder → `/api/transcribe`) with typed fallback → POST `/api/check` → render verdict card: big verdict state (danger/suspicious/no_known_risk in Hindi+English), signal list with per-signal weight + detail, category chip. Stub API answers already.
 - [x] **P0 H3–H5** Report flow on verdict card ("Report scam" → POST `/api/reports`) + `/intel` console: moderation queue (poll `?status=pending`, verify/reject buttons) + trends board (`/api/intel/trends`: category bars, 7-day line, top indicators, city chips).
-- [WIP-parva] **P0 H5–H7** `/guardian`: pairing screen (create link → show `pair_code`), guardian inbox (poll 3s, request cards with reason summary, Allow/Block), ward waiting/decision states. Two-browser demo works.
-- [ ] **P1 H7–H10** Voice polish: record UX, spoken-verdict playback (`tts_audio_b64`), Hindi-first labels with English subtitles; `/recover` flow (form → render kit: 1930 script, complaint draft, bank letter, checklist, copy buttons).
+- [x] **P0 H5–H7** `/guardian`: pairing screen (create link → show `pair_code`), guardian inbox (poll 3s, request cards with reason summary, Allow/Block), ward waiting/decision states. Two-browser demo works.
+- [WIP-parva] **P1 H7–H10** Voice polish: record UX, spoken-verdict playback (`tts_audio_b64`), Hindi-first labels with English subtitles; `/recover` flow (form → render kit: 1930 script, complaint draft, bank letter, checklist, copy buttons).
 - [ ] **P1 H10–H12** Golden-path polish mobile-first: loading/error/empty states, contrast beat styling, demo choreography pass with Saud.
 - [ ] **H12+** PPT + pitch script (own it); rehearse ×3.
 
@@ -43,6 +43,8 @@ Claim: `[ ]` → `[WIP-saud]` / `[WIP-parva]` / `[WIP-harsh]`, **push immediatel
 - [x] FOR harsh, FROM saud — **bump Mongo/Atlas (H6–H8) in priority** — DONE (`backend/store.py`). Saud: set `MONGODB_URI` (+ `ANTHROPIC_API_KEY`) in the backend Vercel env and **redeploy backend** (`vercel --prod --yes`) — deployed API still runs the pre-engine stub.
 - [x] FOR saud, FROM harsh — `backend/data/brands.py` is seeded (~30 official domains, brand tokens, shorteners, scam TLDs); extend it during your fixtures pass (H3–H5). After ANY edit to `backend/engine/` or `backend/data/`, run `backend/tests/run_engine_checks.py` — all golden-path beats are asserted there. *(done — extended at H3–H5, both suites run on every backend-touching change since)*
 - [x] FOR saud, FROM harsh — deploy latest backend + env keys → **deploys are CURRENT** (backend w/ engine + Claude/Atlas fallback paths, frontend w/ real /check) and reseeded; all 4 beats verified live (mocked=true explanations as expected). Env keys themselves = Blocker below.
+
+- [ ] FOR harsh, FROM parva — guardian pairing UX: frontend hands the ward a link/QR carrying `link_id` (works today, demo-safe, live on `/guardian`). For the product-grade "ward types the code" flow, add `GET /api/guardian/links/resolve?pair_code=DHAAL-XXXX` → link object (contract change yours to push). NOT demo-blocking — fold into your P1 H10–H12 guardian pass if there's room.
 
 ## Blockers (Saud clears these first)
 

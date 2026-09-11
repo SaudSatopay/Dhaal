@@ -11,6 +11,8 @@ import { EXAMPLES } from "@/lib/fixtures";
 import TopBar from "@/components/TopBar";
 import VerdictCard from "@/components/VerdictCard";
 import ReportButton from "@/components/ReportButton";
+import WardGate from "@/components/WardGate";
+import { getWardPair, type WardPair } from "@/lib/guardian";
 
 type Tab = "paste" | "qr" | "voice";
 
@@ -88,6 +90,12 @@ export default function CheckPage() {
   const [qrError, setQrError] = useState("");
 
   // voice tab
+  // guardian pairing (ward side) — read once on mount, localStorage is client-only
+  const [wardPair, setWardPairState] = useState<WardPair | null>(null);
+  useEffect(() => {
+    setWardPairState(getWardPair());
+  }, []);
+
   const [recording, setRecording] = useState(false);
   const [recSeconds, setRecSeconds] = useState(0);
   const [transcribing, setTranscribing] = useState(false);
@@ -111,7 +119,13 @@ export default function CheckPage() {
     try {
       const res = await api<Check>("/api/check", {
         method: "POST",
-        body: JSON.stringify({ type, payload: text, lang: "hi-IN", speak }),
+        body: JSON.stringify({
+          type,
+          payload: text,
+          lang: "hi-IN",
+          speak,
+          ward_link_id: wardPair?.link_id ?? null,
+        }),
       });
       setResult(res);
     } catch (e) {
@@ -220,6 +234,11 @@ export default function CheckPage() {
       <TopBar title_hi="जाँच करो" title_en="Check before you pay" />
 
       <main className="mx-auto max-w-xl p-4 pb-16">
+        {wardPair && (
+          <p className="mb-3 rounded-xl bg-emerald-50 px-3 py-2 text-center text-xs font-medium text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300">
+            🛡️ {wardPair.guardian_name} आपकी ढाल हैं — बड़े खतरे पर उनसे पूछा जाएगा
+          </p>
+        )}
         {/* Tabs */}
         <div
           role="tablist"
@@ -418,6 +437,15 @@ export default function CheckPage() {
               <p className="mt-2 text-neutral-600 dark:text-neutral-400">
                 Internet जाँच कर दोबारा कोशिश करें · check connection and retry
               </p>
+            </div>
+          )}
+          {result && !busy && result.guardian_request_id && wardPair && (
+            <div className="mb-4">
+              <WardGate
+                key={result.guardian_request_id}
+                requestId={result.guardian_request_id}
+                guardianName={wardPair.guardian_name}
+              />
             </div>
           )}
           {result && !busy && (

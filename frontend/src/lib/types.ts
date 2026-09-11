@@ -69,6 +69,24 @@ export type Indicator = {
   category: ScamCategory;
 };
 
+export type GuardianLink = {
+  _id: string;
+  ward_name: string;
+  guardian_name: string;
+  pair_code: string;
+  created_at: string;
+};
+
+export type GuardianRequest = {
+  _id: string;
+  link_id: string;
+  check_id: string;
+  summary_hi: string;
+  status: "pending" | "allowed" | "blocked";
+  guardian_note: string;
+  created_at: string;
+};
+
 export type Trends = {
   total_reports: number;
   by_category: { category: ScamCategory; count: number }[];
