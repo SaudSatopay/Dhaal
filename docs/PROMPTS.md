@@ -1,5 +1,7 @@
 # Claude Code Session Prompts
 
+> **H9 mid-build prompts are at the bottom** — Parva: visual identity overhaul · Harsh: Sarvam + guardian resolve + hardening. The original kickoff/loop prompts below them are done/superseded.
+
 Each member opens Claude Code **in their own clone of this repo** and pastes their prompt. Saud runs the Kickoff prompt first (right after the problem statements drop); everyone else starts once he pushes the filled docs. Claude auto-reads `CLAUDE.md`, so the rules travel with the repo.
 
 Prerequisites per member (do before the event): Claude Code installed + logged in · repo cloned · `git config user.name` / `user.email` = your GitHub identity · `gh auth login` done (optional but useful).
@@ -145,4 +147,103 @@ My loop — repeat until I say stop:
 If a rebase conflict touches files outside backend/, stop and tell me —
 Saud arbitrates. From H12 (feature freeze): harden endpoints, kill flaky
 calls, feed Parva real metrics for the PPT.
+```
+
+---
+---
+
+# H9 MID-BUILD PROMPTS (current — use these)
+
+## Prompt 4 — PARVA: visual identity overhaul ("suraksha poster, not SaaS dashboard")
+
+```
+Read CLAUDE.md, then docs/TASKS.md + docs/CONTRACTS.md deltas. I'm Parva — Product
+lane. First: confirm git identity is mine; every commit authors as me, never any AI
+attribution (CLAUDE.md rules).
+
+MISSION THIS SESSION: total visual identity overhaul. The app works end-to-end but
+looks like every AI-generated Tailwind app ever made — judges will see forty of
+those today. Ours must be unmistakable from across the room: bold, artistic,
+Indian, and dead-serious about danger.
+
+DESIGN DIRECTION — "suraksha poster, not SaaS dashboard":
+- Dhaal is a shield (ढाल). Steal the visual language of Indian public-safety
+  signage and hand-painted warning posters — heavy ink, hazard geometry, rubber
+  stamps and seals — executed with modern craft, not kitsch.
+- Type IS the design. Display: Anek Devanagari 700/800 (via next/font), HUGE
+  bilingual lockups — Hindi first, English as the small subtitle underneath.
+  Body: Mukta. Numbers/indicators: IBM Plex Mono. Real jumps in the type scale;
+  the hero wordmark should feel like a poster, not a heading.
+- Token palette, commit to it everywhere: paper #F7F3E8 (warm off-white ground) ·
+  ink #14181F · hazard saffron #E8A13B as THE brand accent · verdict colors
+  reserved STRICTLY for verdicts (danger #C62828 family · caution amber ·
+  clear #2E7D32). Verdict red/green never appears decoratively.
+- The VERDICT CARD is the hero artifact of the product:
+  * DANGER = a hazard notice: thick ink border, diagonal hazard-stripe header
+    band, खतरा enormous, and the community count as a circular rubber-stamp seal
+    ("86 रिपोर्ट"), slightly rotated, ink-textured.
+  * Verdict reveal = stamp-slam: scale + tiny rotation settling with one heavy
+    shadow frame. CSS-only, 250–400ms, honor prefers-reduced-motion.
+  * NO_KNOWN_RISK = a calm green clearance chit — quiet and small. Danger
+    screams; safety whispers.
+- Checking state: a shield "scanning" animation with "जाँच हो रही है…" — never a
+  default spinner.
+- Landing = poster: massive ढाल wordmark, the one-line promise, ONE giant check
+  CTA, live counter as a ticking odometer. No feature-card grid.
+- /intel (the projector surface) may go ink-dark war-room — amber accents, mono
+  numerals — the ONE deliberate dark surface against the paper-light phone
+  surfaces.
+- BANNED (anti-slop list): emoji as icons (draw tiny inline SVGs or use
+  typographic marks), the rounded-2xl-white-card-on-gray look, blue-600, purple
+  gradients, glassmorphism, centered-everything, Inter. If a screen would look at
+  home in a template gallery, redo it.
+
+SCOPE + RULES:
+- VISUAL refactor only — zero API/contract/logic changes; every flow keeps
+  working exactly (paste/QR/voice, report→verify flywheel, guardian pair,
+  recover).
+- Priority order, timeboxed hard (freeze at H12): 1) verdict card 2) /check
+  3) landing 4) /intel 5) guardian + recover get tokens/type applied lightly.
+  Ship in that order — commit per surface ("frontend: verdict card — hazard
+  identity"), pull --rebase, push, move on.
+- Mobile-first always (judges hold phones) + projector legibility (contrast,
+  size). npm run build green before every push. No new heavy deps — CSS
+  animations only, no motion libraries.
+- Done = ping Saud for deploy, then walk runsheet beats 1–3 yourself at mobile
+  width.
+```
+
+## Prompt 5 — HARSH: Sarvam voice + guardian resolve + hardening
+
+```
+Read CLAUDE.md, then docs/TASKS.md + docs/CONTRACTS.md deltas (the keys section
+changed). I'm Harsh (@harshh-2505) — Engine lane. Identity check first; every
+commit authors as me, never any AI attribution.
+
+STATE: SARVAM_API_KEY is LIVE in root .env and the backend's Vercel prod env
+(validated: 200 on /translate). Anthropic + Atlas are already live in prod.
+Your fallback architecture stays untouched — auto-fallback on every external
+call remains the law.
+
+THIS SESSION, in order (freeze at H12):
+1. [P1 H8–H10] Sarvam ASR: make /api/transcribe real — webm/m4a multipart →
+   Sarvam speech-to-text (hi-IN, code-mixed). Keep the typed_text passthrough
+   and the fixture auto-fallback on any failure (mocked:true). Contract
+   unchanged.
+2. [P1] Sarvam TTS: /api/check with speak:true → tts_audio_b64 generated from
+   explanation_hi. Cache the audio on the stored check so replay is instant.
+   Fallback: null audio, never an error.
+3. [Guardian polish, contract-first] Add GET
+   /api/guardian/links/resolve?pair_code=DHAAL-XXXX → link object (Parva's
+   Requests item — enables "ward types the code"). Push the CONTRACTS.md change
+   BEFORE the code.
+4. [H12+ hardening — start if time] Per-external-call latency log lines
+   (claude_ms, sarvam_ms, atlas_ms) — Saud needs real numbers for the PPT.
+   Timeouts + retry-once everywhere. Kill anything flaky.
+5. Tests: extend run_api_checks with transcribe-multipart (mock mode) and
+   resolve-by-code cases. BOTH suites green before every push.
+
+Claim each item on the board ([WIP-harsh], push the marker first). Saud deploys
+after you land — ping him. CLAUDE_MODEL env knob exists; leave it on
+claude-sonnet-5.
 ```
