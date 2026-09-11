@@ -25,12 +25,15 @@ export async function api<T = unknown>(
 ): Promise<T> {
   const doFetch = () =>
     fetch(`${API_BASE}${path}`, {
+      // init first, merged headers LAST — otherwise a caller passing its own
+      // headers (e.g. X-Guardian-Token) silently wipes Content-Type and the
+      // backend sees a JSON string instead of an object (422).
+      ...init,
       headers: {
         "Content-Type": "application/json",
         ...(modKey() ? { "X-Mod-Key": modKey() } : {}),
         ...(init?.headers ?? {}),
       },
-      ...init,
     });
   let res = await doFetch();
   if (res.status === 401 && typeof window !== "undefined" && askModKey()) {
