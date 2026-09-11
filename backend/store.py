@@ -4,6 +4,7 @@ per-call failover so a mid-demo Atlas outage degrades instead of erroring.
 """
 
 import os
+import threading
 import time
 import uuid
 from datetime import datetime, timezone
@@ -56,6 +57,43 @@ class MemoryStore:
             return None
         d.update(fields)
         return dict(d)
+
+    _cas_lock = threading.Lock()
+
+    def insert_new(self, coll: str, doc: dict) -> bool:
+        """Insert ONLY if the _id doesn't exist — single-winner creation."""
+        with self._cas_lock:
+            if doc["_id"] in self.data[coll]:
+                return False
+            self.data[coll][doc["_id"]] = dict(doc)
+            return True
+
+    def set_indicator_count(self, value: str, count: int) -> None:
+        """Absolute repair (reconciliation): count derives from the ledger."""
+        with self._cas_lock:
+            for k, d in list(self.data["indicators"].items()):
+                if d["value"] == value:
+                    if count <= 0:
+                        del self.data["indicators"][k]
+                    else:
+                        d["report_count"] = count
+                    return
+
+    def update_if(self, coll: str, doc_id: str, expect: dict,
+                  fields: dict) -> dict | None:
+        """Atomic check-and-set (H16): update ONLY if every `expect` field
+        currently matches (None matches missing). Returns the updated doc or
+        None — the single-winner primitive behind pair-code claims, outbox
+        leases and contribution ledgers."""
+        with self._cas_lock:
+            d = self.data[coll].get(doc_id)
+            if not d:
+                return None
+            for k, v in expect.items():
+                if d.get(k) != v:
+                    return None
+            d.update(fields)
+            return dict(d)
 
     def indicators_map(self) -> dict:
         return {d["value"]: dict(d) for d in self.data["indicators"].values()}
@@ -118,6 +156,18 @@ class MongoStore:
             {"_id": doc_id}, {"$set": fields}, return_document=ReturnDocument.AFTER
         )
 
+    def update_if(self, coll: str, doc_id: str, expect: dict,
+                  fields: dict) -> dict | None:
+        """Atomic check-and-set via Mongo's own find_one_and_update filter —
+        {field: None} matches both explicit-null and missing, mirroring the
+        memory store's semantics."""
+        filt: dict = {"_id": doc_id}
+        for k, v in expect.items():
+            filt[k] = v if v is not None else {"$in": [None]}
+        return self.db[coll].find_one_and_update(
+            filt, {"$set": fields}, return_document=ReturnDocument.AFTER
+        )
+
     def indicators_map(self) -> dict:
         return {d["value"]: d for d in self.db.indicators.find({})}
 
@@ -140,6 +190,23 @@ class MongoStore:
         if doc and doc.get("report_count", 0) <= 0:
             self.db.indicators.delete_one({"_id": doc["_id"]})
 
+    def insert_new(self, coll: str, doc: dict) -> bool:
+        """Insert ONLY if the _id doesn't exist — single-winner creation."""
+        from pymongo.errors import DuplicateKeyError
+        try:
+            self.db[coll].insert_one(dict(doc))
+            return True
+        except DuplicateKeyError:
+            return False
+
+    def set_indicator_count(self, value: str, count: int) -> None:
+        """Absolute repair (reconciliation): count derives from the ledger."""
+        if count <= 0:
+            self.db.indicators.delete_one({"value": value})
+        else:
+            self.db.indicators.update_one({"value": value},
+                                          {"$set": {"report_count": count}})
+
     def active_name(self) -> str:
         try:
             self.client.admin.command("ping")
@@ -154,8 +221,9 @@ class FailoverStore:
     reads may miss recent community intel and writes are not durable. The API
     layer surfaces this via recently_degraded()."""
 
-    _METHODS = ("insert", "get", "list", "update", "indicators_map",
-                "upsert_indicator", "decrement_indicator")
+    _METHODS = ("insert", "get", "list", "update", "update_if", "insert_new",
+                "set_indicator_count", "indicators_map", "upsert_indicator",
+                "decrement_indicator")
     DEGRADED_WINDOW_S = 60
 
     def __init__(self, primary: MongoStore, shadow: MemoryStore):

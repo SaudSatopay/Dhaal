@@ -744,10 +744,15 @@ def claim_link(body: ClaimIn):
         return JSONResponse({"error": "code expired — ask your guardian for a fresh pairing"},
                             status_code=410)
     ward_token = "dwt_" + secrets.token_urlsafe(24)
-    STORE.update("guardian_links", link["_id"], {
-        "pair_code_claimed": True, "claimed_at": _now(),
-        "ward_token_sha256": _sha(ward_token),
-    })
+    # H16: ATOMIC single-use claim — the check-and-set makes exactly one
+    # concurrent claimant win; every other racer sees claimed=True and 409s.
+    won = STORE.update_if(
+        "guardian_links", link["_id"], {"pair_code_claimed": False},
+        {"pair_code_claimed": True, "claimed_at": _now(),
+         "ward_token_sha256": _sha(ward_token)})
+    if not won:
+        return JSONResponse({"error": "code already used — ask your guardian for a fresh pairing"},
+                            status_code=409)
     return {
         "link_id": link["_id"], "ward_token": ward_token,
         "ward_name": link.get("ward_name", ""),
@@ -937,35 +942,124 @@ def _report_contributions(r: dict) -> list[dict]:
     return [{"value": value.lower()[:200], "type": "script"}]
 
 
+def _contrib_id(rid: str, value: str) -> str:
+    return f"ctb::{rid}::{re.sub(r'[.$ ]', '_', value)[:120]}"
+
+
 @app.post("/api/reports/{rid}/verify")
 def verify_report(rid: str, body: VerifyIn, request: Request):
+    """H16 §6 — verification with a DURABLE contribution ledger. Every
+    (report, identifier) pair is one ledger doc created exactly once
+    (insert_new = single winner); apply marks done, reject marks reversed —
+    each transition a CAS, so repeats and races cannot double-count, and
+    rejection withdraws exactly this report's applied contributions. A crash
+    between ledger and counter is DETECTABLE (ledger is truth) and repaired
+    by POST /api/reports/reconcile, which recounts counters from the ledger.
+    Verify on an already-verified report RESUMES missing contributions
+    instead of pretending completion."""
     if not _mod_ok(request):
         return JSONResponse({"error": "moderator key required"}, status_code=401)
     r = STORE.get("reports", rid)
     if not r:
         return {"error": "report not found"}
     status = "verified" if body.action == "verify" else "rejected"
-    if r.get("status") == status:
-        return r  # idempotent: repeating the same decision changes nothing
-    was_verified = r.get("status") == "verified"
     contributions = _report_contributions(r)
-    # record the decision AND the exact contributions BEFORE mutating the
-    # blocklist, so reversal always withdraws exactly what this report added
-    # even if a later write fails partway (H14: no silent divergence).
-    r = STORE.update("reports", rid, {
-        "status": status, "decided_at": _now(), "decided_via": "mod-key",
-        "indicator_values": [c["value"] for c in contributions],
-    }) or r
+
     if status == "verified":
+        if r.get("status") != "verified":
+            r = STORE.update_if("reports", rid, {"status": r.get("status")}, {
+                "status": "verified", "decided_at": _now(),
+                "decided_via": "mod-key",
+                "indicator_values": [c["value"] for c in contributions],
+            }) or STORE.get("reports", rid) or r
+            if r.get("status") != "verified":
+                return r  # a concurrent decision won; report it as-is
+        applied = 0
         for c in contributions:
-            STORE.upsert_indicator(c["value"], c["type"], r["category"])
-    elif was_verified:
-        # H12: a mistaken verification must be reversible — withdraw exactly
-        # the values this report contributed (other reports' counts survive).
-        for value in (r.get("indicator_values")
-                      or [c["value"] for c in contributions]):
-            STORE.decrement_indicator(value)
-    return r
+            cid_ = _contrib_id(rid, c["value"])
+            created = STORE.insert_new("contribs", {
+                "_id": cid_, "report_id": rid, "value": c["value"],
+                "type": c["type"], "category": r.get("category"),
+                "done": False, "reversed": False, "created_at": _now(),
+            })
+            existing = STORE.get("contribs", cid_)
+            if not created and existing and existing.get("done"):
+                continue  # already applied exactly once
+            # apply, then mark done. A crash between the two leaves done=False
+            # with the counter bumped — reconcile recounts from the ledger.
+            STORE.upsert_indicator(c["value"], c["type"], r.get("category"))
+            STORE.update_if("contribs", cid_, {"done": False},
+                            {"done": True, "applied_at": _now()})
+            applied += 1
+        out = STORE.get("reports", rid) or r
+        out["contributions_applied_now"] = applied
+        out["durable"] = not STORE_DEGRADED()
+        return out
+
+    # ---- reject: reverse exactly what THIS report applied ----
+    if r.get("status") != "rejected":
+        r = STORE.update_if("reports", rid, {"status": r.get("status")}, {
+            "status": "rejected", "decided_at": _now(), "decided_via": "mod-key",
+        }) or STORE.get("reports", rid) or r
+    reversed_n = 0
+    for c in contributions:
+        cid_ = _contrib_id(rid, c["value"])
+        won = STORE.update_if("contribs", cid_,
+                              {"done": True, "reversed": False},
+                              {"reversed": True, "reversed_at": _now()})
+        if won:
+            STORE.decrement_indicator(c["value"])
+            reversed_n += 1
+    out = STORE.get("reports", rid) or r
+    out["contributions_reversed_now"] = reversed_n
+    out["durable"] = not STORE_DEGRADED()
+    return out
+
+
+@app.post("/api/reports/reconcile")
+def reconcile_reports(request: Request):
+    """H16 §6 repair path: the ledger is the source of truth for LIVE
+    contributions — recount every ledgered identifier's report_count as
+    (#done && !reversed) and repair drift from crashes between ledger and
+    counter. Also finishes half-applied entries (done=False on a verified
+    report -> apply now). Seeded demo indicators (ind_seed_*) carry a fixture
+    baseline with no ledger and are intentionally out of scope."""
+    if not _mod_ok(request):
+        return JSONResponse({"error": "moderator key required"}, status_code=401)
+    contribs = STORE.list("contribs")
+    repaired, completed = [], []
+    # finish interrupted applications first
+    for cb in contribs:
+        if not cb.get("done") and not cb.get("reversed"):
+            rep = STORE.get("reports", cb["report_id"])
+            if rep and rep.get("status") == "verified":
+                won = STORE.update_if("contribs", cb["_id"], {"done": False},
+                                      {"done": True, "applied_at": _now(),
+                                       "via": "reconcile"})
+                if won:
+                    completed.append(cb["_id"])
+    contribs = STORE.list("contribs")
+    by_value: dict[str, int] = {}
+    for cb in contribs:
+        by_value.setdefault(cb["value"], 0)
+        if cb.get("done") and not cb.get("reversed"):
+            by_value[cb["value"]] += 1
+    ind = STORE.indicators_map()
+    for value, want in by_value.items():
+        row = ind.get(value)
+        have = row["report_count"] if row else 0
+        if row and str(row.get("_id", "")).startswith("ind_seed"):
+            continue  # fixture baseline — not ledgered, documented exclusion
+        if have != want:
+            if row is None and want > 0:
+                first = next(cb for cb in contribs if cb["value"] == value)
+                STORE.upsert_indicator(value, first["type"], first.get("category"))
+                STORE.set_indicator_count(value, want)
+            else:
+                STORE.set_indicator_count(value, want)
+            repaired.append({"value": value, "from": have, "to": want})
+    return {"ok": True, "completed_pending": completed, "repaired": repaired,
+            "ledger_size": len(contribs), "durable": not STORE_DEGRADED()}
 
 
 @app.get("/api/intel/trends")

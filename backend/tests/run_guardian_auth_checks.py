@@ -173,4 +173,23 @@ ok("clean ward check -> noted (no false alarm to family)",
 ok("needs-context ward check -> noted, never a pending decision",
    st.get(nc["_id"]) == "noted")
 
+# ---- H16: pair-code claim is atomic and single-use UNDER CONCURRENCY -------
+from concurrent.futures import ThreadPoolExecutor  # noqa: E402
+
+race = c.post("/api/guardian/links", json={"ward_name": "R", "guardian_name": "S"}).json()
+main._CLAIM_WINDOW.clear()
+main._CLAIM_MAX_PER_MIN = 50  # the rate limiter must not mask the atomicity test
+
+
+def _claim(_):
+    return c.post("/api/guardian/links/claim",
+                  json={"pair_code": race["pair_code"]}).status_code
+
+
+with ThreadPoolExecutor(max_workers=8) as ex:
+    codes = list(ex.map(_claim, range(8)))
+main._CLAIM_MAX_PER_MIN = 12
+ok("concurrent claims: exactly ONE winner, rest 409",
+   codes.count(200) == 1 and codes.count(409) == 7, str(codes))
+
 print(f"\nALL {P} GUARDIAN AUTH CHECKS PASSED")

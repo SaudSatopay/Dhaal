@@ -386,4 +386,76 @@ ok("clarify: guardian request updated in place (noted->pending), never duplicate
    len(mine) == 1 and mine[0]["status"] == "pending"
    and mine[0]["verdict"] in ("suspicious", "danger"))
 
+# H16 §6: community consistency under failure ---------------------------------
+MODH = {"X-Mod-Key": ""}
+
+
+def _count(val):
+    return main.STORE.indicators_map().get(val, {}).get("report_count", 0)
+
+
+# failure injection: second contribution's counter bump crashes AFTER the
+# ledger doc exists but BEFORE done=True — reconcile must finish it.
+scam2 = "Bijli katega aaj raat! 9911882277 par call karo ya bijli-fix.xyz kholo"
+repF = c.post("/api/reports", json={"payload": scam2, "category": "electricity"}).json()
+_orig_upsert = main.STORE.upsert_indicator
+calls = {"n": 0}
+
+
+def _boom(value, itype, category):
+    calls["n"] += 1
+    if calls["n"] == 2:
+        raise RuntimeError("injected failure mid-contributions")
+    return _orig_upsert(value, itype, category)
+
+
+main.STORE.upsert_indicator = _boom
+try:
+    c.post(f"/api/reports/{repF['_id']}/verify", json={"action": "verify"})
+except Exception:
+    pass
+main.STORE.upsert_indicator = _orig_upsert
+led = [main.STORE.get("contribs", main._contrib_id(repF["_id"], v))
+       for v in ("bijli-fix.xyz", "9911882277")]
+ok("injection: partial failure is VISIBLE in the ledger",
+   any(cb and not cb.get("done") for cb in led))
+rec = c.post("/api/reports/reconcile", headers=MODH).json()
+ok("reconcile completes interrupted contributions",
+   len(rec["completed_pending"]) >= 1
+   and _count("bijli-fix.xyz") == 1 and _count("9911882277") == 1)
+rec2 = c.post("/api/reports/reconcile", headers=MODH).json()
+ok("reconcile is idempotent", rec2["completed_pending"] == []
+   and rec2["repaired"] == [])
+
+# repeat verify never double-counts; reject reverses ONLY this report's marks
+c.post(f"/api/reports/{repF['_id']}/verify", json={"action": "verify"})
+c.post(f"/api/reports/{repF['_id']}/verify", json={"action": "verify"})
+ok("repeat verify cannot double-count (ledger CAS)",
+   _count("bijli-fix.xyz") == 1 and _count("9911882277") == 1)
+repG = c.post("/api/reports", json={"payload": "9911882277 se fraud call",
+                                    "category": "electricity"}).json()
+c.post(f"/api/reports/{repG['_id']}/verify", json={"action": "verify"})
+ok("independent report stacks to 2", _count("9911882277") == 2)
+c.post(f"/api/reports/{repF['_id']}/verify", json={"action": "reject"})
+c.post(f"/api/reports/{repF['_id']}/verify", json={"action": "reject"})
+ok("reject reverses exactly this report's contributions, once, keeping the other's",
+   _count("9911882277") == 1 and _count("bijli-fix.xyz") == 0)
+
+# drift injection: counter manipulated behind the ledger's back -> repaired
+main.STORE.upsert_indicator("9911882277", "phone", "electricity")  # phantom +1
+rec3 = c.post("/api/reports/reconcile", headers=MODH).json()
+ok("reconcile repairs counter drift from the ledger",
+   any(x["value"] == "9911882277" and x["to"] == 1 for x in rec3["repaired"])
+   and _count("9911882277") == 1)
+
+# concurrent verify of the SAME report: contributions still exactly once
+repH = c.post("/api/reports", json={"payload": "fraud site dhokha-pe.xyz par mat jao, 9900112233 se call aata hai",
+                                    "category": "kyc_expiry"}).json()
+from concurrent.futures import ThreadPoolExecutor as _TPE
+with _TPE(max_workers=6) as ex:
+    list(ex.map(lambda _: c.post(f"/api/reports/{repH['_id']}/verify",
+                                 json={"action": "verify"}), range(6)))
+ok("concurrent verify: each identifier contributed at most once",
+   _count("dhokha-pe.xyz") == 1 and _count("9900112233") == 1)
+
 print(f"\nALL {P} CHANNEL CHECKS PASSED")
