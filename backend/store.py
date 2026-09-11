@@ -29,10 +29,13 @@ class MemoryStore:
     name = "memory"
 
     def __init__(self):
-        self.data: dict[str, dict] = {
-            "checks": {}, "reports": {}, "indicators": {},
-            "guardian_links": {}, "guardian_requests": {},
-        }
+        # defaultdict: new channel collections (wa_events, ivr_jobs, …) work
+        # without registration, mirroring Mongo's create-on-write behavior.
+        from collections import defaultdict
+        self.data: dict[str, dict] = defaultdict(dict)
+        for coll in ("checks", "reports", "indicators",
+                     "guardian_links", "guardian_requests"):
+            self.data[coll]  # seed the classic collections
         for ind in FX.SEED_INDICATORS:
             self.data["indicators"][ind["_id"]] = dict(ind)
 

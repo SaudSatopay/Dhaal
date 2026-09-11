@@ -5,6 +5,7 @@ Sarvam and Atlas — the shapes here are the contract, do not drift from CONTRAC
 Stub keeps a deterministic mini-engine so the golden path demos end-to-end immediately.
 """
 import hashlib
+import json
 import os
 import re
 import secrets
@@ -27,9 +28,11 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from starlette.concurrency import run_in_threadpool
 
+import exotel
 import fixtures as FX
 import llm
 import sarvam
+import wa_meta
 import engine as engine_mod
 from engine import run_signal_engine
 from engine.common import extract_phones, extract_vpas
@@ -905,6 +908,42 @@ def _wa_reply(msg: str) -> Response:
     return Response(content=twiml, media_type="application/xml")
 
 
+_WA_WELCOME = (
+    "🛡️ ढाल Dhaal में आपका स्वागत है!\n"
+    "कोई भी suspicious message, link, UPI ID या number यहाँ forward करें — "
+    "तुरंत बताएँगे कि ठगी है या नहीं।\n"
+    "Forward any suspicious message — Dhaal checks it instantly.")
+_WA_MEDIA_UNSUPPORTED = (
+    "📷 अभी WhatsApp पर photo/QR/voice जाँच नहीं होती — QR की जाँच के लिए "
+    "dhaal-delta.vercel.app/check खोलें, या message का TEXT यहाँ paste करें।\n"
+    "Photo/QR/voice checks are not supported on WhatsApp yet — use "
+    "dhaal-delta.vercel.app/check, or paste the message text here.")
+
+
+def _wa_text(doc: dict) -> str:
+    """One WhatsApp answer for a check — shared verbatim by the Twilio TwiML
+    path and the Meta Cloud API path so both channels carry the SAME
+    assessment semantics: a question is never crowned with a green verdict,
+    and the score is a rule-weight, never presented as a probability."""
+    if doc["assessment"] != "assessed":
+        lines = ["❓ *और जानकारी चाहिए · More info needed*", "",
+                 doc["explanation_hi"]]
+        lines += ["", "— ढाल Dhaal · dhaal-delta.vercel.app"]
+        return "\n".join(lines)
+    icon, v_hi, v_en = _WA_VERDICT[doc["verdict"]]
+    lines = [f"{icon} *{v_hi} · {v_en}* — {doc['score']}/100 risk signals",
+             "", doc["explanation_hi"]]
+    top = [s for s in doc["signals"]
+           if s["source"] != "llm_pattern" and s["weight"] > 0][:3]
+    if top:
+        lines += ["", "*संकेत · Signals:*"]
+        lines += [f"• {s['title_hi']} (+{s['weight']})" for s in top]
+    if doc["verdict"] == "danger":
+        lines += ["", "🚑 ठगे गए हों तो पहले घंटे में 1930 पर call करें · dhaal-delta.vercel.app/recover"]
+    lines += ["", "— ढाल Dhaal · dhaal-delta.vercel.app"]
+    return "\n".join(lines)
+
+
 @app.post("/api/whatsapp")
 async def whatsapp_webhook(request: Request):
     form_raw = await request.form()
@@ -917,34 +956,231 @@ async def whatsapp_webhook(request: Request):
     if num_media not in ("", "0"):
         # honesty: image/QR/voice over WhatsApp is NOT implemented — say so
         # instead of silently checking an empty caption.
-        return _wa_reply(
-            "📷 अभी WhatsApp पर photo/QR/voice जाँच नहीं होती — QR की जाँच के लिए "
-            "dhaal-delta.vercel.app/check खोलें, या message का TEXT यहाँ paste करें।\n"
-            "Photo/QR/voice checks are not supported on WhatsApp yet — use "
-            "dhaal-delta.vercel.app/check, or paste the message text here.")
+        return _wa_reply(_WA_MEDIA_UNSUPPORTED)
     if not body_text or body_text.lower().startswith("join "):
-        return _wa_reply(
-            "🛡️ ढाल Dhaal में आपका स्वागत है!\n"
-            "कोई भी suspicious message, link, UPI ID या number यहाँ forward करें — "
-            "तुरंत बताएँगे कि ठगी है या नहीं।\n"
-            "Forward any suspicious message — Dhaal checks it instantly.")
-
+        return _wa_reply(_WA_WELCOME)
     doc = check(CheckIn(type="text", payload=body_text, lang="hi-IN"))
-    # Same assessment semantics as the web app (H14): an unassessed input
-    # leads with the QUESTION — never a green verdict above a context ask.
-    if doc["assessment"] != "assessed":
-        lines = ["❓ *और जानकारी चाहिए · More info needed*", "",
-                 doc["explanation_hi"]]
-        lines += ["", "— ढाल Dhaal · dhaal-delta.vercel.app"]
-        return _wa_reply("\n".join(lines))
+    return _wa_reply(_wa_text(doc))
 
-    icon, v_hi, v_en = _WA_VERDICT[doc["verdict"]]
-    lines = [f"{icon} *{v_hi} · {v_en}*", "", doc["explanation_hi"]]
-    top = [s for s in doc["signals"] if s["source"] != "llm_pattern" and s["weight"] > 0][:3]
-    if top:
-        lines += ["", "*संकेत · Signals:*"]
-        lines += [f"• {s['title_hi']} (+{s['weight']})" for s in top]
+
+# ---------------------------------------------------------------- WhatsApp (Meta Cloud API)
+# H15: the production WhatsApp lane. Meta's Cloud API test number allows
+# custom webhooks on the free tier (what Twilio's trial blocked). Flow:
+# victim forwards a message -> Meta POSTs here -> engine verdict -> reply in
+# the same chat via the Graph API. Replies are inside Meta's 24h service
+# window (we only ever answer an inbound message), so no template approvals.
+
+
+@app.get("/api/wa/webhook")
+def wa_webhook_verify(request: Request):
+    """Meta's one-time subscription handshake: echo hub.challenge iff the
+    verify token matches ours. Anything else -> 403."""
+    q = request.query_params
+    if (q.get("hub.mode") == "subscribe"
+            and q.get("hub.verify_token", "") == os.getenv("WA_VERIFY_TOKEN", "").strip()
+            and os.getenv("WA_VERIFY_TOKEN", "").strip()):
+        return Response(content=q.get("hub.challenge", ""), media_type="text/plain")
+    return JSONResponse({"error": "verification failed"}, status_code=403)
+
+
+@app.post("/api/wa/webhook")
+async def wa_webhook(request: Request):
+    raw = await request.body()
+    # Meta signs every delivery with the app secret. Secret configured ->
+    # invalid/missing signature is refused; unset (local/tests) -> open.
+    if not wa_meta.verify_signature(raw, request.headers.get("x-hub-signature-256", "")):
+        return JSONResponse({"error": "invalid signature"}, status_code=403)
+    try:
+        payload = json.loads(raw.decode("utf-8"))
+        value = payload["entry"][0]["changes"][0]["value"]
+    except Exception:
+        return {"ok": True, "ignored": "unparseable"}  # 200: Meta must not retry junk
+
+    # delivery/read receipts arrive on the same webhook — never "check" those
+    if "messages" not in value:
+        return {"ok": True, "ignored": "status_update"}
+
+    msg = value["messages"][0]
+    msg_id = str(msg.get("id", ""))[:120]
+    sender = str(msg.get("from", ""))[:20]
+    if not msg_id or not sender:
+        return {"ok": True, "ignored": "no_id_or_sender"}
+
+    # Meta RETRIES on timeouts/non-200 — dedupe by message id so a slow check
+    # never produces a double reply. First write wins.
+    if STORE.get("wa_events", msg_id):
+        return {"ok": True, "deduped": True}
+    STORE.insert("wa_events", {"_id": msg_id, "from": sender,
+                               "status": "processing", "created_at": _now()})
+
+    mtype = msg.get("type")
+    if mtype == "text":
+        body_text = str(msg.get("text", {}).get("body", "")).strip()[:_WA_MAX_BODY]
+    elif mtype == "button":
+        body_text = str(msg.get("button", {}).get("text", "")).strip()[:_WA_MAX_BODY]
+    else:
+        # image/audio/document/etc — honest unsupported reply, no silent drop
+        wa_meta.mark_read(msg_id)
+        sent = wa_meta.send_text(sender, _WA_MEDIA_UNSUPPORTED)
+        STORE.update("wa_events", msg_id,
+                     {"status": "unsupported_media", "replied": sent})
+        return {"ok": True, "handled": "media_unsupported"}
+
+    wa_meta.mark_read(msg_id)
+    if not body_text:
+        reply = _WA_WELCOME
+        doc_id = None
+    else:
+        doc = check(CheckIn(type="text", payload=body_text, lang="hi-IN"))
+        reply = _wa_text(doc)
+        doc_id = doc["_id"]
+    sent = wa_meta.send_text(sender, reply)
+    STORE.update("wa_events", msg_id,
+                 {"status": "answered", "check_id": doc_id, "replied": sent})
+    return {"ok": True, "replied": sent}
+
+
+# ---------------------------------------------------------------- IVR (Exotel)
+# H15: the dumbphone lane. Any phone calls the ExoPhone; the Exotel flow is:
+#   Greeting (static prompt) -> Record (caller explains, beep-terminated)
+#   -> Passthru  GET {API}/api/ivr/recording   (we ACK instantly, store the job)
+#   -> Play/dynamic-greeting  GET {API}/api/ivr/result?CallSid=...
+#      (THIS request does the work: fetch recording -> Saarika ASR -> engine
+#       -> short spoken guidance -> Bulbul TTS @8kHz -> returns audio/wav)
+# The split keeps the Passthru under Exotel's response deadline and is
+# serverless-safe (no post-response background work on Vercel). A result SMS
+# goes out best-effort so the caller keeps the guidance in hand. On any
+# failure the result endpoint returns non-200 and the Exotel flow falls back
+# to its static "call 1930 if worried" branch — the caller never hears dead air.
+
+_IVR_MAX_AUDIO = 4 * 1024 * 1024  # 60s of call audio is ~0.5MB; 4MB is ample
+
+
+def _ivr_script(doc: dict) -> tuple[str, str]:
+    """(spoken_hi, sms_text) — SHORT by design: one verdict sentence + one
+    action, phone-listenable; the SMS carries the same content + 1930."""
+    if doc["assessment"] != "assessed":
+        spoken = ("आपकी बात पूरी समझ नहीं आई। जो message या call आया था, उसकी पूरी बात "
+                  "बताते हुए दुबारा call करें। तब तक किसी को पैसे या OTP न दें।")
+        sms = "ढाल Dhaal: पूरी जानकारी के बिना जाँच अधूरी है। दुबारा call करके पूरी बात बताएँ। तब तक पैसे/OTP किसी को न दें। धोखा हो तो 1930 पर call करें।"
+        return spoken, sms
     if doc["verdict"] == "danger":
-        lines += ["", "🚑 ठगे गए हों तो पहले घंटे में 1930 पर call करें · dhaal-delta.vercel.app/recover"]
-    lines += ["", "— ढाल Dhaal · dhaal-delta.vercel.app"]
-    return _wa_reply("\n".join(lines))
+        top = next((s for s in doc["signals"] if s["weight"] > 0), None)
+        why = f" {top['title_hi']}।" if top else ""
+        spoken = (f"सावधान! यह ठगी लगती है।{why} पैसे बिल्कुल न भेजें, OTP किसी को न बताएं, "
+                  "और फोन काट दें। ठगी हो चुकी हो तो तुरंत 1930 पर call करें।")
+        sms = f"ढाल Dhaal: 🛑 खतरा ({doc['score']}/100 risk)।{why} पैसे न भेजें, OTP न बताएं। ठगी होने पर पहले घंटे में 1930 पर call करें।"
+    elif doc["verdict"] == "suspicious":
+        spoken = ("सावधान रहें — इसमें शक की बातें मिली हैं। अभी कुछ भी न भेजें। "
+                  "पहले बैंक या उस संस्था के official नंबर पर खुद call करके पक्का करें।")
+        sms = f"ढाल Dhaal: ⚠️ सावधान ({doc['score']}/100 risk)। अभी कुछ न भेजें — official नंबर से खुद पक्का करें। धोखा लगे तो 1930।"
+    else:
+        spoken = ("इसमें कोई जाना-पहचाना खतरा नहीं मिला। फिर भी पैसे भेजने से पहले "
+                  "नाम और नंबर खुद जाँच लें। शक हो तो 1930 पर call करें।")
+        sms = "ढाल Dhaal: 🟢 कोई ज्ञात खतरा नहीं। फिर भी भेजने से पहले नाम-नंबर खुद जाँचें। शक हो तो 1930।"
+    return spoken, sms
+
+
+def _ivr_params(request: Request, form: dict | None = None) -> dict:
+    """Exotel sends params as query (Passthru/greeting) or form (callbacks);
+    accept both, tolerate their naming variants."""
+    p = {**{k: v for k, v in request.query_params.items()}, **(form or {})}
+    return {
+        "call_sid": (p.get("CallSid") or p.get("callSid") or "").strip()[:80],
+        "from": (p.get("CallFrom") or p.get("From") or "").strip()[:20],
+        "recording_url": (p.get("RecordingUrl") or p.get("recording_url") or "").strip()[:500],
+    }
+
+
+@app.get("/api/ivr/recording")
+@app.post("/api/ivr/recording")
+async def ivr_recording(request: Request):
+    """Exotel Passthru after the Record applet — ACK fast, store the job."""
+    form = {}
+    if request.method == "POST":
+        try:
+            form = {k: str(v) for k, v in (await request.form()).items()}
+        except Exception:
+            form = {}
+    p = _ivr_params(request, form)
+    if not p["call_sid"]:
+        return JSONResponse({"error": "CallSid required"}, status_code=422)
+    existing = STORE.get("ivr_jobs", p["call_sid"])
+    if not existing:
+        STORE.insert("ivr_jobs", {
+            "_id": p["call_sid"], "from": p["from"],
+            "recording_url": p["recording_url"], "status": "received",
+            "created_at": _now(),
+        })
+    elif p["recording_url"] and not existing.get("recording_url"):
+        STORE.update("ivr_jobs", p["call_sid"],
+                     {"recording_url": p["recording_url"]})
+    return {"ok": True}
+
+
+@app.get("/api/ivr/result")
+def ivr_result(request: Request):
+    """The dynamic-greeting fetch: does ASR -> engine -> TTS and returns the
+    8 kHz WAV Exotel plays to the caller. Idempotent: replays serve the cache."""
+    p = _ivr_params(request)
+    if not p["call_sid"]:
+        return JSONResponse({"error": "CallSid required"}, status_code=422)
+    job = STORE.get("ivr_jobs", p["call_sid"])
+    if not job:  # result hit without a prior Passthru — build from own params
+        job = {"_id": p["call_sid"], "from": p["from"],
+               "recording_url": p["recording_url"], "status": "received",
+               "created_at": _now()}
+        STORE.insert("ivr_jobs", job)
+    if job.get("audio_b64"):  # cached — Exotel retries/replays are free
+        import base64 as _b64
+        return Response(content=_b64.b64decode(job["audio_b64"]),
+                        media_type="audio/wav")
+
+    rec_url = job.get("recording_url") or p["recording_url"]
+    transcript = None
+    if rec_url:
+        got = exotel.fetch_recording(rec_url)
+        if got and len(got[0]) <= _IVR_MAX_AUDIO:
+            blob, ctype = got
+            out = sarvam.speech_to_text(
+                blob, filename=rec_url.rsplit("/", 1)[-1][:60] or "call.mp3",
+                content_type=ctype)
+            transcript = out["transcript"] if out else None
+    if not transcript:
+        # ASR/recording unavailable (no key locally, or fetch failed): the
+        # rehearsed fixture keeps the lane demonstrable; mocked is recorded.
+        transcript = FX.DIGITAL_ARREST_TRANSCRIPT
+        STORE.update("ivr_jobs", p["call_sid"], {"mocked_transcript": True})
+
+    doc = check(CheckIn(type="voice_transcript", payload=transcript, lang="hi-IN"))
+    spoken, sms_text = _ivr_script(doc)
+    audio_b64 = sarvam.text_to_speech(spoken, lang="hi-IN", sample_rate=8000)
+
+    sms_sent = False
+    if job.get("from"):
+        sms_sent = exotel.send_sms(job["from"], sms_text)
+    STORE.update("ivr_jobs", p["call_sid"], {
+        "status": "done" if audio_b64 else "no_tts",
+        "transcript": transcript[:500], "check_id": doc["_id"],
+        "verdict": doc["verdict"], "assessment": doc["assessment"],
+        "spoken": spoken, "sms_sent": sms_sent, "audio_b64": audio_b64,
+        "decided_at": _now(),
+    })
+    if not audio_b64:
+        # no TTS -> non-200 so the Exotel flow plays its static fallback
+        # branch instead of dead air; the SMS (if configured) still went out.
+        return JSONResponse({"error": "tts unavailable", "sms_sent": sms_sent},
+                            status_code=503)
+    import base64 as _b64
+    return Response(content=_b64.b64decode(audio_b64), media_type="audio/wav")
+
+
+@app.get("/api/ivr/jobs/{call_sid}")
+def ivr_job(call_sid: str, request: Request):
+    """Debug/inspection — transcript is caller PII, so moderator-gated."""
+    if not _mod_ok(request):
+        return JSONResponse({"error": "moderator key required"}, status_code=401)
+    job = STORE.get("ivr_jobs", call_sid)
+    if not job:
+        return JSONResponse({"error": "not found"}, status_code=404)
+    return {k: v for k, v in job.items() if k != "audio_b64"}

@@ -106,7 +106,17 @@ A pairing identifier is NOT authentication. Two role tokens per pairing, minted 
 ```
 → `{"call_script_1930", "complaint_draft", "bank_letter", "checklist": ["…"], "what", "incident_date", "mocked": true}` — the `what` choice genuinely changes all four blocks (paid ⇒ 1930/dispute · shared_otp ⇒ freeze/PIN-rotation first · clicked_link ⇒ device+credential hygiene, 1930 only if money moved). Unknown facts stay `____`; the date is the user's, never assumed today; payments are described as fraud-INDUCED, not "unauthorized"; no recovery promises.
 
-### `POST /api/whatsapp` — Twilio webhook (TwiML) · H14 hardened
+### WhatsApp (Meta Cloud API) — H15, the production WhatsApp lane
+- `GET /api/wa/webhook` — Meta subscription handshake: echoes `hub.challenge` iff `hub.verify_token` == `WA_VERIFY_TOKEN` (403 otherwise).
+- `POST /api/wa/webhook` — validates `X-Hub-Signature-256` (HMAC-SHA256, `META_APP_SECRET`; refused when set and invalid), ignores `statuses` receipts, **dedupes by Meta message id** (their retries never double-reply), then engine-checks the text and replies via Graph API (`WA_ACCESS_TOKEN` + `WA_PHONE_NUMBER_ID`). Media → honest unsupported reply. Message content identical to the Twilio path (`_wa_text`): H14 assessment semantics, score shown as rule-weight risk — never a probability. Events stored in `wa_events`.
+
+### IVR (Exotel) — H15, the dumbphone lane
+- `GET|POST /api/ivr/recording` — Exotel Passthru after the Record applet: instant ACK, stores job by `CallSid` (`ivr_jobs`), no processing (Passthru deadline + serverless).
+- `GET /api/ivr/result?CallSid=` — the dynamic-greeting fetch does the work: recording download (https-only, basic auth) → Saarika ASR (fallback: rehearsed fixture transcript, recorded as `mocked_transcript`) → engine → short spoken guidance → Bulbul TTS @8 kHz → `audio/wav`. Cached per CallSid (replays free, SMS once). TTS unavailable → **503** (Exotel plays its static fallback). Result SMS best-effort via Exotel (`EXOTEL_*` env).
+- `GET /api/ivr/jobs/{CallSid}` — moderator-gated (transcript = caller PII; audio excluded).
+- Setup runbook + call-flow diagram: `docs/CHANNELS.md`.
+
+### `POST /api/whatsapp` — Twilio webhook (TwiML) · H14 hardened (legacy/parked)
 Same assessment semantics as the web app (question leads when unassessed — never a green line above it). `NumMedia>0` ⇒ honest "photo/QR/voice not supported here" reply. Body capped at 2000 chars. `X-Twilio-Signature` (HMAC-SHA1) VALIDATED whenever `TWILIO_AUTH_TOKEN` is set (403 on mismatch); with `VERCEL` + `WA_REQUIRE_SIGNATURE=1` unsigned webhooks are refused even without the token. `WA_PUBLIC_URL` pins the signed URL behind proxies. (Sandbox transport itself is parked on the Twilio trial tier — auth verified by test, not live Twilio.)
 
 Errors, all endpoints: `{"error": "human-readable message"}`.

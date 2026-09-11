@@ -72,20 +72,24 @@ def speech_to_text(blob: bytes, filename: str = "audio.webm",
         return None
 
 
-def text_to_speech(text: str, lang: str = "hi-IN") -> str | None:
-    """-> base64 WAV string (contract field tts_audio_b64) or None."""
+def text_to_speech(text: str, lang: str = "hi-IN",
+                   sample_rate: int | None = None) -> str | None:
+    """-> base64 WAV string (contract field tts_audio_b64) or None.
+    sample_rate: telephony callers (Exotel IVR) pass 8000 — PSTN playback is
+    8 kHz mono; web callers omit it (Sarvam default, richer audio)."""
     if not available() or not text.strip():
         return None
     snippet = text.strip()[:450]  # TTS input cap; explanations are 2-3 sentences
+    extra = {"speech_sample_rate": sample_rate} if sample_rate else {}
     # bulbul:v2 deprecated 2026 (Sarvam 400s with "use bulbul:v3"); v3 speaker
     # roster replaced the old names — ritu/priya are current-valid.
     r = _post("/text-to-speech",
               json={"text": snippet, "target_language_code": lang,
-                    "speaker": "ritu", "model": "bulbul:v3"})
+                    "speaker": "ritu", "model": "bulbul:v3", **extra})
     if r is None or r.status_code >= 400:
         r = _post("/text-to-speech",  # alt field naming, same model gen
                   json={"inputs": [snippet], "target_language_code": lang,
-                        "speaker": "priya", "model": "bulbul:v3"})
+                        "speaker": "priya", "model": "bulbul:v3", **extra})
     if r is None or r.status_code >= 400:
         return None
     try:
