@@ -152,9 +152,11 @@ def check(body: CheckIn):
     # Insufficient information (H12+ review): a bare unknown number/VPA or a
     # few stray words carries no verdict-worthy evidence — say so and ask ONE
     # follow-up instead of implying safety with a green card.
+    # A parsed upi:// URI is NOT context-less — we read the actual payee/amount,
+    # so its verdict stands even though the string has no spaces (Parva, H13).
     needs_context = None
     _t = body.payload.strip()
-    if score == 0 and (
+    if score == 0 and not _t.lower().startswith("upi://") and (
         re.fullmatch(r"\+?[\d\s\-]{8,15}", _t)
         or re.fullmatch(r"[a-z0-9.\-_]{2,}@[a-z]{2,}", _t, re.I)
         or len(_t.split()) < 4

@@ -186,6 +186,10 @@ ok("bare number asks for context", nc["verdict"] == "no_known_risk"
    and nc.get("needs_context") and "question_hi" in nc["needs_context"])
 nc2 = c.post("/api/check", json={"type": "text", "payload": FX.KYC_SCAM_TEXT}).json()
 ok("rich input has no context ask", nc2.get("needs_context") is None)
+# A parsed upi:// URI is real evidence, never "too short" (Parva's H13 flag)
+nc3 = c.post("/api/check", json={"type": "qr", "payload": "upi://pay?pa=ramlal@okaxis&pn=Ramlal%20Kirana"}).json()
+ok("clean upi qr has no context ask", nc3.get("needs_context") is None
+   and nc3["verdict"] == "no_known_risk")
 gl2 = c.post("/api/guardian/links", json={"ward_name": "W", "guardian_name": "G",
                                           "guardian_phone": "+919812300000"}).json()
 ok("guardian phone stored", gl2.get("guardian_phone") == "+919812300000")
