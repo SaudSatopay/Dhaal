@@ -197,6 +197,12 @@ export const S_HOME = {
   sIntelSub: { hi: "समुदाय की live scam जानकारी", en: "Live scam intel from the community" },
   sRecover: { hi: "पहला घंटा", en: "The first hour" },
   sRecoverSub: { hi: "ठगी हो गई? Recovery kit", en: "Just got scammed? Recovery kit" },
+  radarTitle: { hi: "धोखों का LIVE RADAR", en: "Live scam radar" },
+  radarSub: { hi: "Rajasthan — हर बिंदु = verified reports", en: "Rajasthan — every dot = verified reports" },
+  verifiedNow: { hi: "अभी verify हुआ", en: "Just verified" },
+  statLive: { hi: "इस session में", en: "live this session" },
+  statLangs: { hi: "भाषाएँ", en: "languages" },
+  statFamilies: { hi: "signal families", en: "signal families" },
 } satisfies Record<string, LangText>;
 
 /* ---------------- /intel ---------------- */
