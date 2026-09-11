@@ -121,10 +121,13 @@ export default function VerdictCard({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [staged, check._id]);
-  // H14: unassessed checks (verdict null) never reach this card — the check
-  // page renders the context/unsupported panel instead. Guard after hooks.
-  if (!check.verdict) return null;
-  const v = VERDICT_UI[check.verdict];
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [speaking, setSpeaking] = useState(false);
+  // H14: verdict is nullable in the contract; unassessed checks never reach
+  // this card (the check page renders the context/unsupported panel), so
+  // lookups below use a narrowed alias — after every hook, per hook rules.
+  const verdict = check.verdict ?? "no_known_risk";
+  const v = VERDICT_UI[verdict];
   const [vLabel, vLabelSub] = pick(lang, v.label);
   const [vHint] = pick(lang, v.hint);
   const cat = check.scam_category ? CATEGORY_UI[check.scam_category] : null;
@@ -132,8 +135,6 @@ export default function VerdictCard({
     lang === "en"
       ? [check.explanation_en, check.explanation_hi]
       : [check.explanation_hi, check.explanation_en];
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const [speaking, setSpeaking] = useState(false);
 
   function speak() {
     if (!check.tts_audio_b64) return;
@@ -181,7 +182,7 @@ export default function VerdictCard({
   ) : null;
 
   /* ---------------- quiet clearance chit ---------------- */
-  if (check.verdict === "no_known_risk") {
+  if (verdict === "no_known_risk") {
     return (
       <section
         aria-live="polite"
