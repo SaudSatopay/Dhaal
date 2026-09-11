@@ -73,7 +73,12 @@ _AWARENESS = re.compile(
     r"awareness|workshop|seminar|lecture|classroom|professor|teacher|training|"
     r"advisory|warn(?:ed|ing)\s+(?:us|me|people|about)|beware\s+of|savdhan\s+rahe|"
     r"news|article|akhbar|अख़बार|अखबार|जागरूकता|सिखाया|पढ़ाया|समझाया|\bpadhaya\b|"
-    r"\bsikha(?:ya)?\b|cyber\s+safety", re.I)
+    r"\bsikha(?:ya)?\b|cyber\s+safety"
+    # tutorial/news registers the v3 battery exposed (v3-044/045)
+    r"|समाचार|ख़बर|खबर\s*:|\bkhabar\b|breaking\s*:|\breport\s*:"
+    r"|toh\s+doston|दोस्तों|aaj\s+ke\s+session|is\s+video\s+me(?:in)?"
+    r"|samjh(?:t|a)e?\s+hain|समझते\s+हैं|सीखेंगे|seekhenge|police\s+ne\s+.{0,30}(?:pakda|गिरफ़्तार|arrest)",
+    re.I)
 
 
 # H12 (external review): single ambient words must not convict. Each category
@@ -139,7 +144,13 @@ CATEGORIES: dict[str, tuple[int, list, list]] = {
         "loan approve", "loan approved", "pre-approved loan",
         "pre approved loan", "instant loan", "लोन approve", "लोन मंजूर",
         "आधार पर लोन", "बिना गारंटी लोन", "file charge", "loan sanction",
-    ]), []),
+    ]) + [
+        # gap-tolerant (v3-009: "instant PERSONAL loan", "loan ... approve
+        # ho gaya", "GST/charge before disbursal")
+        re.compile(r"\b(?:instant|pre.?approved)\b[^.।!?]{0,25}\bloan\b", re.I),
+        re.compile(r"\bloan\b[^.।!?]{0,40}(?:approve|approved|sanction|मंजूर|pass ho)", re.I),
+        re.compile(r"(?:disbursal|disburse|loan amount)[^.।!?]{0,50}(?:pehle|पहले|before|first)", re.I),
+    ], []),
 }
 
 # Money/pressure context that lets weak tokens combine into a category hit.
@@ -147,7 +158,10 @@ _CTX = _rx([
     "₹", "rs.", "rupees", "rupay", "paise", "fee", "फीस", "फ़ीस", "bhejo",
     "भेजो", "send money", "pay", "payment", "upi", "account", "खाते", "खाता",
     "transfer", "तुरंत", "turant", "immediately", "urgent", "अभी", "warna",
-    "वरना", "किसी को मत", "tell no one", "verification",
+    "वरना", "किसी को मत", "tell no one",
+    # H16: bare "verification" removed — it co-fired innocent weak-token pairs
+    # (v3-053: passport verification + court date). "verification fee" still
+    # counts via fee_demand.
 ])
 
 _CROSS = [
@@ -167,9 +181,11 @@ _CROSS = [
     ("fee_demand", 20, "Upfront fee demanded", "पहले फीस माँगी जा रही है",
      "Prizes, refunds and jobs that need a fee first are scams.",
      "जहाँ इनाम/refund से पहले फीस माँगे, वह ठगी है।",
-     _rx(["processing fee", "verification fee", "वेरिफिकेशन फीस", "फीस भेज",
-          "registration fee", "token amount", "security deposit",
-          "शुल्क भेज", "फीस जमा", "file charge"])),
+     _rx(["processing fee", "processing charge", "verification fee",
+          "वेरिफिकेशन फीस", "फीस भेज", "registration fee", "token amount",
+          "security deposit", "शुल्क भेज", "फीस जमा", "file charge",
+          "gst charge", "gst jama", "gst जमा"])
+     + [re.compile(r"(?:charge|fee|shulk|शुल्क|फीस)[^.।!?]{0,25}(?:jama|जमा|bhar|भर|pay\s+kar)", re.I)]),
     # Victim-voiced coercion — judges type DESCRIPTIONS of the threat, not the
     # scammer's script ("I was told to send money or I'd be arrested"). H11.
     ("coercion_extortion", 30, "Money demanded under threat", "धमकी देकर पैसे माँगे जा रहे हैं",
@@ -234,16 +250,76 @@ _REMOTE_ACCESS = _rx(["anydesk", "teamviewer", "quick support", "quicksupport",
 # Refund/prize that requires SENDING money first — the advance-fee mechanic.
 _BAIT_GET = _rx(["refund", "रिफंड", "cashback", "कैशबैक", "prize", "इनाम",
                  "lottery", "claim your", "claim karne", "वापसी", "winner",
-                 "to receive your", "receive karne"])
+                 "to receive your", "receive karne", "loan", "लोन",
+                 "disbursal", "salary milegi", "job milegi"])
 _BAIT_SEND = _rx(["paise bhejo", "पैसे भेजो", "paise bhej", "पैसे भेज",
-                  "bhejo", "भेजो", "bhejein", "भेजें", "bheje", "send money",
-                  "pay first", "pehle pay", "pehle bhejo", "पहले भेजो",
-                  "pehle bhejein", "transfer karo", "transfer kare",
-                  "pay karo", "send rs", "send ₹", "pay delivery charge",
-                  "delivery charge", "shipping charge"])
+                  "send money", "pay first", "pehle pay", "pehle bhejo",
+                  "पहले भेजो", "pehle bhejein", "पहले भेजें", "transfer karo",
+                  "transfer kare", "pay karo", "send rs", "send ₹",
+                  "pay delivery charge", "delivery charge",
+                  "shipping charge"]) + [
+    # money-scoped sends — "documents bhejo" must never count (H16 precision)
+    re.compile(r"(?:₹|\brs\.?\b|paise|पैसे|\d{2,7})\s*(?:[^.।!?]{0,12})?"
+               r"(?:bhej(?:o|iye|ein|en|\s+do)?|भेज(?:ो|िए|ें|\s+दो)?)", re.I),
+    re.compile(r"(?:bhej(?:o|iye|ein|en)?|भेज(?:ो|िए|ें)?)\s*(?:karne\s+par)?"
+               r"[^.।!?]{0,12}(?:₹|\brs\.?\b|\d{3,7})", re.I),
+] + [
+    # money-scoped deposits only — "documents jama karo" must never count
+    re.compile(r"(?:₹|\brs\.?\b|paise|पैसे|fee|फीस|charge|शुल्क|amount|"
+               r"\d{2,7})[^.।!?]{0,18}(?:jama|जमा)", re.I),
+]
 
-_COLLECT_PHRASE = re.compile(r"collect request|collect रिक्वेस्ट", re.I)
+_COLLECT_PHRASE = re.compile(
+    r"collect request|collect रिक्वेस्ट|रिक्वेस्ट|request\s+(?:bheji|भेजी|aayi|आई)", re.I)
 _APPROVE_WORD = re.compile(r"\bapprove|\baccept\b|स्वीकार|मंज़ूर", re.I)
+
+# ---- extortion via threatened disclosure/harm (H16: v3-016 family) ----------
+# Relation, not phrasing: [I hold something over you] + [demand]. The threat
+# alone (no demand) routes to the threat_no_ask clarification instead.
+_DISCLOSURE_THREAT = _rx([
+    "recorded you", "recorded your", "your private video", "private video",
+    "private photo", "tumhara video", "तुम्हारा video", "तेरा video",
+    "aapka video", "आपकी private", "photos मेरे पास", "photo मेरे पास",
+    "video मेरे पास", "video mere paas", "photos mere paas",
+    "send it to your family", "send to your contacts",
+    "sabko bhej", "सबको भेज", "family ko bhej", "परिवार को भेज",
+    "घरवालों को भेज", "रिश्तेदारों को भेज", "viral kar", "वायरल कर",
+    "leak kar", "लीक कर", "badnaam kar", "बदनाम कर", "photo edit",
+    "nangi photo", "अश्लील", "mms", "screenshot sabko", "expose kar",
+    "sabko dikha", "सबको दिखा", "izzat", "इज़्ज़त",
+])
+# demanded action verbs beyond money (delete/meet/obey) — money demand comes
+# from _BAIT_SEND/_SEND_DIRECTIVE post-strip
+_DEMAND_VERBS = _rx(["transfer", "bhejo", "भेजो", "bhej do", "भेज दो", "pay",
+                     "send", "de do", "दे दो", "jama kar", "जमा कर"])
+
+# ---- self-initiated flow question (H16): "Where do I enter the OTP in the
+# official app?" is a user asking about THEIR OWN action — a question, not a
+# request from a counterparty. Interrogative + first-person + no redirect to
+# the asker's chat/number = mention, never credential_request.
+_SELF_QUERY = re.compile(
+    r"(?:^|\b)(?:where|how|when|can i|should i|do i|kahan|kaha|kaise|kab|"
+    r"कहाँ|कहां|कैसे|कब)\b[^.।!?]{0,60}?(?:\bi\b|\bmy\b|\bme\b|main|mai|apna|"
+    r"mera|मैं|मेरा|अपना|करूँ|करूं|karu|karun|daalu|dalu|डालूँ|डालूं|likhu)"
+    r"|(?:karu|karun|daalu|dalu|करूँ|करूं|डालूँ|डालूं|likhu|likhun)\s*\?",
+    re.I)
+
+# ---- delivered-code referent (H16): once ANY sentence establishes that a
+# code/OTP was delivered ("jo code abhi aaya", "the code you received"), a
+# later bare directive — "send it here", "wo mujhe bata do", "code bhejo" —
+# is a credential request even without the word OTP in that sentence.
+_CODE_DELIVERED = re.compile(
+    r"(?:otp|code|कोड|ओटीपी)[^.।!?]{0,50}(?:aaya|आया|aya|mila|मिला|received|"
+    r"bheja (?:hai|gaya)|भेजा (?:है|गया)|sent (?:you|to you))"
+    r"|(?:just|abhi|अभी)\s+(?:got|received|aaya|आया)[^.।!?]{0,20}(?:otp|code|कोड)",
+    re.I)
+_BARE_REF_REQ = re.compile(
+    r"(?:send|share|forward|tell|batao?|बता(?:ओ|इए|एँ|एं)?|bhej(?:o|iye|ein)?|"
+    r"भेज(?:ो|िए|ें)?|likh(?:o|iye)?)\w*\b[^.।!?]{0,30}?"
+    r"(?:\bit\b|\bthat\b|\bhere\b|code|कोड|use|उसे|wo(?:h)?\b|वो|वह|mujhe|मुझे)"
+    r"|(?:\bit\b|use|उसे|wo(?:h)?\b|वो|वह|code|कोड)[^.।!?]{0,25}?"
+    r"(?:bhej|भेज|bata|बता|send|share|forward|yahan|यहाँ|is\s+(?:number|chat))",
+    re.I)
 
 # ---- new families (held-out v2 misses + external review) --------------------
 _FAMILY_TROUBLE = _rx(["accident", "एक्सिडेंट", "दुर्घटना", "hospital",
@@ -287,11 +363,21 @@ def detect(text: str, signals: list, evidence: list | None = None) -> list[str]:
     # ---- directive evidence (per sentence, negation-scoped) ----
     cred_request_span = None
     cred_delivery = any(p.search(text) for p in _CRED_DELIVERY)
+    code_delivered = bool(_CODE_DELIVERED.search(text))
     for i, (raw_s, st_s) in enumerate(zip(sentences, stripped_sents)):
         has_mention = any(p.search(raw_s) for p in _CRED_MENTION)
-        if not has_mention:
+        # H16 cross-sentence referent: an earlier sentence delivered "the
+        # code"; this one may demand it without naming it.
+        referent_m = (_BARE_REF_REQ.search(st_s)
+                      if code_delivered and not has_mention else None)
+        if not has_mention and not referent_m:
             continue
-        m = _CRED_REQ_A.search(st_s) or _CRED_REQ_B.search(st_s)
+        # H16 self-initiated flow: a first-person QUESTION about where/how *I*
+        # enter my code is the user's own action — never a counterparty ask.
+        if _SELF_QUERY.search(raw_s) and not _CHAT_DIRECTION.search(raw_s):
+            _ev(evidence, "credential_self_query", raw_s, i)
+            continue
+        m = referent_m or _CRED_REQ_A.search(st_s) or _CRED_REQ_B.search(st_s)
         if not m:
             continue
         # in-person platform flow: OTP told/shown to a present agent — exempt
@@ -393,6 +479,33 @@ def detect(text: str, signals: list, evidence: list | None = None) -> list[str]:
             "Asked to APPROVE to receive money", "पैसे 'पाने' के लिए approve करने को कहा",
             "Approving a collect request always sends money OUT — receiving needs no approval.",
             "Collect request approve करने से पैसे कटते हैं — पैसे पाने के लिए कभी approve नहीं करना पड़ता।",
+        ))
+
+    # extortion: threatened disclosure/harm tied to a MONEY demand (H16).
+    # High-precision relation (threat-set + demand-verb + money context), so a
+    # single hit is danger-grade — blackmail is unambiguous. Without the money
+    # context ("recorded your presentation, transfer the file") it never fires.
+    disclosure_span = _first_span(_DISCLOSURE_THREAT, text)
+    money_ctx = re.search(r"₹|\brs\.?\s?\d|rupee|हज़ार|hazaa?r|lakh|लाख|\b\d{3,7}\b",
+                          text, re.I)
+    if disclosure_span and money_ctx and (
+            bait_send_span or _first_span(_DEMAND_VERBS, stripped_all)):
+        _ev(evidence, "extortion_disclosure", disclosure_span)
+        signals.append(make_signal(
+            "extortion_disclosure", "deterministic", 60,
+            "Blackmail: pay or be exposed", "Blackmail: पैसे दो वरना बदनाम",
+            "Threatening to leak/expose something unless you pay is extortion — a crime by THEM, whatever they claim to have. Do not pay; save evidence; report on 1930/cybercrime.gov.in.",
+            "कुछ leak/viral करने की धमकी देकर पैसे माँगना ब्लैकमेल है — जुर्म UNKA है, चाहे उनके पास कुछ भी हो। पैसे न दें; सबूत रखें; 1930 पर रिपोर्ट करें।",
+        ))
+    elif disclosure_span:
+        # threat held over the user but no demand stated YET — this must reach
+        # the threat_no_ask clarification, never a green card
+        _ev(evidence, "threat_framing", disclosure_span)
+        signals.append(make_signal(
+            "threat_framing", "deterministic", 15,
+            "Threat of exposure/harm", "बदनामी/नुकसान की धमकी",
+            "Something is being held over you — watch for the demand that follows.",
+            "आप पर कुछ थोपा जा रहा है — आगे आने वाली माँग ही असली मक़सद है।",
         ))
 
     # family emergency + send-money (held-out v2 misses s04/s30)

@@ -1147,7 +1147,22 @@ async def wa_webhook(request: Request):
 
 
 # ---------------------------------------------------------------- IVR (Exotel)
-# H15: the dumbphone lane. Any phone calls the ExoPhone; the Exotel flow is:
+# H16: FEATURE DROPPED (owner decision). The lane stays in the codebase as
+# retired reference, but production routes are DISABLED before any storage,
+# fetching, inference, TTS or SMS can happen — a request to a retired route
+# must never trigger paid compute, external calls, or a fabricated assessment.
+# Re-enable deliberately with IVR_ENABLED=1 (plus Exotel env) if ever revived.
+def IVR_ENABLED() -> bool:  # dynamic: tests exercise both states in-process
+    return os.getenv("IVR_ENABLED", "").strip() == "1"
+
+
+def _ivr_retired() -> JSONResponse:
+    return JSONResponse(
+        {"error": "IVR lane retired — feature dropped; see docs/CHANNELS.md"},
+        status_code=410)
+
+
+# H15 (historical design, retained for the retired lane):
 #   Greeting (static prompt) -> Record (caller explains, beep-terminated)
 #   -> Passthru  GET {API}/api/ivr/recording   (we ACK instantly, store the job)
 #   -> Play/dynamic-greeting  GET {API}/api/ivr/result?CallSid=...
@@ -1218,6 +1233,8 @@ def _ivr_params(request: Request, form: dict | None = None) -> dict:
 @app.post("/api/ivr/recording")
 async def ivr_recording(request: Request):
     """Exotel Passthru after the Record applet — ACK fast, store the job."""
+    if not IVR_ENABLED():
+        return _ivr_retired()
     form = {}
     if request.method == "POST":
         try:
@@ -1244,6 +1261,8 @@ async def ivr_recording(request: Request):
 def ivr_result(request: Request):
     """The dynamic-greeting fetch: does ASR -> engine -> TTS and returns the
     8 kHz WAV Exotel plays to the caller. Idempotent: replays serve the cache."""
+    if not IVR_ENABLED():
+        return _ivr_retired()
     p = _ivr_params(request)
     if not p["call_sid"]:
         return JSONResponse({"error": "CallSid required"}, status_code=422)
@@ -1272,10 +1291,13 @@ def ivr_result(request: Request):
                 content_type=ctype)
             transcript = out["transcript"] if out else None
     if not transcript:
-        # ASR/recording unavailable (no key locally, or fetch failed): the
-        # rehearsed fixture keeps the lane demonstrable; mocked is recorded.
-        transcript = FX.DIGITAL_ARREST_TRANSCRIPT
-        STORE.update("ivr_jobs", p["call_sid"], {"mocked_transcript": True})
+        # H16: a missing recording or failed ASR must NEVER become a fabricated
+        # transcript — assessing words the caller never said is worse than no
+        # answer. Non-200 -> Exotel's static fallback branch speaks instead.
+        STORE.update("ivr_jobs", p["call_sid"],
+                     {"status": "no_transcript", "decided_at": _now()})
+        return JSONResponse({"error": "recording could not be transcribed"},
+                            status_code=503)
 
     doc = check(CheckIn(type="voice_transcript", payload=transcript, lang="hi-IN"))
     spoken, sms_text = _ivr_script(doc)
@@ -1303,6 +1325,8 @@ def ivr_result(request: Request):
 @app.get("/api/ivr/jobs/{call_sid}")
 def ivr_job(call_sid: str, request: Request):
     """Debug/inspection — transcript is caller PII, so moderator-gated."""
+    if not IVR_ENABLED():
+        return _ivr_retired()
     if not _mod_ok(request):
         return JSONResponse({"error": "moderator key required"}, status_code=401)
     job = STORE.get("ivr_jobs", call_sid)

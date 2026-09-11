@@ -127,32 +127,47 @@ r = c.post("/api/wa/webhook", content=b"not-json",
            headers={"Content-Type": "application/json"})
 ok("wa junk body acked without action", r.status_code == 200 and len(SENT) == 0)
 
-# ---- Exotel IVR --------------------------------------------------------------
-# Passthru ACK is instant and stores the job
-r = c.get("/api/ivr/recording?CallSid=CA-test-1&CallFrom=09811110002"
-          "&RecordingUrl=https://recordings.exotel.com/x/rec1.mp3")
-ok("ivr passthru acks", r.status_code == 200 and r.json()["ok"] is True)
-ok("ivr passthru requires CallSid",
-   c.get("/api/ivr/recording").status_code == 422)
-
-# result: recording fetch + ASR are offline here -> fixture transcript path;
-# TTS is monkeypatched to a tiny valid WAV so the audio contract is asserted.
+# ---- Exotel IVR — RETIRED (H16): routes are dead before any compute ---------
+CALLED = {"fetch": 0, "asr": 0, "tts": 0}
+_real_asr = main.sarvam.speech_to_text
+main.exotel.fetch_recording = lambda url: (CALLED.__setitem__("fetch", CALLED["fetch"] + 1)
+                                           or (b"\xff\xf3fake-mp3", "audio/mpeg"))
+main.sarvam.speech_to_text = (lambda blob, filename="a", content_type="b":
+                              CALLED.__setitem__("asr", CALLED["asr"] + 1)
+                              or {"transcript": "मैं CBI से बोल रहा हूँ, गिरफ़्तारी से बचना है तो वेरिफिकेशन फीस भेजिए, किसी को बताइए मत", "language_code": "hi-IN"})
 _TINY_WAV = (b"RIFF$\x00\x00\x00WAVEfmt \x10\x00\x00\x00\x01\x00\x01\x00"
              b"\x40\x1f\x00\x00\x80>\x00\x00\x02\x00\x10\x00data\x00\x00\x00\x00")
-main.exotel.fetch_recording = lambda url: (b"\xff\xf3fake-mp3", "audio/mpeg")
 main.sarvam.text_to_speech = (
     lambda text, lang="hi-IN", sample_rate=None:
-    base64.b64encode(_TINY_WAV).decode() if sample_rate == 8000 else None)
+    (CALLED.__setitem__("tts", CALLED["tts"] + 1)
+     or base64.b64encode(_TINY_WAV).decode()) if sample_rate == 8000 else None)
+
+SMS.clear()
+r_ret1 = c.get("/api/ivr/recording?CallSid=CA-dead&RecordingUrl=https://recordings.exotel.com/x.mp3")
+r_ret2 = c.get("/api/ivr/result?CallSid=CA-dead")
+r_ret3 = c.get("/api/ivr/jobs/CA-dead")
+ok("ivr retired: every route 410", r_ret1.status_code == 410
+   and r_ret2.status_code == 410 and r_ret3.status_code == 410)
+ok("ivr retired: zero compute, zero external calls, zero sms",
+   CALLED == {"fetch": 0, "asr": 0, "tts": 0} and len(SMS) == 0)
+
+# ---- retained retired-lane behavior (explicit IVR_ENABLED=1 only) -----------
+os.environ["IVR_ENABLED"] = "1"
+r = c.get("/api/ivr/recording?CallSid=CA-test-1&CallFrom=09811110002"
+          "&RecordingUrl=https://recordings.exotel.com/x/rec1.mp3")
+ok("ivr (enabled) passthru acks", r.status_code == 200 and r.json()["ok"] is True)
+ok("ivr (enabled) passthru requires CallSid",
+   c.get("/api/ivr/recording").status_code == 422)
 
 SMS.clear()
 r = c.get("/api/ivr/result?CallSid=CA-test-1")
-ok("ivr result returns playable wav", r.status_code == 200
+ok("ivr (enabled) result returns playable wav", r.status_code == 200
    and r.headers["content-type"].startswith("audio/wav")
-   and r.content.startswith(b"RIFF"))
+   and r.content.startswith(b"RIFF") and CALLED["asr"] == 1)
 os.environ["MOD_KEY"] = "mk-test"
 job = c.get("/api/ivr/jobs/CA-test-1", headers={"X-Mod-Key": "mk-test"}).json()
-ok("ivr job gated + recorded", job["verdict"] == "danger"
-   and job.get("mocked_transcript") is True and "audio_b64" not in job)
+ok("ivr job gated + real transcript recorded", job["verdict"] == "danger"
+   and "mocked_transcript" not in job and "audio_b64" not in job)
 ok("ivr job endpoint 401 without mod key",
    c.get("/api/ivr/jobs/CA-test-1").status_code == 401)
 os.environ["MOD_KEY"] = ""
@@ -163,6 +178,20 @@ ok("ivr result sms attempted to caller",
 r2 = c.get("/api/ivr/result?CallSid=CA-test-1")
 ok("ivr result idempotent on replay", r2.status_code == 200 and len(SMS) == 1)
 
+# H16: failed transcription must NEVER fabricate an assessment
+main.sarvam.speech_to_text = lambda *a, **k: None
+SMS.clear()
+r = c.get("/api/ivr/result?CallSid=CA-notrans&CallFrom=09811110005"
+          "&RecordingUrl=https://recordings.exotel.com/x/rec9.mp3")
+os.environ["MOD_KEY"] = "mk-test"
+jobn = c.get("/api/ivr/jobs/CA-notrans", headers={"X-Mod-Key": "mk-test"}).json()
+os.environ["MOD_KEY"] = ""
+ok("ivr no-transcript -> 503, no fabricated verdict, no sms",
+   r.status_code == 503 and jobn.get("status") == "no_transcript"
+   and "verdict" not in jobn and len(SMS) == 0)
+main.sarvam.speech_to_text = _real_asr
+os.environ["IVR_ENABLED"] = ""
+
 # spoken script branches: danger vs needs-context differ and stay short
 d_danger = c.post("/api/check", json={"type": "voice_transcript",
                                       "payload": FX.DIGITAL_ARREST_TRANSCRIPT}).json()
@@ -172,12 +201,18 @@ s2, m2 = main._ivr_script(d_ctx)
 ok("ivr scripts branch by outcome", s1 != s2 and "1930" in s1
    and "दुबारा call" in s2 and max(len(s1), len(s2)) < 300)
 
-# TTS down -> 503 (Exotel plays its static fallback), SMS still attempted
+# TTS down (transcript fine) -> 503 static-fallback, SMS still attempted
+os.environ["IVR_ENABLED"] = "1"
+main.sarvam.speech_to_text = (lambda blob, filename="a", content_type="b":
+                              {"transcript": "गिरफ़्तारी से बचना है तो वेरिफिकेशन फीस भेजिए, किसी को बताइए मत",
+                               "language_code": "hi-IN"})
 main.sarvam.text_to_speech = lambda *a, **k: None
 SMS.clear()
 r = c.get("/api/ivr/result?CallSid=CA-test-2&CallFrom=09811110003"
           "&RecordingUrl=https://recordings.exotel.com/x/rec2.mp3")
 ok("ivr tts-down degrades to 503 + sms", r.status_code == 503 and len(SMS) == 1)
+main.sarvam.speech_to_text = _real_asr
+os.environ["IVR_ENABLED"] = ""
 
 # recording URL scheme is validated — no plaintext/relative fetches, ever
 ok("ivr recording fetch refuses non-https",
@@ -195,6 +230,7 @@ ok("ivr recording host allowlist logic",
    and not _ex._recording_host_ok("https://exotel.com.attacker.dev/x"))
 
 # fresh IVR computation is rate-limited; cached replays are exempt
+os.environ["IVR_ENABLED"] = "1"
 main._IVR_WINDOW.clear()
 main._IVR_MAX_PER_MIN = 2
 codes = [c.get(f"/api/ivr/result?CallSid=CA-rate-{i}").status_code for i in range(4)]
@@ -202,6 +238,7 @@ main._IVR_MAX_PER_MIN = 6
 ok("ivr fresh compute rate-limited (429 after burst)", 429 in codes)
 cached = c.get("/api/ivr/result?CallSid=CA-test-1")  # cached from earlier
 ok("ivr cached replay bypasses the limit", cached.status_code == 200)
+os.environ["IVR_ENABLED"] = ""
 
 # WA: missing secret on prod (VERCEL) fails closed
 os.environ["VERCEL"] = "1"

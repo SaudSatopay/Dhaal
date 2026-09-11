@@ -63,7 +63,15 @@ message up to **5 verified recipient numbers** — enough for the demo + judges.
 
 ## 2 · Dumbphone IVR — Exotel
 
-> **STATUS (H15, Saud's call: "drop Exotel"): PARKED.** Trial KYC cleared PAN
+> **STATUS (H16): RETIRED — routes DISABLED in production.** All `/api/ivr/*`
+> endpoints return **410 before any storage, fetching, inference, TTS or SMS**
+> (gate: `IVR_ENABLED=1` env would deliberately revive them). The synthetic
+> fixture-transcript fallback is **deleted** — a failed transcription can never
+> become a fabricated assessment (503 instead). No Exotel credentials were ever
+> configured in any environment. `demo/ivr_verdict_sample.wav` is a historical
+> artifact generated while the lane ran on prod. Earlier status for context:
+>
+> **(H15, Saud's call: "drop Exotel"): PARKED.** Trial KYC cleared PAN
 > but then demanded a business certificate (Shop & Establishment / Udyam /
 > Trade License) — a real-document gate we won't file for overnight. The lane
 > itself is DONE and live: endpoints deployed, 22-check-covered, and prod

@@ -296,4 +296,60 @@ check("H15 vpa: known PSP handle carries no unknown-handle noise",
       "upi://pay?pa=ramlal@okaxis&pn=Ramlal", "no_known_risk", itype="qr_text",
       indicators={}, forbid_signal="vpa_unknown_handle")
 
+# --- H16 detection round: relations, not phrasings --------------------------
+# extortion (threatened disclosure + demand) — three languages, one split
+check("H16 extortion: recorded-video blackmail (en)",
+      "I recorded your private video. Transfer Rs 20000 to me or I will send it to your family.",
+      "danger", indicators={}, want_signal="extortion_disclosure")
+check("H16 extortion: hinglish viral threat",
+      "Tumhara video mere paas hai, 5000 bhej do warna sabko viral kar dunga.",
+      "danger", indicators={}, want_signal="extortion_disclosure")
+check("H16 extortion: polite + split across sentences",
+      "आपकी private photos मेरे पास हैं। कृपया आज शाम तक 15000 transfer कर दीजिए। वरना मैं उन्हें आपके परिवार को भेज दूँगा।",
+      "danger", indicators={}, want_signal="extortion_disclosure")
+check("H16 extortion threat WITHOUT demand -> threat evidence, low score",
+      "Maine tumhari private video record kar li hai.",
+      "no_known_risk", indicators={}, want_signal="threat_framing",
+      forbid_signal="extortion_disclosure")
+# self-initiated flow question ≠ credential request
+check("H16 benign: 'where do I enter the OTP' self-flow question",
+      "Where do I enter the OTP in the official bank app?",
+      "no_known_risk", indicators={}, forbid_signal="credential_request")
+check("H16 benign: hinglish self-flow OTP question",
+      "Bank app me OTP kahan daalu main? Login nahi ho raha.",
+      "no_known_risk", indicators={}, forbid_signal="credential_request")
+check("H16 harmful: same verbs but directed AT the user by a counterparty",
+      "Login complete karne ke liye OTP is chat me enter kariye.",
+      "suspicious", indicators={}, want_signal="credential_request")
+# reported demand still flags — describing a live dangerous request
+check("H16 reported demand still warns",
+      "The caller told me to send my password to fix my account. Should I?",
+      "suspicious", indicators={}, want_signal="credential_request")
+# delivered-code referent across sentences
+check("H16 referent: 'jo code abhi aaya wo mujhe bata dijiye'",
+      "Verification complete karne ke liye jo code abhi aapke phone par aaya hai wo mujhe bata dijiye. Dhyan rahe, yeh code kisi aur ko mat batana.",
+      "suspicious", indicators={}, want_signal="credential_request")
+check("H16 referent: 'send it here' after delivery sentence",
+      "An OTP has been sent to your phone just now. Send it here to continue.",
+      "suspicious", indicators={}, want_signal="credential_request")
+check("H16 referent guard: delivery WITHOUT any ask stays clean",
+      "An OTP has been sent to your phone just now. It expires in 10 minutes.",
+      "no_known_risk", indicators={}, forbid_signal="credential_request")
+# v3 miss shapes, generalized
+check("H16 loan: modifier-tolerant instant-personal-loan + pre-disbursal charge",
+      "Sir aapka ₹5,00,000 ka instant personal loan bina documents ke approve ho gaya hai. Amount account me transfer hone se pehle GST aur processing charge ₹1,999 jama karein.",
+      "danger", indicators={}, want_signal="script_loan_fee")
+check("H16 collect-approve in Devanagari",
+      "यह पेटीएम कस्टमर केयर है। आपका ₹1999 का रिफंड अटका हुआ है। रिफंड पाने के लिए हमारे द्वारा भेजी गई रिक्वेस्ट को अपने ऐप में स्वीकार करें।",
+      "suspicious", indicators={}, want_signal="collect_to_receive_bait")
+check("H16 news register stays clean",
+      "समाचार: साइबर पुलिस ने केवाईसी अपडेट के नाम पर ठगी करने वाले गिरोह को गिरफ़्तार किया, जो लोगों को फ़र्ज़ी लिंक भेजकर बैंक जानकारी चुराता था।",
+      "no_known_risk", indicators={}, forbid_signal="script_kyc_expiry")
+check("H16 tutorial register stays clean",
+      "Toh doston, aaj ke session me samjhte hain ki digital arrest scam kaise chalta hai aur log kaise fas jaate hain.",
+      "no_known_risk", indicators={}, forbid_signal="script_digital_arrest")
+check("H16 innocent trigger words (passport verification + court) stay clean",
+      "Kal police station gaye the passport verification ke liye, sab theek ho gaya. Parso court me chacha ke property case ki date hai.",
+      "no_known_risk", indicators={}, forbid_signal="script_digital_arrest")
+
 print(f"\nALL {PASS} CHECKS PASSED")
