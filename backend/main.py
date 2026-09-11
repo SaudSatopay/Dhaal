@@ -664,16 +664,8 @@ async def transcribe(request: Request):
         raw_ct = audio.content_type or "audio/webm"
         clean_ct = raw_ct.split(";")[0].strip() or "audio/webm"
         fname = audio.filename or "audio.webm"
-        out = await run_in_threadpool(
-            sarvam.speech_to_text, blob, fname, clean_ct,
-        )
-        if out:
-            return {"transcript": out["transcript"],
-                    "lang": out["language_code"] or lang_hint, "mocked": False,
-                    "engine": "saarika"}
-        # H17 second server engine: Groq Whisper picks up whatever Saarika
-        # dropped (outage, unsupported clip, empty read) — two independent
-        # vendors before we ever bother the user again.
+        # H17 engine order (owner's call): Groq Whisper FIRST — measured 330ms
+        # on real Hindi and dependable; Saarika stays as the second engine.
         out = await run_in_threadpool(
             asr_groq.speech_to_text, blob, fname, clean_ct, lang_hint,
         )
@@ -681,6 +673,13 @@ async def transcribe(request: Request):
             return {"transcript": out["transcript"],
                     "lang": out["language_code"] or lang_hint, "mocked": False,
                     "engine": "whisper"}
+        out = await run_in_threadpool(
+            sarvam.speech_to_text, blob, fname, clean_ct,
+        )
+        if out:
+            return {"transcript": out["transcript"],
+                    "lang": out["language_code"] or lang_hint, "mocked": False,
+                    "engine": "saarika"}
         # H17 (same rule that retired the IVR fallback): the user SPOKE real
         # words — a failed transcription must be an honest error, never a
         # fixture passed off as what they said. The client offers typed input.

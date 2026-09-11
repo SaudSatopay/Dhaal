@@ -165,18 +165,28 @@ ok("transcribe sanitizes parameterized content type before ASR",
    and _seen_ct.get("ct") == "audio/mp4")
 main.sarvam.speech_to_text = _stub_real
 
-# H17 engine chain: Saarika down -> Groq Whisper carries the clip; the
-# response says which engine spoke.
+# H17 engine chain (Groq FIRST per owner): whisper answers when up; when it
+# is down, Saarika carries the clip; the response says which engine spoke.
 _groq_real = main.asr_groq.speech_to_text
 main.asr_groq.speech_to_text = lambda *a, **k: {"transcript": "जाँच की आवाज़",
                                                 "language_code": "hi-IN"}
 rg = c.post("/api/transcribe",
             files={"audio": ("clip.webm", b"\x1aE\xdf\xa3fake-webm-bytes", "audio/webm")},
             data={"lang_hint": "hi-IN"})
-ok("transcribe chain: saarika dead -> whisper answers, engine reported",
+ok("transcribe chain: whisper first, engine reported",
    rg.status_code == 200 and rg.json()["engine"] == "whisper"
    and rg.json()["transcript"] == "जाँच की आवाज़" and rg.json()["mocked"] is False)
 main.asr_groq.speech_to_text = lambda *a, **k: None
+_sarv_real2 = main.sarvam.speech_to_text
+main.sarvam.speech_to_text = lambda *a, **k: {"transcript": "सारिका की आवाज़",
+                                              "language_code": "hi-IN"}
+rs = c.post("/api/transcribe",
+            files={"audio": ("clip.webm", b"\x1aE\xdf\xa3fake-webm-bytes", "audio/webm")},
+            data={"lang_hint": "hi-IN"})
+ok("transcribe chain: whisper dead -> saarika answers, engine reported",
+   rs.status_code == 200 and rs.json()["engine"] == "saarika"
+   and rs.json()["transcript"] == "सारिका की आवाज़")
+main.sarvam.speech_to_text = _sarv_real2
 
 # H17 contract change: real audio + BOTH engines out must be an HONEST 503 —
 # the fixture-substitution this test used to assert was the fabrication

@@ -126,6 +126,10 @@ body::after {
   from { transform: scale(1); opacity: 0.55; }
   to   { transform: scale(1.6); opacity: 0; }
 }
+/* the ring is DECOR over a live button — it must never eat the tap that
+   stops the recording (H17 field bug: "stop does nothing" on real touches;
+   programmatic clicks bypass hit-testing, which is why automation passed) */
+.pulse-ring { pointer-events: none; }
 @keyframes soft-blink {
   50% { opacity: 0.3; }
 }
