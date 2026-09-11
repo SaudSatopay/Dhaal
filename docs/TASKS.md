@@ -13,8 +13,8 @@ Claim: `[ ]` → `[WIP-saud]` / `[WIP-parva]` / `[WIP-harsh]`, **push immediatel
 ## Board
 
 ### Product — Parva (`frontend/`)
-- [WIP-parva] **P0 H1–H3** `/check`: input card with 3 tabs — paste text/URL/UPI · QR image upload (**decode client-side with `jsqr`**, send `qr_text`) · mic (MediaRecorder → `/api/transcribe`) with typed fallback → POST `/api/check` → render verdict card: big verdict state (danger/suspicious/no_known_risk in Hindi+English), signal list with per-signal weight + detail, category chip. Stub API answers already.
-- [ ] **P0 H3–H5** Report flow on verdict card ("Report scam" → POST `/api/reports`) + `/intel` console: moderation queue (poll `?status=pending`, verify/reject buttons) + trends board (`/api/intel/trends`: category bars, 7-day line, top indicators, city chips).
+- [x] **P0 H1–H3** `/check`: input card with 3 tabs — paste text/URL/UPI · QR image upload (**decode client-side with `jsqr`**, send `qr_text`) · mic (MediaRecorder → `/api/transcribe`) with typed fallback → POST `/api/check` → render verdict card: big verdict state (danger/suspicious/no_known_risk in Hindi+English), signal list with per-signal weight + detail, category chip. Stub API answers already.
+- [WIP-parva] **P0 H3–H5** Report flow on verdict card ("Report scam" → POST `/api/reports`) + `/intel` console: moderation queue (poll `?status=pending`, verify/reject buttons) + trends board (`/api/intel/trends`: category bars, 7-day line, top indicators, city chips).
 - [ ] **P0 H5–H7** `/guardian`: pairing screen (create link → show `pair_code`), guardian inbox (poll 3s, request cards with reason summary, Allow/Block), ward waiting/decision states. Two-browser demo works.
 - [ ] **P1 H7–H10** Voice polish: record UX, spoken-verdict playback (`tts_audio_b64`), Hindi-first labels with English subtitles; `/recover` flow (form → render kit: 1930 script, complaint draft, bank letter, checklist, copy buttons).
 - [ ] **P1 H10–H12** Golden-path polish mobile-first: loading/error/empty states, contrast beat styling, demo choreography pass with Saud.
