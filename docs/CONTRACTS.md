@@ -68,7 +68,7 @@ API shapes, data models, env names. **Owning lane pushes the contract change BEF
 
 ### `GET /api/health` — live → `{"ok": true, "mock_mode": false, "store": "memory|atlas"}`
 
-### `POST /api/check` — **engine live** (deterministic signals + community blocklist; explanation still canned ⇒ `mocked: true` until Claude layer H4–H6)
+### `POST /api/check` — **live** (deterministic engine + Claude narration; Claude down/no key ⇒ template explanations with `mocked: true`. Persistence: Atlas when `MONGODB_URI` set, per-call memory failover)
 ```json
 {"type": "text|url|upi|qr_text|voice_transcript", "payload": "...", "lang": "hi-IN", "speak": false, "ward_link_id": null}
 ```

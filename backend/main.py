@@ -8,14 +8,22 @@ import os
 import re
 import uuid
 from datetime import datetime, timezone
+from pathlib import Path
+
+from dotenv import load_dotenv
+
+load_dotenv(Path(__file__).resolve().parents[1] / ".env")  # repo-root .env (local dev)
+load_dotenv()  # backend/.env; real env vars (Vercel) always win
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 import fixtures as FX
+import llm
 from engine import run_signal_engine
 from engine.urls import first_host
+from store import get_store
 
 MOCK_MODE = os.getenv("MOCK_MODE", "false").lower() == "true"
 CORS_ORIGINS = [o.strip() for o in os.getenv("CORS_ORIGINS", "*").split(",")]
@@ -29,15 +37,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ---------------------------------------------------------------- in-memory store
-# Harsh H6-H8: swap to Mongo Atlas when MONGODB_URI is set; keep this fallback.
-DB = {
-    "checks": {},
-    "reports": {},
-    "indicators": {i["value"]: dict(i) for i in FX.SEED_INDICATORS},
-    "guardian_links": {},
-    "guardian_requests": {},
-}
+# ---------------------------------------------------------------- store
+# Atlas when MONGODB_URI is set (serverless-durable), else in-memory; per-call
+# failover to memory so a wifi/Atlas outage degrades instead of 500ing.
+STORE = get_store()
 
 
 def _id(prefix: str) -> str:
@@ -68,7 +71,7 @@ def canned_explanation(verdict, category):
 # ---------------------------------------------------------------- endpoints
 @app.get("/api/health")
 def health():
-    return {"ok": True, "mock_mode": MOCK_MODE, "store": "memory"}
+    return {"ok": True, "mock_mode": MOCK_MODE, "store": STORE.active_name()}
 
 
 class CheckIn(BaseModel):
@@ -82,10 +85,29 @@ class CheckIn(BaseModel):
 @app.post("/api/check")
 def check(body: CheckIn):
     verdict, score, signals, category = run_signal_engine(
-        body.payload, body.type, DB["indicators"], allow_network=not MOCK_MODE
+        body.payload, body.type, STORE.indicators_map(), allow_network=not MOCK_MODE
     )
-    # Harsh H4-H6: Claude writes explanation FROM detected signals; canned = mocked.
-    exp_hi, exp_en = canned_explanation(verdict, category)
+
+    # Claude narrates FROM the detected signals (zero verdict weight);
+    # any failure or MOCK_MODE -> canned templates with mocked: true.
+    exp_hi = exp_en = None
+    mocked = True
+    if not MOCK_MODE:
+        out = llm.narrate(body.payload, body.type, verdict, score, signals, category)
+        if out:
+            exp_hi, exp_en = out["explanation_hi"], out["explanation_en"]
+            category = category or out.get("category")
+            if out.get("pattern_note_en") or out.get("pattern_note_hi"):
+                signals.append({
+                    "id": "llm_pattern_note", "source": "llm_pattern", "weight": 0,
+                    "title_en": "Pattern read", "title_hi": "पैटर्न की पहचान",
+                    "detail_en": out.get("pattern_note_en", ""),
+                    "detail_hi": out.get("pattern_note_hi", ""),
+                })
+            mocked = False
+    if exp_hi is None:
+        exp_hi, exp_en = canned_explanation(verdict, category)
+
     doc = {
         "_id": _id("chk"),
         "input": {"type": body.type, "payload": body.payload, "lang": body.lang},
@@ -93,17 +115,18 @@ def check(body: CheckIn):
         "explanation_hi": exp_hi, "explanation_en": exp_en,
         "scam_category": category,
         "tts_audio_b64": None,  # Harsh H8-H10: Sarvam TTS when speak=true
-        "mocked": True,
+        "mocked": mocked,
         "created_at": _now(),
     }
-    DB["checks"][doc["_id"]] = doc
-    if body.ward_link_id and verdict != "no_known_risk" and body.ward_link_id in DB["guardian_links"]:
+    STORE.insert("checks", doc)
+    if body.ward_link_id and verdict != "no_known_risk" \
+            and STORE.get("guardian_links", body.ward_link_id):
         gr = {
             "_id": _id("gr"), "link_id": body.ward_link_id, "check_id": doc["_id"],
             "summary_hi": exp_hi[:140], "status": "pending", "guardian_note": "",
             "created_at": _now(),
         }
-        DB["guardian_requests"][gr["_id"]] = gr
+        STORE.insert("guardian_requests", gr)
         doc["guardian_request_id"] = gr["_id"]
     return doc
 
@@ -132,20 +155,18 @@ def create_link(body: LinkIn):
         "_id": _id("gl"), "ward_name": body.ward_name, "guardian_name": body.guardian_name,
         "pair_code": f"DHAAL-{uuid.uuid4().hex[:4].upper()}", "created_at": _now(),
     }
-    DB["guardian_links"][doc["_id"]] = doc
-    return doc
+    return STORE.insert("guardian_links", doc)
 
 
 @app.get("/api/guardian/requests")
 def list_requests(link_id: str):
-    out = [r for r in DB["guardian_requests"].values() if r["link_id"] == link_id]
+    out = STORE.list("guardian_requests", {"link_id": link_id})
     return {"requests": sorted(out, key=lambda r: r["created_at"], reverse=True)}
 
 
 @app.get("/api/guardian/requests/{rid}")
 def get_request(rid: str):
-    r = DB["guardian_requests"].get(rid)
-    return r or {"error": "request not found"}
+    return STORE.get("guardian_requests", rid) or {"error": "request not found"}
 
 
 class DecisionIn(BaseModel):
@@ -155,12 +176,9 @@ class DecisionIn(BaseModel):
 
 @app.post("/api/guardian/requests/{rid}/decision")
 def decide(rid: str, body: DecisionIn):
-    r = DB["guardian_requests"].get(rid)
-    if not r:
-        return {"error": "request not found"}
-    r["status"] = "allowed" if body.decision == "allowed" else "blocked"
-    r["guardian_note"] = body.note
-    return r
+    status = "allowed" if body.decision == "allowed" else "blocked"
+    r = STORE.update("guardian_requests", rid, {"status": status, "guardian_note": body.note})
+    return r or {"error": "request not found"}
 
 
 class ReportIn(BaseModel):
@@ -188,13 +206,12 @@ def create_report(body: ReportIn):
         "note": body.note, "city": body.city, "status": "pending",
         "indicator_type": _indicator_type(body.payload), "created_at": _now(),
     }
-    DB["reports"][doc["_id"]] = doc
-    return doc
+    return STORE.insert("reports", doc)
 
 
 @app.get("/api/reports")
 def list_reports(status: str = "pending"):
-    out = [r for r in DB["reports"].values() if r["status"] == status]
+    out = STORE.list("reports", {"status": status})
     return {"reports": sorted(out, key=lambda r: r["created_at"], reverse=True)}
 
 
@@ -204,34 +221,28 @@ class VerifyIn(BaseModel):
 
 @app.post("/api/reports/{rid}/verify")
 def verify_report(rid: str, body: VerifyIn):
-    r = DB["reports"].get(rid)
+    r = STORE.get("reports", rid)
     if not r:
         return {"error": "report not found"}
-    r["status"] = "verified" if body.action == "verify" else "rejected"
-    if r["status"] == "verified":
+    status = "verified" if body.action == "verify" else "rejected"
+    r = STORE.update("reports", rid, {"status": status}) or r
+    if status == "verified":
         # extract the indicator value: phone/upi/domain inside payload, else script text
         value = r["payload"].strip()
         if r["indicator_type"] == "domain":
             value = first_host(value) or value
-        ind = DB["indicators"].get(value)
-        if ind:
-            ind["report_count"] += 1
-        else:
-            DB["indicators"][value] = {
-                "_id": _id("ind"), "type": r["indicator_type"], "value": value,
-                "report_count": 1, "first_seen": _now(), "category": r["category"],
-            }
+        STORE.upsert_indicator(value, r["indicator_type"], r["category"])
     return r
 
 
 @app.get("/api/intel/trends")
 def trends():
-    live_verified = [r for r in DB["reports"].values() if r["status"] == "verified"]
+    live_verified = STORE.list("reports", {"status": "verified"})
     data = {k: (v.copy() if isinstance(v, dict) else list(v)) if isinstance(v, (dict, list)) else v
             for k, v in FX.SEED_TRENDS.items()}
     data["total_reports"] = FX.SEED_TRENDS["total_reports"] + len(live_verified)
     data["top_indicators"] = sorted(
-        DB["indicators"].values(), key=lambda i: i["report_count"], reverse=True
+        STORE.indicators_map().values(), key=lambda i: i["report_count"], reverse=True
     )[:10]
     data["live_reports"] = len(live_verified)
     return data
