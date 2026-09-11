@@ -244,6 +244,11 @@ export const S_XRAY = {
     en: "You're asking about entering a code in a flow YOU opened — nobody is demanding it, so it isn't flagged.",
   },
   factualTag: { hi: "जानकारी", en: "info" },
+  kPromise: { hi: "पैसे आने का वादा", en: "Money promised IN" },
+  wPromise: {
+    hi: "यह रकम आपको मिलने का वादा है — पर साथ का link PAY request खोलता है। पैसे पाने के लिए कभी pay नहीं करना पड़ता।",
+    en: "This amount is promised TO you — yet the attached link opens a PAY request. Receiving money never requires you to pay.",
+  },
   kPattern: { hi: "जाना-पहचाना script", en: "Known scam script" },
   wPattern: {
     hi: "यही शब्द भारत भर में चल रहे ठगी-script से मिले — पूरे India का अनुभव आपकी ढाल है।",

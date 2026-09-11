@@ -40,6 +40,7 @@ const KIND_UI: Record<string, KindUI> = {
   credential_self_query: { label: S_XRAY.kSelfQ, why: S_XRAY.wSelfQ, tone: "info" },
   code_delivery_context: { label: S_XRAY.kDelivery, why: S_XRAY.wDelivery, tone: "info" },
   destination: { label: S_XRAY.kDest, why: S_XRAY.wDest, tone: "caution" },
+  refund_promise: { label: S_XRAY.kPromise, why: S_XRAY.wPromise, tone: "danger" },
   category: { label: S_XRAY.kPattern, why: S_XRAY.wPattern, tone: "danger" },
 };
 
