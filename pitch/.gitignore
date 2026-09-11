@@ -4,3 +4,4 @@ package-lock.json
 *.pdf
 !Dhaal-pitch.pdf
 ~$*
+!Dhaal-HackX-submission.pdf

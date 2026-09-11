@@ -1,0 +1,262 @@
+<!doctype html><meta charset="utf-8">
+<title>Dhaal — HackX submission deck</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Anek+Devanagari:wght@600;700;800&family=Mukta:wght@400;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+  :root{ --pp:#5B21A6; --ppdeep:#2E1065; --ink:#17131F; --red:#C62828; --saf:#E8A13B;
+         --grn:#2E7D32; --soft:#6B6478; --line:#E5E1EC; }
+  *{margin:0;box-sizing:border-box}
+  @page{size:1280px 720px;margin:0}
+  body{font-family:Mukta,"Nirmala UI",sans-serif;color:var(--ink)}
+  .pg{width:1280px;height:720px;position:relative;overflow:hidden;page-break-after:always;background:#fff}
+  .disp{font-family:"Archivo Black",sans-serif}
+  .dev{font-family:"Anek Devanagari",sans-serif;font-weight:800}
+  .mono{font-family:"IBM Plex Mono",monospace}
+  .hdr img{position:absolute}
+  .hdr .l1{left:19px;top:19px;width:269px}
+  .hdr .l2{left:566px;top:19px;width:154px}
+  .hdr .l3{left:826px;top:10px;width:442px}
+  .eyebrow{font-family:"IBM Plex Mono",monospace;font-weight:600;font-size:16px;letter-spacing:7px;color:var(--pp);text-transform:uppercase}
+  .title{font-family:"Archivo Black",sans-serif;font-size:44px;line-height:1.04;margin-top:6px}
+  .title .r{color:var(--red)} .title .p{color:var(--pp)}
+  .body{position:absolute;left:64px;right:64px;top:96px}
+  .foot{position:absolute;left:64px;right:64px;bottom:20px;display:flex;justify-content:space-between;
+        font-family:"IBM Plex Mono",monospace;font-size:13px;letter-spacing:4px;color:var(--soft)}
+  .stamp{position:absolute;width:150px;height:150px;border:6px solid var(--saf);border-radius:50%;
+         transform:rotate(-12deg);display:flex;flex-direction:column;justify-content:center;text-align:center;color:var(--saf)}
+  .stamp .a{font-family:"IBM Plex Mono",monospace;font-size:13px;letter-spacing:2px;font-weight:600}
+  .stamp .b{font-family:"Anek Devanagari",sans-serif;font-weight:800;font-size:34px;line-height:1.05}
+
+  /* cover */
+  .cover{color:#fff}
+  .cover .bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+  .cover .art{position:absolute;left:261px;top:110px;width:758px}
+  .cover .lg1{position:absolute;left:29px;top:19px;width:250px}
+  .cover .lg2{position:absolute;right:24px;top:19px;width:480px}
+  .cover .block{position:absolute;left:0;right:0;top:452px;text-align:center}
+  .cover .prod{font-family:"Anek Devanagari",sans-serif;font-weight:800;font-size:42px}
+  .cover .prod b{color:var(--saf)}
+  .cover .team{font-family:"Archivo Black",sans-serif;font-size:58px;letter-spacing:2px;margin-top:8px;color:#fff}
+  .cover .meta{font-family:"IBM Plex Mono",monospace;font-size:17px;line-height:1.9;margin-top:14px;color:#DCCFF2}
+  .cover .meta b{color:#fff}
+
+  /* index rows */
+  .irow{display:flex;align-items:baseline;gap:22px;padding:13px 0;border-bottom:3px solid var(--ink)}
+  .irow:first-child{border-top:5px solid var(--ink)}
+  .irow .no{font-family:"IBM Plex Mono",monospace;font-weight:600;font-size:17px;color:var(--red);width:38px}
+  .irow .hi{font-family:"Anek Devanagari",sans-serif;font-weight:800;font-size:27px;width:270px;line-height:1.1}
+  .irow .d{font-size:15.5px;line-height:1.4;color:#3A3444;flex:1}
+  .irow .d b{color:var(--ink)}
+
+  /* nodes + arrows */
+  .node{border:4px solid var(--ink);border-radius:10px;background:#fff;padding:14px 16px;text-align:center}
+  .node .t{font-family:"Archivo Black",sans-serif;font-size:17px}
+  .node .s{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--soft);margin-top:6px;line-height:1.55}
+  .node.hot{background:var(--red);border-color:var(--red);color:#fff}
+  .node.hot .s{color:#F3D9D9}
+  .node.pp{border-color:var(--pp)} .node.pp .t{color:var(--pp)}
+  .arr{font-family:"Archivo Black",sans-serif;font-size:40px;color:var(--saf);align-self:center;padding:0 10px}
+
+  .tile{border:4px solid var(--ink);border-radius:10px;background:#fff;text-align:center;padding:16px 8px 12px}
+  .tile .n{font-family:"Archivo Black",sans-serif;font-size:64px;line-height:.95}
+  .tile .l{font-family:"IBM Plex Mono",monospace;font-size:11.5px;font-weight:600;color:var(--soft);margin-top:10px;letter-spacing:1px}
+
+  .plate{display:inline-block;background:var(--ink);color:#fff;padding:2px 14px}
+  .hl{background:var(--saf);padding:0 10px}
+  ul.cl{list-style:none} ul.cl li{padding-left:0;margin-top:7px;font-size:15.5px;line-height:1.45;color:#3A3444}
+  ul.cl li b{color:var(--ink)}
+  .h6{font-family:"Archivo Black",sans-serif;font-size:19px;color:var(--pp);margin:18px 0 4px}
+</style>
+
+<!-- ================== 1 · COVER ================== -->
+<section class="pg cover">
+  <img class="bg" src="assets-template/image1.png">
+  <img class="lg1" src="assets-template/image3.png">
+  <img class="lg2" src="assets-template/image4.png">
+  <img class="art" src="assets-template/image2.png">
+  <div class="block">
+    <div class="prod">ढाल <b>Dhaal</b> — पैसे भेजने से पहले, <b>एक जाँच।</b></div>
+    <div class="team">TEAM ALL STARS</div>
+    <div class="meta">
+      TEAM ID: <b>[Registration ID]</b><br>
+      PS: <b>Consumer Protection Against Payment Scams</b> · THEME: <b>FINTECH (PS #7)</b>
+    </div>
+  </div>
+</section>
+
+<!-- ================== 2 · IDEA ================== -->
+<section class="pg">
+  <div class="hdr"><img class="l1" src="assets-template/image5.png"><img class="l2" src="assets-template/image7.png"><img class="l3" src="assets-template/image6.png"></div>
+  <div class="body">
+    <div class="eyebrow">Idea · Solution</div>
+    <div style="display:flex;gap:44px;margin-top:8px">
+      <div style="flex-shrink:0;width:430px">
+        <div class="dev" style="font-size:96px;line-height:.95;color:var(--pp)">एक<br>जाँच।</div>
+        <div class="disp" style="font-size:22px;margin-top:14px">One check<br>before you pay.</div>
+        <div class="mono" style="font-size:13.5px;color:var(--soft);margin-top:12px;line-height:1.7">paste it · photo the QR ·<br>or just SPEAK the call</div>
+        <div style="margin-top:16px;font-size:15.5px;line-height:1.45"><b>Rules compute the verdict. AI only explains it</b> — and can never change it. Never “safe”, only <b>“no known risk”.</b></div>
+      </div>
+      <div style="flex:1">
+        <div class="irow"><div class="no">01</div><div class="hi">जाँच</div><div class="d">Verdict + <b>every weighted signal</b>, हिं/EN toggle — and <b>spoken aloud</b>.</div></div>
+        <div class="irow"><div class="no">02</div><div class="hi">परिवार की ढाल</div><div class="d">Risky payment → family's 10-second <b>Allow/Block</b>. Risk shared, never transactions.</div></div>
+        <div class="irow"><div class="no">03</div><div class="hi">धोखों का नक्शा</div><div class="d">Report → human verify → <b>everyone's live blocklist</b>. Burned in Jaipur ≠ works in Jodhpur.</div></div>
+        <div class="irow"><div class="no">04</div><div class="hi">पहला घंटा</div><div class="d"><b>1930 script + complaint + bank letter</b>, auto-drafted in Hindi — the hour that gets money back.</div></div>
+        <div style="margin-top:18px" class="disp"><span class="plate" style="background:var(--red)">LIVE: dhaal-delta.vercel.app</span><span style="font-size:15px;margin-left:12px;color:var(--soft);font-family:Mukta">judges: check your own inbox in Q&amp;A</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="foot"><span>ढाल · TEAM ALL STARS</span><span>02</span></div>
+</section>
+
+<!-- ================== 3 · TECHNICAL ================== -->
+<section class="pg">
+  <div class="hdr"><img class="l1" src="assets-template/image5.png"><img class="l2" src="assets-template/image7.png"><img class="l3" src="assets-template/image6.png"></div>
+  <div class="body">
+    <div class="eyebrow">Technical Approach</div>
+    <div class="title">Verdict = <span class="r">deterministic code.</span> AI narrates.</div>
+    <div class="mono" style="font-size:13px;color:var(--soft);margin-top:10px">Next.js PWA · FastAPI (Vercel Python) · MongoDB Atlas · Claude sonnet-5 · Sarvam Saarika ASR + Bulbul TTS · jsQR on-device</div>
+    <div style="display:flex;margin-top:26px">
+      <div class="node" style="width:200px"><div class="t">INPUT</div><div class="s">text · URL · UPI<br>QR (on-device)<br>voice → ASR 0.6s</div></div>
+      <div class="arr">→</div>
+      <div class="node hot" style="flex:1"><div class="t">SIGNAL ENGINE — DETERMINISTIC</div><div class="s">collect-vs-pay parser · lookalike domains (edit-distance vs official seed list) · 10 scam-script families incl. coercion, job &amp; loan-fee · bait-word + brand-impersonation VPA checks · community blocklist<br><b>SCORE ≥60 → खतरा · ≥30 → सावधान</b></div></div>
+      <div class="arr">→</div>
+      <div class="node" style="width:240px"><div class="t">EXPLAIN &amp; SPEAK</div><div class="s">Claude — narrates FROM signals, zero verdict weight<br>Bulbul — बोली हुई warning</div></div>
+    </div>
+    <div style="display:flex;gap:30px;margin-top:16px;align-items:center">
+      <div class="node pp" style="width:300px;margin-left:290px"><div class="t">MongoDB Atlas</div><div class="s">durable, human-verified community intel</div></div>
+      <div style="font-size:15px;line-height:1.5;flex:1"><b>Fails safe:</b> retry-once + deterministic fallback on every external call — dead Wi-Fi degrades prose, never protection. Mocked responses say <span class="mono" style="font-size:13px">mocked:true</span>.</div>
+    </div>
+    <div style="margin-top:22px;display:flex;gap:16px;align-items:baseline">
+      <span class="disp" style="font-size:30px">49</span><span class="mono" style="font-size:12px;color:var(--soft)">AUTOMATED CHECKS GREEN</span>
+      <span class="disp" style="font-size:30px;color:var(--pp)">5.4s</span><span class="mono" style="font-size:12px;color:var(--soft)">P50 CHECK, LIVE PROD</span>
+      <span class="disp" style="font-size:30px;color:var(--red)">ms</span><span class="mono" style="font-size:12px;color:var(--soft)">VERDICT ITSELF (RULES)</span>
+    </div>
+  </div>
+  <div class="foot"><span>ढाल · TEAM ALL STARS</span><span>03</span></div>
+</section>
+
+<!-- ================== 4 · UX ================== -->
+<section class="pg">
+  <div class="hdr"><img class="l1" src="assets-template/image5.png"><img class="l2" src="assets-template/image7.png"><img class="l3" src="assets-template/image6.png"></div>
+  <div class="body">
+    <div class="eyebrow">User Experience &amp; Design</div>
+    <div class="title">A <span class="p">public-safety poster</span>, not a SaaS dashboard.</div>
+    <div style="display:flex;gap:22px;margin-top:26px">
+      <div class="node" style="flex:1;text-align:left;padding:20px 22px"><div class="dev" style="font-size:26px">सुरक्षा-poster पहचान</div><div style="font-size:14.5px;margin-top:8px;line-height:1.5">Ink + saffron hazard language, Anek Devanagari display, a <b>rubber-stamp community count</b> on the verdict card.</div></div>
+      <div class="node" style="flex:1;text-align:left;padding:20px 22px"><div class="dev" style="font-size:26px">अगले अरब users के लिए</div><div style="font-size:14.5px;margin-top:8px;line-height:1.5"><b>हिं/EN toggle</b> holds across every page and output — incl. the spoken warning · voice in AND out · QR decoded <b>on-device</b> (photo never leaves the phone) · entry-level phones.</div></div>
+      <div class="node" style="flex:1;text-align:left;padding:20px 22px"><div class="dev" style="font-size:26px">इज़्ज़त के साथ हिफ़ाज़त</div><div style="font-size:14.5px;margin-top:8px;line-height:1.5">Guardian sees the <b>risk, never the transactions</b>. Risky checks ask a decision; clean ones are quiet notes.</div></div>
+    </div>
+    <div class="disp" style="font-size:46px;margin-top:52px;text-align:center;color:var(--red)">Danger screams. Safety whispers.</div>
+    <div class="mono" style="text-align:center;margin-top:10px;font-size:13px;color:var(--soft)">HONEST LANGUAGE EVERYWHERE — “NO KNOWN RISK”, NEVER “SAFE”</div>
+  </div>
+  <div class="foot"><span>ढाल · TEAM ALL STARS</span><span>04</span></div>
+</section>
+
+<!-- ================== 5 · FEASIBILITY ================== -->
+<section class="pg">
+  <div class="hdr"><img class="l1" src="assets-template/image5.png"><img class="l2" src="assets-template/image7.png"><img class="l3" src="assets-template/image6.png"></div>
+  <div class="body">
+    <div class="eyebrow">Feasibility &amp; Viability</div>
+    <div class="title">Not a concept — <span class="r">deployed tonight.</span></div>
+    <div style="display:flex;gap:20px;margin-top:24px">
+      <div class="tile" style="flex:1"><div class="n">49</div><div class="l">AUTOMATED CHECKS<br>GREEN</div></div>
+      <div class="tile" style="flex:1"><div class="n" style="color:var(--pp)">5.4s</div><div class="l">P50 FULL CHECK<br>LIVE PROD</div></div>
+      <div class="tile" style="flex:1"><div class="n" style="color:var(--pp)">450+</div><div class="l">VERIFIED REPORTS<br>IN ATLAS</div></div>
+      <div class="tile" style="flex:1"><div class="n" style="color:var(--red)">₹0</div><div class="l">INFRA — RUNS ON<br>FREE TIERS</div></div>
+    </div>
+    <div class="h6">Risks, already engineered away</div>
+    <ul class="cl">
+      <li><b>API outage</b> → deterministic fallbacks — the demo survives dead venue Wi-Fi.</li>
+      <li><b>False positives</b> → delivery-vs-request context rules; real bank OTP/debit SMS score <b>0</b> (tested).</li>
+      <li><b>Blocklist poisoning</b> → human verification before any indicator goes live.</li>
+      <li><b>Scale</b> → stateless serverless + Atlas; TTS caching; marginal cost per check ≈ a fraction of a paisa.</li>
+    </ul>
+    <div style="margin-top:16px" class="mono"><span class="hl" style="font-weight:600">dhaal-delta.vercel.app</span>&nbsp;&nbsp;<span class="hl" style="font-weight:600">dhaal-api.vercel.app</span>&nbsp;&nbsp;<span style="font-size:12px;color:var(--soft)">GUARDIAN + FLYWHEEL + VOICE LOOP VERIFIED END-TO-END</span></div>
+  </div>
+  <div class="foot"><span>ढाल · TEAM ALL STARS</span><span>05</span></div>
+</section>
+
+<!-- ================== 6 · IMPACT ================== -->
+<section class="pg">
+  <div class="hdr"><img class="l1" src="assets-template/image5.png"><img class="l2" src="assets-template/image7.png"><img class="l3" src="assets-template/image6.png"></div>
+  <div class="body">
+    <div class="eyebrow">Impact &amp; Benefits</div>
+    <div style="display:flex;align-items:baseline;gap:20px;margin-top:4px">
+      <div class="disp" style="font-size:88px;color:var(--red);letter-spacing:-2px">₹22,495 Cr</div>
+      <div style="font-size:19px;font-weight:600;line-height:1.3">lost to cyber fraud in 2025 —<br>and the victim pressed PAY <b>themselves</b>.</div>
+    </div>
+    <div class="mono" style="font-size:12.5px;color:var(--soft);margin-top:6px">24.51B UPI TXNS/MONTH (NPCI AUG ’26) · 28.1 LAKH COMPLAINTS (I4C 2025) · ₹805 CR UPI FRAUD FY26 (PARLIAMENT)</div>
+    <div style="display:flex;margin-top:26px;align-items:stretch">
+      <div class="node" style="width:225px"><div class="t">1 REPORT</div><div class="s">10 seconds</div></div>
+      <div class="arr">→</div>
+      <div class="node" style="width:225px"><div class="t">HUMAN VERIFY</div><div class="s">no rumour poisoning</div></div>
+      <div class="arr">→</div>
+      <div class="node" style="width:225px"><div class="t">BLOCKLIST LIVE</div><div class="s">durable · Atlas</div></div>
+      <div class="arr">→</div>
+      <div class="node" style="flex:1;border-color:var(--grn)"><div class="t" style="color:var(--grn)">EVERYONE SHIELDED</div><div class="s">every phone, instantly</div></div>
+    </div>
+    <div class="mono" style="margin-top:12px;font-size:13px;color:var(--pp);font-weight:600">↻ HERD IMMUNITY FOR FRAUD — THE SHIELD COMPOUNDS WITH EVERY USER</div>
+    <ul class="cl" style="margin-top:16px">
+      <li><b>Every Indian with a phone</b> — free forever · <b>the elderly</b> — the most-targeted group, protected by family (guardian mode).</li>
+      <li><b>Banks &amp; UPI apps</b> — fewer reimbursements · <b>cyber cells</b> — structured early reports; fast 1930 reporting has already saved <b>₹7,130+ crore</b>.</li>
+    </ul>
+  </div>
+  <div class="foot"><span>ढाल · TEAM ALL STARS</span><span>06</span></div>
+</section>
+
+<!-- ================== 7 · BUSINESS ================== -->
+<section class="pg">
+  <div class="hdr"><img class="l1" src="assets-template/image5.png"><img class="l2" src="assets-template/image7.png"><img class="l3" src="assets-template/image6.png"></div>
+  <div class="body">
+    <div class="eyebrow">Business Model &amp; Sustainability</div>
+    <div style="display:flex;gap:24px;margin-top:14px">
+      <div style="flex:1;border:5px solid var(--grn);border-radius:12px;padding:22px 24px">
+        <div class="disp" style="font-size:34px;color:var(--grn)">Citizens:<br>FREE forever.</div>
+        <div style="font-size:15px;margin-top:10px;line-height:1.5">Protection this fundamental must not be paywalled — and the marginal cost per check is a <b>fraction of a paisa</b> by construction.</div>
+      </div>
+      <div style="flex:1.5;border:5px solid var(--ink);border-radius:12px;padding:22px 24px">
+        <div class="disp" style="font-size:34px">Institutions pay.</div>
+        <ul class="cl" style="margin-top:8px">
+          <li><b>Risk-API + verified-blocklist licensing</b> — banks, fintechs, UPI apps (they reimburse this fraud today).</li>
+          <li><b>Pre-payment SDK inside UPI apps</b> — the check runs before the PAY button renders.</li>
+          <li><b>Deployment partnerships</b> — state cyber cells &amp; the CSC network (assisted mode).</li>
+        </ul>
+      </div>
+    </div>
+    <div class="h6">The moat</div>
+    <div style="font-size:16.5px;line-height:1.55">The community blocklist <b>compounds with every user</b> — a network effect no new entrant starts with. Roadmap: one-tap <span class="hl"><b>1930/I4C</b></span> hand-off · <span class="hl"><b>10+ Indic languages</b></span> via the same Sarvam pipeline (one parameter) · auto-verify thresholds for moderation at scale.</div>
+  </div>
+  <div class="foot"><span>ढाल · TEAM ALL STARS</span><span>07</span></div>
+</section>
+
+<!-- ================== 8 · REFERENCES ================== -->
+<section class="pg">
+  <div class="hdr"><img class="l1" src="assets-template/image5.png"><img class="l2" src="assets-template/image7.png"><img class="l3" src="assets-template/image6.png"></div>
+  <div class="body">
+    <div class="eyebrow">Research &amp; References</div>
+    <div style="display:flex;gap:40px;margin-top:16px">
+      <div style="flex:1.4">
+        <div class="h6" style="margin-top:0">Data sources (verified 11 Sep 2026)</div>
+        <ul class="cl" style="font-size:14px">
+          <li><b>NPCI</b> monthly UPI statistics — 24.51B txns / ₹29.82 lakh crore, Aug 2026</li>
+          <li><b>I4C (MHA)</b> — ₹22,495 crore lost · 28.1 lakh complaints (2025) · 32.4M calls to 1930</li>
+          <li><b>Ministry of Finance, Rajya Sabha reply</b> — ₹805 crore UPI fraud, 10.64 lakh incidents, FY26</li>
+          <li><b>PIB / MHA</b> — ₹7,130+ crore saved via CFCFRMS (1930) early reporting</li>
+          <li><b>RBI</b> — guidelines on unauthorised-transaction liability</li>
+        </ul>
+        <div class="h6">Domain research</div>
+        <ul class="cl" style="font-size:14px">
+          <li>Scam-script corpus from I4C advisories: digital arrest, KYC-expiry, collect-refund bait, OLX/army, job-task, loan-fee, coercion</li>
+          <li>upi:// deep-link collect-vs-pay semantics · NPCI PSP handle registry for VPA verification</li>
+        </ul>
+      </div>
+      <div style="width:330px;text-align:center">
+        <img src="../assets/src/qr-plain.png" style="width:250px;border:10px solid var(--ink);border-radius:8px;background:#fff;padding:10px">
+        <div class="mono" style="font-weight:600;font-size:17px;margin-top:12px">dhaal-delta.vercel.app</div>
+        <div class="mono" style="font-size:12px;color:var(--soft);margin-top:6px">github.com/SaudSatopay/MUJ-HACKX</div>
+        <div class="dev" style="font-size:26px;color:var(--pp);margin-top:18px">हर report, सबकी ढाल।</div>
+      </div>
+    </div>
+  </div>
+  <div class="stamp" style="right:70px;bottom:60px"><div class="a">DHAAL · ढाल</div><div class="b">एक<br>जाँच</div></div>
+  <div class="foot"><span>ढाल · TEAM ALL STARS · धन्यवाद</span><span>08</span></div>
+</section>
