@@ -152,6 +152,36 @@ calls, feed Parva real metrics for the PPT.
 ---
 ---
 
+# H11 PROMPT — PARVA: global language toggle (last pre-freeze feature)
+
+```
+Read CLAUDE.md + docs/TASKS.md deltas. I'm Parva — Product lane. Identity check
+first; commits as me, no AI attribution.
+
+FEATURE (Saud's ask, timeboxed — freeze is close): a global language toggle so
+the whole app runs consistently in ONE language, chosen by the user.
+
+SPEC:
+- A हिं / EN pill toggle visible on EVERY page (TopBar + landing header),
+  styled inside the poster identity (ink border, saffron active state).
+- Persist in localStorage ("dhaal-lang", default "hi"); read on mount, no
+  flash — a tiny useLang() hook or context in lib/.
+- When EN is selected: UI labels lead in English (labels.ts already has every
+  pair — selected language becomes primary, the other drops to the small
+  subtitle or hides where space is tight), verdict card shows explanation_en
+  (hi when हिं), signal titles/details use *_en fields, runsheet strings
+  unaffected.
+- Pass the selection through the API calls: lang "hi-IN"/"en-IN" on /api/check
+  (drives TTS voice language) and lang_hint on /api/transcribe.
+- ZERO contract/API changes needed — every response field is already
+  bilingual. Zero logic changes. If a page has hardcoded Hindi strings,
+  migrate them into labels.ts pairs.
+- npm run build green, walk beats 1-3 in BOTH languages at mobile width,
+  commit ("frontend: global language toggle"), push, ping Saud for deploy.
+```
+
+---
+
 # H9 MID-BUILD PROMPTS (current — use these)
 
 ## Prompt 4 — PARVA: visual identity overhaul ("suraksha poster, not SaaS dashboard")

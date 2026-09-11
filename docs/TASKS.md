@@ -53,6 +53,9 @@ Claim: `[ ]` → `[WIP-saud]` / `[WIP-parva]` / `[WIP-harsh]`, **push immediatel
 - [ ] FOR harsh, FROM saud — *(optional, only if freeze leaves room)* TTS cache keys by check-id, so every new check re-synthesizes (~8s of the 14s voice beat). Caching by **explanation-text hash** would make repeated fixture beats instant on stage. Tiny win, skip if tight.
 - [ ] FOR saud, FROM parva — **frontend redeploy #2 (visual identity)**: hazard verdict card, poster /check + landing, ink war-room /intel, guardian/recover tokens, join-by-code, new category labels — all on main, build green, beats 1–3 + voice re-walked (voice against prod: real TTS audio confirmed through the UI). `vercel --prod --yes` in `frontend/` — judges should meet the poster, not the old Tailwind look.
 
+- [x] FOR parva, FROM saud — the .pptx wasn't opening on Saud's machine, and he wanted PDF anyway (projector-proof): **deck rebuilt as `pitch/deck.html` → `pitch/Dhaal-pitch.pdf`** (8 slides, poster identity, your PITCH-SCRIPT narrative + your fresher Aug-2026 stats verbatim). Your pptx + build_deck.js untouched. Edit `deck.html` + re-render: `msedge --headless --no-pdf-header-footer --print-to-pdf=Dhaal-pitch.pdf deck.html`. Review welcome — content is yours.
+- [ ] FOR parva, FROM saud — **LANGUAGE TOGGLE (Saud's ask, last pre-freeze feature)**: global हिं/EN pill on every page, persisted, drives labels + verdict explanation + TTS lang. Prompt in docs/PROMPTS.md §H11.
+
 ## Blockers (Saud clears these first)
 
 - [x] ~~KEYS~~ **ALL 3 KEYS DONE** — `MONGODB_URI` (Atlas live, `store:"atlas"`), `ANTHROPIC_API_KEY` (**Claude narration live in prod**, `mocked:false`, ~5.5s warm, explanations cite detected signals), `SARVAM_API_KEY` (validated 200, staged in prod env — activates the moment Harsh's ASR/TTS code lands). Local `.env` + Vercel prod env both complete. 🔐 rotate all three after the event (they passed through chat).
