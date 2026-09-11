@@ -31,7 +31,7 @@ Claim: `[ ]` → `[WIP-saud]` / `[WIP-parva]` / `[WIP-harsh]`, **push immediatel
 ### Glue — Saud (root, `scripts/`, deploys, fixtures)
 - [x] Kickoff: PS locked · docs rewritten · scaffold + stub API serving all contracts
 - [x] **P0 H1–H3** Deploy DONE: frontend **https://dhaal-delta.vercel.app** · backend **https://dhaal-api.vercel.app** (Railway trial expired → backend runs as a Vercel Python service; `backend/vercel.json`). `NEXT_PUBLIC_API_URL` set in Vercel prod env. Deployment protection disabled on both. Redeploy: `vercel --prod --yes` inside `frontend/` or `backend/`. QR card for the live URL still to make (H12–H15 packaging).
-- [ ] **P0 H3–H5** Fixtures + seeds final: scam SMS set, collect-QR + legit-QR images, digital-arrest script, blocklisted demo number with 43 reports, ~200 seeded intel reports (`scripts/seed.py`) · brand-domain seed list for Harsh.
+- [WIP-saud] **P0 H3–H5** Fixtures + seeds final: scam SMS set, collect-QR + legit-QR images, digital-arrest script, blocklisted demo number with 43 reports, ~200 seeded intel reports (`scripts/seed.py`) · brand-domain seed list for Harsh (landing as NEW file `backend/data/brands.py` — heads-up Harsh: import it, don't recreate).
 - [ ] **Hourly** Golden-path QA walk; breakages → Blockers; unblocking Parva/Harsh beats own tasks.
 - [ ] **P1 H8** Judge-mode dry run on venue network; decide live-vs-mock default per external call; rehearse "judge's own inbox" beat + fixture fallback.
 - [ ] **H12–H15** Backup demo video · freeze enforcement · README rewrite.
