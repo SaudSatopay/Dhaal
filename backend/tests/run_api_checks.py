@@ -21,7 +21,24 @@ from fastapi.testclient import TestClient  # noqa: E402
 import fixtures as FX  # noqa: E402
 import main  # noqa: E402
 
+# main's dotenv load pulls the real MOD_KEY into this process — moderation auth
+# is asserted explicitly below; every other check runs with the gate open.
+os.environ["MOD_KEY"] = ""
+
 c = TestClient(main.app)
+
+# --- moderation gate (H12): key required when MOD_KEY is set ---
+os.environ["MOD_KEY"] = "test-mod-key"
+r_noauth = c.get("/api/reports?status=pending")
+r_auth = c.get("/api/reports?status=pending", headers={"X-Mod-Key": "test-mod-key"})
+os.environ["MOD_KEY"] = ""
+def _ok0(name, cond):  # local ok() is defined later; assert directly here
+    if not cond:
+        print(f"FAILED: {name}")
+        sys.exit(1)
+    print(f"ok   {name}")
+_ok0("moderation 401 without key", r_noauth.status_code == 401)
+_ok0("moderation 200 with key", r_auth.status_code == 200 and "reports" in r_auth.json())
 P = 0
 
 
