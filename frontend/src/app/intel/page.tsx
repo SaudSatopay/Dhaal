@@ -1,9 +1,10 @@
 "use client";
 
-// Community intel console (golden-path beats 6+7). Runs on the LAPTOP/projector:
-// the ONE deliberate dark surface — ink war room, saffron accents, mono numerals —
-// against the paper-light phone surfaces. Left = trends war map, right = moderation
-// queue. Verify here → indicator goes live for every /api/check within seconds.
+// Community intel console (golden-path beats 6+7) — the WAR DESK of the poster
+// world: paper ground, ink borders, hazard bands, stamp motifs. The one dark
+// element is the weekly hero plate (ink + paper text + saffron), same system as
+// the deck's LIVE DEMO slide. Left = trends war map, right = moderation queue.
+// Verify here → indicator goes live for every /api/check within seconds.
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
@@ -26,7 +27,31 @@ function timeAgo(iso: string): string {
   return `${Math.floor(s / 86400)} d`;
 }
 
-// ---------------------------------------------------------------- trends board
+/* ---------------- poster furniture ---------------- */
+
+function SectionCard({
+  title,
+  sub,
+  children,
+}: {
+  title: string;
+  sub: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="border-2 border-ink bg-paper">
+      <div className="hazard-saffron h-2 border-b-2 border-ink" aria-hidden="true" />
+      <div className="p-4">
+        <h3 className="font-display text-lg font-bold leading-tight">
+          {title} <span className="plate ml-1 font-sans font-normal text-inksoft">{sub}</span>
+        </h3>
+        <div className="mt-3">{children}</div>
+      </div>
+    </div>
+  );
+}
+
+/* ---------------- trends board ---------------- */
 
 function DayLine({ days }: { days: { day: string; count: number }[] }) {
   if (days.length < 2) return null;
@@ -44,51 +69,50 @@ function DayLine({ days }: { days: { day: string; count: number }[] }) {
     return `${d.getDate()} ${d.toLocaleString("en", { month: "short" })}`;
   };
   return (
-    <div>
-      <svg viewBox={`0 0 ${W} ${H + 16}`} className="w-full" role="img" aria-label="verified reports per day">
-        <line x1={PAD} y1={H - PAD} x2={W - PAD} y2={H - PAD} stroke="var(--color-inkline)" strokeWidth="1.5" />
-        <polygon points={area} fill="var(--color-saffron)" opacity="0.12" />
-        <polyline
-          points={pts}
-          fill="none"
-          stroke="var(--color-saffron)"
-          strokeWidth="2.5"
-          strokeLinecap="square"
-          strokeLinejoin="miter"
-        />
-        {days.map((d, i) => (
-          <circle key={d.day} cx={x(i)} cy={y(d.count)} r="7" className="fill-transparent">
+    <svg viewBox={`0 0 ${W} ${H + 16}`} className="w-full" role="img" aria-label="verified reports per day">
+      <line x1={PAD} y1={H - PAD} x2={W - PAD} y2={H - PAD} stroke="var(--color-ink)" strokeWidth="2" />
+      <polygon points={area} fill="var(--color-saffron)" opacity="0.18" />
+      <polyline
+        points={pts}
+        fill="none"
+        stroke="var(--color-saffron)"
+        strokeWidth="2.5"
+        strokeLinecap="square"
+        strokeLinejoin="miter"
+      />
+      {days.map((d, i) => (
+        <g key={d.day}>
+          <circle cx={x(i)} cy={y(d.count)} r="7" fill="transparent">
             <title>{`${fmt(d.day)}: ${d.count} reports`}</title>
           </circle>
-        ))}
-        {days.map((d, i) => (
           <rect
-            key={`v-${d.day}`}
             x={x(i) - 2.5}
             y={y(d.count) - 2.5}
             width="5"
             height="5"
-            className="pointer-events-none"
             fill="var(--color-saffron)"
+            stroke="var(--color-ink)"
+            strokeWidth="1"
+            className="pointer-events-none"
           />
-        ))}
-        <text
-          x={x(days.length - 1) - 5}
-          y={y(last.count) - 8}
-          textAnchor="end"
-          fill="var(--color-paper)"
-          className="font-mono text-[11px] font-semibold tabular-nums"
-        >
-          {last.count}
-        </text>
-        <text x={PAD} y={H + 12} fill="var(--color-fog)" className="font-mono text-[10px]">
-          {fmt(days[0].day)}
-        </text>
-        <text x={W - PAD} y={H + 12} textAnchor="end" fill="var(--color-fog)" className="font-mono text-[10px]">
-          {fmt(last.day)}
-        </text>
-      </svg>
-    </div>
+        </g>
+      ))}
+      <text
+        x={x(days.length - 1) - 5}
+        y={y(last.count) - 8}
+        textAnchor="end"
+        fill="var(--color-ink)"
+        className="font-mono text-[11px] font-semibold tabular-nums"
+      >
+        {last.count}
+      </text>
+      <text x={PAD} y={H + 12} fill="var(--color-inksoft)" className="font-mono text-[10px]">
+        {fmt(days[0].day)}
+      </text>
+      <text x={W - PAD} y={H + 12} textAnchor="end" fill="var(--color-inksoft)" className="font-mono text-[10px]">
+        {fmt(last.day)}
+      </text>
+    </svg>
   );
 }
 
@@ -103,11 +127,11 @@ function CategoryBars({ cats }: { cats: { category: ScamCategory; count: number 
           <li key={c.category} className="grid grid-cols-[9rem_1fr_2.5rem] items-center gap-2">
             <div className="min-w-0">
               <div className="truncate text-sm font-semibold leading-tight">{p}</div>
-              <div className="plate truncate text-fog">{s}</div>
+              <div className="plate truncate text-inksoft">{s}</div>
             </div>
-            <div className="h-2.5 border border-inkline bg-inkpanel">
+            <div className="h-3 border border-ink bg-paper2">
               <div
-                className="h-full bg-saffron"
+                className="h-full border-r border-ink bg-saffron"
                 style={{ width: `${Math.max(6, (c.count / max) * 100)}%` }}
               />
             </div>
@@ -125,14 +149,14 @@ function TrendsBoard({ trends }: { trends: Trends }) {
   const lang = useLang();
   return (
     <div className="space-y-4">
-      {/* hero stat */}
-      <div className="border-2 border-inkline bg-inkpanel p-4">
+      {/* hero stat — the one earned dark plate (ink + paper + saffron) */}
+      <div className="relative border-[3px] border-ink bg-ink p-4 text-paper shadow-poster">
         <div className="plate text-saffron">{pick(lang, S_INTEL.week)[0]}</div>
         <div className="mt-1 flex items-baseline gap-3">
           <span className="font-mono text-6xl font-semibold tabular-nums leading-none">
             {trends.total_reports}
           </span>
-          <span className="text-sm text-fog">
+          <span className="text-sm text-paper/70">
             verified
             <br />
             scam reports
@@ -143,59 +167,48 @@ function TrendsBoard({ trends }: { trends: Trends }) {
             +{trends.live_reports} VERIFIED LIVE THIS SESSION
           </div>
         )}
-      </div>
-
-      {/* 7-day line */}
-      <div className="border-2 border-inkline bg-inkpanel p-4">
-        <h3 className="text-sm font-bold">
-          {pick(lang, S_INTEL.perDay)[0]}{" "}
-          <span className="plate ml-1 font-normal text-fog">{pick(lang, S_INTEL.perDay)[1]}</span>
-        </h3>
-        <div className="mt-2">
-          <DayLine days={trends.by_day} />
+        {/* stamp ring, war-desk seal */}
+        <div
+          aria-hidden="true"
+          className="plate absolute right-3 top-3 -rotate-6 rounded-full border-2 border-saffron px-2 py-3 text-saffron"
+        >
+          ढाल · LIVE
         </div>
       </div>
 
-      {/* category bars */}
-      <div className="border-2 border-inkline bg-inkpanel p-4">
-        <h3 className="text-sm font-bold">
-          {pick(lang, S_INTEL.byType)[0]}{" "}
-          <span className="plate ml-1 font-normal text-fog">{pick(lang, S_INTEL.byType)[1]}</span>
-        </h3>
-        <div className="mt-3">
-          <CategoryBars cats={trends.by_category} />
-        </div>
-      </div>
+      <SectionCard title={pick(lang, S_INTEL.perDay)[0]} sub={pick(lang, S_INTEL.perDay)[1]}>
+        <DayLine days={trends.by_day} />
+      </SectionCard>
 
-      {/* top indicators */}
-      <div className="border-2 border-inkline bg-inkpanel p-4">
-        <h3 className="text-sm font-bold">
-          {pick(lang, S_INTEL.mostReported)[0]}{" "}
-          <span className="plate ml-1 font-normal text-fog">
-            {pick(lang, S_INTEL.mostReported)[1]}
-          </span>
-        </h3>
-        <ul className="mt-2 divide-y divide-inkline">
+      <SectionCard title={pick(lang, S_INTEL.byType)[0]} sub={pick(lang, S_INTEL.byType)[1]}>
+        <CategoryBars cats={trends.by_category} />
+      </SectionCard>
+
+      <SectionCard
+        title={pick(lang, S_INTEL.mostReported)[0]}
+        sub={pick(lang, S_INTEL.mostReported)[1]}
+      >
+        <ul className="divide-y-2 divide-line">
           {trends.top_indicators.slice(0, 6).map((ind, i) => (
             <li key={ind._id ?? ind.value} className="flex items-center gap-3 py-2">
-              <span className="w-5 shrink-0 text-right font-mono text-xs text-fog">
+              <span className="w-6 shrink-0 text-right font-mono text-xs font-semibold text-saffdeep">
                 {String(i + 1).padStart(2, "0")}
               </span>
-              <TypeMark type={ind.type} className="h-4 w-4 shrink-0 text-fog" />
+              <TypeMark type={ind.type} className="h-4 w-4 shrink-0 text-ink" />
               <span className="min-w-0 flex-1 truncate font-mono text-sm">{ind.value}</span>
-              <span className="shrink-0 border border-saffron px-1.5 font-mono text-xs font-semibold tabular-nums text-saffron">
+              <span className="shrink-0 border-2 border-saffdeep px-1.5 font-mono text-xs font-semibold tabular-nums text-saffdeep">
                 {ind.report_count}×
               </span>
             </li>
           ))}
         </ul>
-      </div>
+      </SectionCard>
 
-      {/* cities */}
       <div className="flex flex-wrap gap-2">
         {trends.cities.map((c) => (
-          <span key={c.city} className="border border-inkline px-2.5 py-1 text-sm text-fog">
-            {c.city} <span className="font-mono font-semibold tabular-nums text-paper">{c.count}</span>
+          <span key={c.city} className="border-2 border-ink bg-paper px-2.5 py-1 text-sm">
+            {c.city}{" "}
+            <span className="font-mono font-semibold tabular-nums text-saffdeep">{c.count}</span>
           </span>
         ))}
       </div>
@@ -203,7 +216,7 @@ function TrendsBoard({ trends }: { trends: Trends }) {
   );
 }
 
-// ---------------------------------------------------------------- moderation queue
+/* ---------------- moderation queue ---------------- */
 
 function QueueCard({
   report,
@@ -218,47 +231,50 @@ function QueueCard({
   const [lp, ls] = pick(lang, catLabel(report.category));
   const pending = report.status === "pending";
   return (
-    <li className={`border-2 bg-inkpanel p-3 ${pending ? "border-saffron" : "border-inkline"}`}>
-      <div className="flex items-start justify-between gap-2">
-        <span className="flex min-w-0 items-start gap-2 break-all font-mono text-sm leading-snug">
-          <TypeMark type={report.indicator_type} className="mt-0.5 h-4 w-4 shrink-0 text-fog" />
-          <span>
-            {report.payload.length > 90 ? `${report.payload.slice(0, 90)}…` : report.payload}
+    <li className={`border-ink bg-paper ${pending ? "border-[3px] shadow-poster-sm" : "border-2"}`}>
+      {pending && <div className="hazard-danger h-2.5 border-b-2 border-ink" aria-hidden="true" />}
+      <div className="p-3">
+        <div className="flex items-start justify-between gap-2">
+          <span className="flex min-w-0 items-start gap-2 break-all font-mono text-sm leading-snug">
+            <TypeMark type={report.indicator_type} className="mt-0.5 h-4 w-4 shrink-0 text-inksoft" />
+            <span>
+              {report.payload.length > 90 ? `${report.payload.slice(0, 90)}…` : report.payload}
+            </span>
           </span>
-        </span>
-        <span className="plate shrink-0 text-fog">{timeAgo(report.created_at)}</span>
-      </div>
-      <div className="mt-2 flex flex-wrap items-center gap-1.5">
-        <span className="plate border border-inkline px-1.5 py-0.5 text-fog">
-          {lp} · {ls}
-        </span>
-        <span className="plate border border-inkline px-1.5 py-0.5 text-fog">{report.city}</span>
-        <span className="plate border border-inkline px-1.5 py-0.5 text-fog">
-          {report.indicator_type}
-        </span>
-      </div>
-      {report.note && <p className="mt-2 text-sm italic text-fog">“{report.note}”</p>}
-      <div className="mt-3 flex gap-2">
-        <button
-          onClick={() => onDecide(report._id, "verify")}
-          disabled={busy}
-          className="flex flex-1 items-center justify-center gap-2 border-2 border-saffron bg-saffron px-3 py-2 text-sm font-bold text-ink hover:bg-saffron/85 disabled:opacity-40"
-        >
-          <ICheck className="h-4 w-4" /> {pick(lang, S_INTEL.verify)[0]}
-        </button>
-        <button
-          onClick={() => onDecide(report._id, "reject")}
-          disabled={busy}
-          className="flex items-center gap-1.5 border-2 border-inkline px-3 py-2 text-sm font-semibold text-fog hover:border-fog hover:text-paper disabled:opacity-40"
-        >
-          <ICross className="h-3.5 w-3.5" /> Reject
-        </button>
+          <span className="plate shrink-0 text-inksoft">{timeAgo(report.created_at)}</span>
+        </div>
+        <div className="mt-2 flex flex-wrap items-center gap-1.5">
+          <span className="plate border border-ink px-1.5 py-0.5">
+            {lp} · {ls}
+          </span>
+          <span className="plate border border-line px-1.5 py-0.5 text-inksoft">{report.city}</span>
+          <span className="plate border border-line px-1.5 py-0.5 text-inksoft">
+            {report.indicator_type}
+          </span>
+        </div>
+        {report.note && <p className="mt-2 text-sm italic text-inksoft">“{report.note}”</p>}
+        <div className="mt-3 flex gap-2">
+          <button
+            onClick={() => onDecide(report._id, "verify")}
+            disabled={busy}
+            className="flex flex-1 items-center justify-center gap-2 border-[3px] border-ink bg-saffron px-3 py-2 font-display text-sm font-bold shadow-poster-sm transition-transform active:translate-x-[2px] active:translate-y-[2px] active:shadow-none disabled:opacity-40"
+          >
+            <ICheck className="h-4 w-4" /> {pick(lang, S_INTEL.verify)[0]}
+          </button>
+          <button
+            onClick={() => onDecide(report._id, "reject")}
+            disabled={busy}
+            className="flex items-center gap-1.5 border-2 border-ink px-3 py-2 text-sm font-semibold hover:bg-paper2 disabled:opacity-40"
+          >
+            <ICross className="h-3.5 w-3.5" /> Reject
+          </button>
+        </div>
       </div>
     </li>
   );
 }
 
-// ---------------------------------------------------------------- page
+/* ---------------- page ---------------- */
 
 export default function IntelPage() {
   const lang = useLang();
@@ -328,33 +344,38 @@ export default function IntelPage() {
   const [queueP, queueS] = pick(lang, S_INTEL.queue);
 
   return (
-    <div className="min-h-screen bg-ink text-paper">
-      {/* war-room masthead */}
-      <header className="sticky top-0 z-10 border-b-2 border-inkline bg-ink">
+    <div className="min-h-screen bg-paper">
+      {/* war-desk masthead — same poster system as every other page */}
+      <header className="sticky top-0 z-10 border-b-[3px] border-ink bg-paper">
         <div className="mx-auto flex max-w-5xl items-center gap-3 px-4 py-2.5">
           <Link href="/" aria-label="Dhaal home" className="flex items-baseline gap-1.5 hover:opacity-80">
             <span aria-hidden="true" className="text-lg leading-none">←</span>
             <span className="font-display text-2xl font-extrabold leading-none">ढाल</span>
           </Link>
-          <div className="min-w-0 flex-1 border-l-2 border-inkline pl-3">
+          <div className="min-w-0 flex-1 border-l-2 border-ink pl-3">
             <div className="truncate font-bold leading-tight">{titleP}</div>
-            <div className="plate truncate text-fog">{titleS} · WAR ROOM</div>
+            <div className="plate truncate text-inksoft">{titleS} · WAR DESK</div>
           </div>
-          <LangToggle variant="ink" />
-          <span className="plate shrink-0 border border-saffron px-2 py-0.5 text-saffron">
+          <LangToggle />
+          <span className="plate shrink-0 border border-saffdeep px-2 py-0.5 text-saffdeep">
             <span className="blink">●</span> LIVE
           </span>
         </div>
+        <div className="hazard-saffron h-2 border-t-2 border-ink" aria-hidden="true" />
       </header>
 
       <main className="mx-auto max-w-5xl p-4 pb-16">
         {apiDown && (
-          <div className="plate mb-4 border-2 border-saffron p-3 text-saffron">
+          <div className="plate mb-4 border-2 border-saffdeep bg-paper2 p-3 text-saffdeep">
             {pick(lang, S_INTEL.apiDown)[0]}
           </div>
         )}
         {flash && (
-          <div className="mb-4 border-2 border-saffron bg-inkpanel p-3 font-semibold text-saffron">
+          <div
+            className={`mb-4 border-[3px] border-ink p-3 font-bold shadow-poster-sm ${
+              flash === "ok" ? "bg-saffron" : "bg-paper2 text-saffdeep"
+            }`}
+          >
             {pick(lang, flash === "ok" ? S_INTEL.flashOk : S_INTEL.flashFail)[0]}
           </div>
         )}
@@ -362,14 +383,16 @@ export default function IntelPage() {
         <div className="grid gap-6 lg:grid-cols-[1fr_minmax(20rem,24rem)]">
           {/* moderation queue — first on mobile, right column on laptop */}
           <section className="lg:order-2">
-            <h2 className="flex items-center justify-between font-bold">
+            <h2 className="flex items-center justify-between font-display text-xl font-bold">
               <span>
-                {queueP} <span className="plate ml-1 font-normal text-fog">{queueS}</span>
+                {queueP} <span className="plate ml-1 font-sans font-normal text-inksoft">{queueS}</span>
               </span>
               {queue && (
                 <span
                   className={`px-2 font-mono text-sm font-semibold tabular-nums ${
-                    queue.length > 0 ? "bg-saffron text-ink" : "border border-inkline text-fog"
+                    queue.length > 0
+                      ? "blink border-2 border-ink bg-saffron"
+                      : "border border-line text-inksoft"
                   }`}
                 >
                   {queue.length}
@@ -377,9 +400,9 @@ export default function IntelPage() {
               )}
             </h2>
             {queue === null ? (
-              <div className="mt-3 h-24 animate-pulse border-2 border-inkline bg-inkpanel" />
+              <div className="mt-3 h-24 animate-pulse border-2 border-line bg-paper2" />
             ) : queue.length === 0 ? (
-              <p className="mt-3 border-2 border-dashed border-inkline p-4 text-center text-sm text-fog">
+              <p className="mt-3 border-2 border-dashed border-ink p-4 text-center text-sm text-inksoft">
                 {pick(lang, S_INTEL.queueEmpty)[0]}
                 <span className="plate mt-1 block">NEW REPORTS LAND HERE WITHIN 3S</span>
               </p>
@@ -394,9 +417,11 @@ export default function IntelPage() {
 
           {/* trends war map */}
           <section className="lg:order-1">
-            <h2 className="font-bold">
+            <h2 className="font-display text-xl font-bold">
               {pick(lang, S_INTEL.warMap)[0]}{" "}
-              <span className="plate ml-1 font-normal text-fog">{pick(lang, S_INTEL.warMap)[1]}</span>
+              <span className="plate ml-1 font-sans font-normal text-inksoft">
+                {pick(lang, S_INTEL.warMap)[1]}
+              </span>
             </h2>
             {trends ? (
               <div className="mt-3">
@@ -404,8 +429,8 @@ export default function IntelPage() {
               </div>
             ) : (
               <div className="mt-3 space-y-4">
-                <div className="h-28 animate-pulse border-2 border-inkline bg-inkpanel" />
-                <div className="h-40 animate-pulse border-2 border-inkline bg-inkpanel" />
+                <div className="h-28 animate-pulse border-2 border-line bg-paper2" />
+                <div className="h-40 animate-pulse border-2 border-line bg-paper2" />
               </div>
             )}
           </section>
