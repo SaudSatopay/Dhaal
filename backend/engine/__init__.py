@@ -141,9 +141,12 @@ def _build_facts(text, input_type, expected_intent, upi_info, url_info,
     if (expected_intent or "unknown") == "unknown" and executable:
         missing.append("your_intent")
 
-    pressure = [ev["kind"] for ev in evidence
-                if ev["kind"] in ("urgency_framing", "secrecy_pressure",
-                                  "threat_framing", "coercion_extortion")]
+    # dedupe: multi-fragment evidence (H16) can repeat a kind; the pressure
+    # list is a set of tactics, not a fragment count
+    pressure = list(dict.fromkeys(
+        ev["kind"] for ev in evidence
+        if ev["kind"] in ("urgency_framing", "secrecy_pressure",
+                          "threat_framing", "coercion_extortion")))
 
     # H16 §4C: an amount PROMISED to the user (refund/cashback/prize "you'll
     # get ₹X") — extracted from prose only, never from inside a upi:// URI, so
