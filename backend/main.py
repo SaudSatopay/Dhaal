@@ -649,7 +649,14 @@ async def transcribe(request: Request):
         if out:
             return {"transcript": out["transcript"],
                     "lang": out["language_code"] or lang_hint, "mocked": False}
-    # Sarvam down / no key / MOCK_MODE — rehearsed fixture keeps the beat alive
+        # H17 (same rule that retired the IVR fallback): the user SPOKE real
+        # words — a failed transcription must be an honest error, never a
+        # fixture passed off as what they said. The client offers typed input.
+        return JSONResponse(status_code=503,
+                            content={"status": "no_transcript",
+                                     "detail": "transcription unavailable — type the message instead"})
+    # MOCK_MODE only (explicit demo env, never prod): rehearsed fixture,
+    # flagged mocked=true and rendered with a DEMO label client-side.
     return {"transcript": FX.DIGITAL_ARREST_TRANSCRIPT, "lang": "hi-IN", "mocked": True}
 
 

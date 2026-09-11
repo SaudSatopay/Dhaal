@@ -84,7 +84,7 @@ export async function apiForm<T = unknown>(path: string, form: FormData): Promis
   const res = await fetch(`${API_BASE}${path}`, { method: "POST", body: form });
   if (!res.ok) {
     const body = await res.text().catch(() => "");
-    throw new Error(`API ${res.status}: ${body || res.statusText}`);
+    throw new ApiError(res.status, `API ${res.status}: ${body || res.statusText}`);
   }
   return res.json() as Promise<T>;
 }

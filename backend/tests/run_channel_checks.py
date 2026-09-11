@@ -276,6 +276,20 @@ ok("ivr no-transcript -> 503, no fabricated verdict, no sms",
 main.sarvam.speech_to_text = _real_asr
 os.environ["IVR_ENABLED"] = ""
 
+# H17: the APP transcribe path obeys the same rule — real audio + dead ASR is
+# an honest 503, never the rehearsed fixture dressed up as the user's words
+main.sarvam.speech_to_text = lambda *a, **k: None
+rt = c.post("/api/transcribe",
+            files={"audio": ("clip.webm", b"\x1aEberlebeep", "audio/webm")})
+ok("app transcribe: dead ASR -> 503 no_transcript (no fixture substitution)",
+   rt.status_code == 503 and rt.json().get("status") == "no_transcript")
+main.sarvam.speech_to_text = _real_asr
+# typed fallback still first-class
+rtyped = c.post("/api/transcribe", json={"typed_text": "यह नंबर सही है क्या", "lang_hint": "hi-IN"})
+ok("app transcribe: typed fallback unaffected",
+   rtyped.status_code == 200 and rtyped.json()["transcript"].startswith("यह नंबर")
+   and rtyped.json()["mocked"] is False)
+
 # spoken script branches: danger vs needs-context differ and stay short
 d_danger = c.post("/api/check", json={"type": "voice_transcript",
                                       "payload": FX.DIGITAL_ARREST_TRANSCRIPT}).json()

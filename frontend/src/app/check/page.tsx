@@ -8,7 +8,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import jsQR from "jsqr";
-import { api, apiForm } from "@/lib/api";
+import { api, ApiError, apiForm } from "@/lib/api";
 import type { Check, ExpectedIntent, InputType, TranscribeResult } from "@/lib/types";
 import { EXAMPLES } from "@/lib/fixtures";
 import { S_CHECK, S_COMMON, S_VERDICT } from "@/lib/labels";
@@ -382,7 +382,14 @@ export default function CheckPage() {
       }
       setTranscript(res.transcript);
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      // H17: ASR-unavailable (503 no_transcript) is an honest, recoverable
+      // state — same coaching flow as a mocked fallback: speak again or type.
+      if (e instanceof ApiError && e.status === 503) {
+        setTranscript("");
+        setMicRetry(true);
+      } else {
+        setError(e instanceof Error ? e.message : String(e));
+      }
     } finally {
       setTranscribing(false);
     }
