@@ -295,8 +295,8 @@ export const S_VERDICT = {
 /* ---------------- whatsapp strip ---------------- */
 export const S_WA = {
   line: {
-    hi: "WhatsApp पर भी: +1 (737) 250-8034 · भेजें 'join twilio-trial' · scam forward करो, जाँच पाओ",
-    en: "Also on WhatsApp: +1 (737) 250-8034 · send 'join twilio-trial' · forward a scam, get the verdict",
+    hi: "WhatsApp bot: scam forward करो, जाँच उसी chat में — number जल्द live",
+    en: "WhatsApp bot: forward a scam, the verdict lands in the chat — number going live soon",
   },
 } satisfies Record<string, LangText>;
 

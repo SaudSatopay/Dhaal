@@ -7,6 +7,7 @@ import type { ScamCategory, Trends } from "@/lib/types";
 import { CATEGORY_UI } from "@/lib/labels";
 import { pick, useLang } from "@/lib/lang";
 import LangToggle from "@/components/LangToggle";
+import { DhaalMark } from "@/components/icons";
 
 export default function TopBar({ title_hi, title_en }: { title_hi: string; title_en: string }) {
   const lang = useLang();
@@ -37,8 +38,9 @@ export default function TopBar({ title_hi, title_en }: { title_hi: string; title
   return (
     <header className="sticky top-0 z-10 border-b-[3px] border-ink bg-paper">
       <div className="mx-auto flex max-w-xl items-center gap-3 px-4 py-2.5">
-        <Link href="/" aria-label="Dhaal home" className="flex items-baseline gap-1.5 hover:opacity-80">
+        <Link href="/" aria-label="Dhaal home" className="flex items-center gap-1.5 hover:opacity-80">
           <span aria-hidden="true" className="text-lg leading-none">←</span>
+          <DhaalMark className="h-7 w-auto" />
           <span className="font-display text-2xl font-extrabold leading-none">ढाल</span>
         </Link>
         <div className="min-w-0 flex-1 border-l-2 border-ink pl-3">

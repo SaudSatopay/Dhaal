@@ -1,9 +1,9 @@
 "use client";
 
-// The QR-scan landing — a live war-room poster. The hero is the SCAM RADAR:
-// a hand-drawn Rajasthan outline with pings sized by REAL verified-report
-// counts from /api/intel/trends, odometer stats, and a ticker of the latest
-// verified indicators. All data live from the API — nothing invented.
+// The landing — a live war-room poster. Giant inked wordmark, then the SCAM
+// RADAR: a survey-style Rajasthan plate with a rotating sweep and pings sized
+// by REAL verified-report counts from /api/intel/trends, odometer stats, and
+// a ticker of the latest verified indicators. All data live — nothing invented.
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
@@ -12,7 +12,7 @@ import type { ScamCategory, Trends } from "@/lib/types";
 import { CATEGORY_UI, S_HOME, S_WA } from "@/lib/labels";
 import { pick, useLang, type Lang, type LangText } from "@/lib/lang";
 import LangToggle from "@/components/LangToggle";
-import { IArrowR, IGlobe, IShield, IShieldCheck, ISiren, IUsers } from "@/components/icons";
+import { DhaalMark, IArrowR, IGlobe, IShieldCheck, ISiren, IUsers } from "@/components/icons";
 import { S_LEARN } from "@/lib/labels";
 
 const SURFACES: { href: string; Icon: typeof IUsers; label: LangText; sub: LangText }[] = [
@@ -22,47 +22,103 @@ const SURFACES: { href: string; Icon: typeof IUsers; label: LangText; sub: LangT
   { href: "/recover", Icon: ISiren, label: S_HOME.sRecover, sub: S_HOME.sRecoverSub },
 ];
 
-// Hand-placed coordinates on the hand-drawn outline below (viewBox 0 0 200 190).
-// Only cities we can place render a ping; unknown cities are skipped, never guessed.
-const CITY_XY: Record<string, [number, number]> = {
-  jaipur: [118, 62],
-  jodhpur: [58, 92],
-  udaipur: [88, 140],
-  kota: [138, 118],
-  ajmer: [96, 84],
-  bikaner: [52, 48],
-  jaisalmer: [28, 80],
-  alwar: [132, 50],
-};
-
-// Simplified Rajasthan outline — deliberately hand-drawn (ink on paper), not GIS.
+// Survey-plate frame: viewBox 0 0 320 300. Rajasthan drawn from geography —
+// north tip at Sri Ganganagar, the eastern Dholpur notch, the Kota–Jhalawar
+// hang, the Banswara tail south, the Jaisalmer point west. Inked, not GIS.
 const RAJASTHAN_PATH =
-  "M58 12 L78 18 L98 38 L128 46 L152 58 L168 74 L150 92 L152 122 L142 140 L112 168 L98 164 L84 146 L66 140 L44 122 L22 104 L14 78 L30 44 Z";
+  "M112 18 L140 30 L158 48 L186 56 L218 62 L252 78 L272 96 L250 106 " +
+  "L258 132 L262 166 L252 196 L224 190 L218 210 L196 252 L172 264 L150 248 " +
+  "L128 232 L106 222 L74 208 L52 194 L24 150 L36 112 L58 74 L86 40 Z";
+
+// Ping anchor per city + hand-placed label offset (dx, dy) so plates never
+// collide with dots or each other. Unknown cities are skipped, never guessed.
+const CITY_XY: Record<string, { xy: [number, number]; label: [number, number] }> = {
+  jaipur: { xy: [196, 96], label: [12, -14] },
+  jodhpur: { xy: [98, 148], label: [-2, 20] },
+  udaipur: { xy: [152, 222], label: [-46, 14] },
+  kota: { xy: [226, 162], label: [12, 12] },
+  ajmer: { xy: [160, 130], label: [10, 12] },
+  bikaner: { xy: [76, 78], label: [10, -10] },
+  jaisalmer: { xy: [52, 140], label: [8, -14] },
+  alwar: { xy: [222, 78], label: [12, -8] },
+};
 
 function Radar({ trends, lang }: { trends: Trends; lang: Lang }) {
   const cities = trends.cities.filter((c) => CITY_XY[c.city.toLowerCase()]);
   const max = Math.max(...cities.map((c) => c.count), 1);
   return (
-    <svg viewBox="0 0 200 190" className="w-full" role="img" aria-label={pick(lang, S_HOME.radarSub)[0]}>
-      {/* faint registration crosses — war-desk paper texture */}
-      {[
-        [40, 40], [160, 40], [40, 150], [160, 150], [100, 95],
-      ].map(([x, y], i) => (
-        <g key={i} stroke="var(--color-line)" strokeWidth="1">
-          <line x1={x - 4} y1={y} x2={x + 4} y2={y} />
-          <line x1={x} y1={y - 4} x2={x} y2={y + 4} />
+    <svg viewBox="0 0 320 300" className="w-full" role="img" aria-label={pick(lang, S_HOME.radarSub)[0]}>
+      <defs>
+        {/* survey hatch for the drop-shadow plate */}
+        <pattern id="hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+          <line x1="0" y1="0" x2="0" y2="6" stroke="var(--color-ink)" strokeWidth="1.6" />
+        </pattern>
+        {/* faint chart grid */}
+        <pattern id="grid" width="28" height="28" patternUnits="userSpaceOnUse">
+          <path d="M28 0H0V28" fill="none" stroke="var(--color-line)" strokeWidth="0.7" />
+        </pattern>
+        {/* the sweep beam — bright leading edge, long fade */}
+        <linearGradient id="beam" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0" stopColor="var(--color-saffron)" stopOpacity="0" />
+          <stop offset="0.82" stopColor="var(--color-saffron)" stopOpacity="0.28" />
+          <stop offset="1" stopColor="var(--color-saffron)" stopOpacity="0.55" />
+        </linearGradient>
+        <clipPath id="stateClip">
+          <path d={RAJASTHAN_PATH} />
+        </clipPath>
+      </defs>
+
+      {/* chart-paper ground */}
+      <rect x="6" y="6" width="308" height="288" fill="url(#grid)" />
+      {/* registration crosses */}
+      {[[36, 34], [284, 34], [36, 268], [284, 268]].map(([x, y], i) => (
+        <g key={i} stroke="var(--color-line)" strokeWidth="1.4">
+          <line x1={x - 6} y1={y} x2={x + 6} y2={y} />
+          <line x1={x} y1={y - 6} x2={x} y2={y + 6} />
         </g>
       ))}
+      {/* survey margin notes */}
+      <text x="10" y="152" className="font-mono" fontSize="8" fill="var(--color-inksoft)" transform="rotate(-90 10 152)" textAnchor="middle" letterSpacing="2">
+        27°N
+      </text>
+      <text x="160" y="296" className="font-mono" fontSize="8" fill="var(--color-inksoft)" textAnchor="middle" letterSpacing="2">
+        73°E — RAJASTHAN — SURVEY OF SCAMS · 2026
+      </text>
+      {/* compass */}
+      <g transform="translate(292 24)">
+        <line x1="0" y1="10" x2="0" y2="-8" stroke="var(--color-ink)" strokeWidth="1.6" />
+        <path d="M0 -12 L4 -4 L-4 -4 Z" fill="var(--color-ink)" />
+        <text x="0" y="22" className="font-mono" fontSize="8" fill="var(--color-inksoft)" textAnchor="middle">N</text>
+      </g>
+
+      {/* the state — hatched shadow, misregistered saffron pass, ink pass */}
+      <path d={RAJASTHAN_PATH} transform="translate(7 7)" fill="url(#hatch)" opacity="0.16" />
+      <path d={RAJASTHAN_PATH} transform="translate(3.5 3.5)" fill="var(--color-saffron)" opacity="0.85" />
       <path
         d={RAJASTHAN_PATH}
         fill="var(--color-paper2)"
         stroke="var(--color-ink)"
-        strokeWidth="2.5"
+        strokeWidth="3"
         strokeLinejoin="miter"
       />
+
+      {/* survey grid inside the state + rotating sweep, both clipped */}
+      <g clipPath="url(#stateClip)">
+        <rect x="0" y="0" width="320" height="300" fill="url(#grid)" opacity="0.55" />
+        <g className="radar-sweep" style={{ transformOrigin: "160px 150px" }}>
+          <path d="M160 150 L340 40 L340 150 Z" fill="url(#beam)" />
+        </g>
+      </g>
+
+      {/* city pings + label plates with leader lines */}
       {cities.map((c, i) => {
-        const [x, y] = CITY_XY[c.city.toLowerCase()];
-        const r = 3.5 + (c.count / max) * 5;
+        const spot = CITY_XY[c.city.toLowerCase()];
+        const [x, y] = spot.xy;
+        const [dx, dy] = spot.label;
+        const r = 5 + (c.count / max) * 7;
+        const name = c.city.charAt(0).toUpperCase() + c.city.slice(1);
+        const lx = x + dx + (dx >= 0 ? r : -r);
+        const ly = y + dy + (dy > 6 ? r : dy < -6 ? -r : 0);
         return (
           <g key={c.city}>
             <circle
@@ -72,19 +128,25 @@ function Radar({ trends, lang }: { trends: Trends; lang: Lang }) {
               r={r}
               fill="none"
               stroke="var(--color-danger)"
-              strokeWidth="1.5"
+              strokeWidth="2"
               style={{ animationDelay: `${i * 0.45}s` }}
             />
-            <circle cx={x} cy={y} r={r} fill="var(--color-saffron)" stroke="var(--color-ink)" strokeWidth="1.5" />
+            <circle cx={x} cy={y} r={r} fill="var(--color-saffron)" stroke="var(--color-ink)" strokeWidth="2" />
+            <circle cx={x} cy={y} r="1.6" fill="var(--color-ink)" />
             <text
-              x={x}
-              y={y + r + 8}
-              textAnchor="middle"
+              x={lx}
+              y={ly}
+              textAnchor={dx >= 0 ? "start" : "end"}
               className="font-mono"
-              fontSize="7"
-              fill="var(--color-inksoft)"
+              fontSize="10"
+              fontWeight="600"
+              fill="var(--color-ink)"
+              stroke="var(--color-paper2)"
+              strokeWidth="3.5"
+              paintOrder="stroke"
+              strokeLinejoin="round"
             >
-              {c.city} · {c.count}
+              {name} · {c.count}
             </text>
           </g>
         );
@@ -171,23 +233,51 @@ export default function Home() {
       <div className="hazard-saffron h-2.5 border-b-2 border-ink" aria-hidden="true" />
 
       <main className="mx-auto flex w-full max-w-xl flex-1 flex-col px-5 pb-4">
-        <div className="flex-1 pt-6">
-          {/* compact wordmark row + language pill */}
-          <div className="flex items-end justify-between gap-3">
-            <div className="flex items-end gap-2.5">
-              <IShield className="h-9 w-9 text-ink" />
-              <h1 className="font-display text-5xl font-extrabold leading-none tracking-tight">
+        <div className="flex-1 pt-5">
+          {/* ===================== THE MASTHEAD ===================== */}
+          <div className="chit-in d1 relative">
+            <div className="flex items-start justify-between">
+              <span className="plate text-inksoft">{pick(lang, S_HOME.markSub)[0]}</span>
+              <LangToggle />
+            </div>
+
+            {/* seal + giant wordmark, optically locked at the type's x-height */}
+            <div className="mt-1 flex items-center gap-4">
+              <DhaalMark className="seal-pop d2 h-[4.6rem] w-auto shrink-0 sm:h-[5.6rem]" />
+              <h1 className="type-wordmark font-display font-extrabold tracking-tight">
                 ढाल
               </h1>
             </div>
-            <LangToggle />
-          </div>
-          <p className="mt-2.5 font-display text-xl font-bold leading-snug">
-            {pick(lang, S_HOME.promise1)[0]} {pick(lang, S_HOME.promise2)[0]}
-          </p>
+            <div className="rule-grow mt-2 h-1.5 bg-saffron" aria-hidden="true" />
 
-          {/* THE HERO — live scam radar */}
-          <section className="mt-4 border-[3px] border-ink bg-paper shadow-poster">
+            {/* the promise — poster type, the check boxed like a stamped field */}
+            <p className="type-hero mt-3 font-display font-bold">
+              {pick(lang, S_HOME.promise1)[0]}{" "}
+              <span className="inline-block -rotate-1 border-[3px] border-ink bg-saffron px-2 leading-tight shadow-poster-sm">
+                {pick(lang, S_HOME.promise2)[0]}
+              </span>
+            </p>
+            <p className="mt-2.5 max-w-md text-[15px] leading-snug text-inksoft">
+              {pick(lang, S_HOME.promiseSub)[0]}
+            </p>
+          </div>
+
+          {/* ===================== THE ACTION ===================== */}
+          <Link
+            href="/check"
+            className="chit-in d3 sheet mt-5 block border-[3px] border-ink bg-saffron p-4 shadow-poster"
+          >
+            <span className="flex items-center justify-between gap-3">
+              <span className="font-display text-3xl font-extrabold leading-none sm:text-4xl">
+                {pick(lang, S_HOME.cta)[0]}
+              </span>
+              <IArrowR className="cta-arrow h-9 w-9 shrink-0" />
+            </span>
+            <span className="plate mt-2 block opacity-70">PASTE · QR PHOTO · VOICE · WHATSAPP</span>
+          </Link>
+
+          {/* ===================== THE RADAR ===================== */}
+          <section className="chit-in d4 mt-6 border-[3px] border-ink bg-paper shadow-poster">
             <div className="flex items-center justify-between border-b-[3px] border-ink px-3 py-2">
               <h2 className="font-display text-lg font-bold leading-none">
                 {pick(lang, S_HOME.radarTitle)[0]}
@@ -201,7 +291,7 @@ export default function Home() {
             {trends ? (
               <>
                 <p className="plate px-3 pt-2 text-inksoft">{pick(lang, S_HOME.radarSub)[0]}</p>
-                <div className="px-6 pb-1 pt-1">
+                <div className="px-3 pb-1 pt-1">
                   <Radar trends={trends} lang={lang} />
                 </div>
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-t-2 border-line px-3 py-2.5">
@@ -223,43 +313,34 @@ export default function Home() {
                     </span>
                   </div>
                 </div>
-                <p className="mt-1.5 font-mono text-[11px] font-semibold tracking-wide text-inksoft">
+                <p className="border-t-2 border-line px-3 py-1.5 font-mono text-[11px] font-semibold tracking-wide text-inksoft">
                   {lang === "hi"
                     ? "डेटा: synthetic demo + आज शाम की live रिपोर्टें"
                     : "data: synthetic demo + this evening's live reports"}
                 </p>
               </>
             ) : (
-              <div className="m-3 h-48 animate-pulse bg-paper2" />
+              <div className="m-3 h-56 animate-pulse bg-paper2" />
             )}
           </section>
 
           {/* just-verified ticker */}
           {trends && <Ticker trends={trends} lang={lang} />}
 
-          {/* THE action */}
-          <Link
-            href="/check"
-            className="mt-5 block border-[3px] border-ink bg-saffron p-4 shadow-poster transition-transform active:translate-x-[3px] active:translate-y-[3px] active:shadow-none"
-          >
-            <span className="flex items-center justify-between gap-3">
-              <span className="font-display text-3xl font-extrabold leading-none">
-                {pick(lang, S_HOME.cta)[0]}
-              </span>
-              <IArrowR className="h-8 w-8 shrink-0" />
-            </span>
-            <span className="plate mt-1.5 block opacity-70">PASTE · QR PHOTO · VOICE</span>
-          </Link>
-
-          {/* secondary surfaces — a typographic index, not a card grid */}
-          <nav className="mt-6 border-t-[3px] border-ink">
-            {SURFACES.map((s) => (
+          {/* ===================== THE INDEX ===================== */}
+          <nav className="chit-in d5 mt-7 border-t-[3px] border-ink">
+            {SURFACES.map((s, i) => (
               <Link
                 key={s.href}
                 href={s.href}
-                className="group flex items-center gap-3.5 border-b-2 border-line py-3 hover:bg-paper2"
+                className="group flex items-center gap-3.5 border-b-2 border-line py-3 pl-1 pr-1 transition-colors hover:bg-paper2"
               >
-                <s.Icon className="h-6 w-6 shrink-0 text-saffdeep" />
+                <span className="plate w-7 shrink-0 text-inksoft" aria-hidden="true">
+                  0{i + 1}
+                </span>
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center border-2 border-ink bg-paper text-saffdeep shadow-poster-sm transition-transform group-hover:-translate-y-0.5">
+                  <s.Icon className="h-6 w-6" />
+                </span>
                 <span className="min-w-0 flex-1">
                   <span className="block text-lg font-bold leading-tight">
                     {pick(lang, s.label)[0]}
@@ -268,7 +349,7 @@ export default function Home() {
                     {pick(lang, s.sub)[0]}
                   </span>
                 </span>
-                <IArrowR className="h-5 w-5 shrink-0 text-inksoft group-hover:text-ink" />
+                <IArrowR className="h-5 w-5 shrink-0 text-inksoft transition-transform group-hover:translate-x-1 group-hover:text-ink" />
               </Link>
             ))}
           </nav>

@@ -27,6 +27,52 @@ export function IShield({ className }: P) {
   );
 }
 
+// The brand mark — a printed seal, not a glyph. Layers imitate letterpress
+// misregistration: solid saffron pass offset under the ink pass, a pinstripe
+// inner shield like security engraving, hazard chevrons in the base, and the
+// check with square terminals. Pure geometry — no font dependency.
+export function DhaalMark({ className }: P) {
+  return (
+    <svg viewBox="0 0 56 62" className={className} aria-hidden="true" focusable="false">
+      {/* misregistered saffron print pass */}
+      <path
+        d="M31 7.5 51 14v15.5c0 12.6-8.2 21-20 26.5C19.2 50.5 11 42.1 11 29.5V14Z"
+        fill="var(--color-saffron)"
+      />
+      {/* ink pass — paper-filled shield */}
+      <path
+        d="M28 4.5 48 11v15.5c0 12.6-8.2 21-20 26.5C16.2 47.5 8 39.1 8 26.5V11Z"
+        fill="var(--color-paper)"
+        stroke="var(--color-ink)"
+        strokeWidth="3.4"
+        strokeLinejoin="miter"
+      />
+      {/* engraved pinstripe shield */}
+      <path
+        d="M28 9.7 43.6 14.8v11.9c0 9.9-6.4 16.6-15.6 21.2-9.2-4.6-15.6-11.3-15.6-21.2V14.8Z"
+        fill="none"
+        stroke="var(--color-ink)"
+        strokeWidth="1.3"
+        strokeLinejoin="miter"
+      />
+      {/* hazard chevrons in the shield base */}
+      <g stroke="var(--color-ink)" strokeWidth="2.6" fill="none">
+        <path d="M19 40.5 28 46l9-5.5" />
+        <path d="M21.5 44.5 28 48.5l6.5-4" />
+      </g>
+      {/* the check — square terminals, poster weight */}
+      <path
+        d="M19 25.5l6.5 6.5L38.5 18.5"
+        fill="none"
+        stroke="var(--color-ink)"
+        strokeWidth="5"
+        strokeLinecap="square"
+        strokeLinejoin="miter"
+      />
+    </svg>
+  );
+}
+
 export function IShieldCheck({ className }: P) {
   return (
     <Svg className={className}>
