@@ -295,6 +295,37 @@ def _assess(payload: str, score: int, facts: dict):
             "question_hi": "यह धमकी है — पर वे आपसे करवाना क्या चाहते हैं? पैसे, OTP, कोई link? जो कहा गया वह paste करें। डर लगे तो 1930 भी है।",
             "question_en": "This reads as a threat — but what are they asking you to DO? Money, OTP, a link? Paste what they said. If you feel unsafe, 1930 is there too.",
         }
+    # payment-shaped gibberish: mentions upi/pa=/am= in a broken shape that
+    # never parsed — unreadable, never clean (v4-106/108 shapes)
+    if p is None and len(t.split()) <= 10 \
+            and re.search(r"\bupi\b|\bupi:?/", t, re.I) \
+            and re.search(r"pa\s*=|am\s*=|amount|@ok[a-z]{2,}|scan", t, re.I):
+        return "unsupported_input", {
+            "reason": "unreadable_payment_code",
+            "question_hi": "यह payment code टूटा हुआ लग रहा है — original QR दुबारा scan करें या पूरा message paste करें।",
+            "question_en": "This looks like a broken payment code — rescan the original QR or paste the full message.",
+        }
+    # a bare short DEMAND with no identifier/context: whose demand? for what?
+    # ("paisa bhej do bhai" must ask, not clear — v4-088/089)
+    if len(t.split()) <= 6 and score < engine_mod.SUSPICIOUS_AT \
+            and re.search(r"paise?|पैसे|₹|bhej|भेज|transfer|send", t, re.I) \
+            and re.search(r"bhej|भेज|send|transfer|de\s+do|दे\s+दो", t, re.I) \
+            and not (_BARE_VPA_RE.search(t) or re.search(r"\d{6,}", t)
+                     or "http" in t.lower()):
+        return "needs_context", {
+            "reason": "bare_demand",
+            "question_hi": "कौन माँग रहा है, और किस लिए? जो message/call आया था वह पूरा paste करें — माँग अकेले जाँच नहीं होती।",
+            "question_en": "WHO is asking, and for what? Paste the full message/call — a demand alone can't be checked.",
+        }
+    # qr/scan referent fragments: "QR scan karke bata" names nothing checkable
+    if len(t.split()) <= 7 and re.search(r"\bqr\b|scan", t, re.I) \
+            and not (p or "http" in t.lower()) \
+            and re.search(r"bata|बता|sahi|सही|check|karu|karun|\?", t, re.I):
+        return "needs_context", {
+            "reason": "no_referent",
+            "question_hi": "कौन-सा QR? उसकी photo QR tab में डालें या उसमें लिखा upi:// text paste करें — तभी जाँच होगी।",
+            "question_en": "WHICH QR? Upload its photo in the QR tab or paste its upi:// text — then it can be checked.",
+        }
     words = len(t.split())
     if words < 4 and not (p and p.get("status") == "valid"):
         return "needs_context", {

@@ -1,4 +1,28 @@
-# Engine evaluation — honest edition (v4, post-H14 hardening)
+# Engine evaluation — honest edition (v5, H16 sprint)
+
+## 0 · Battery v4 — 110 cases (developer-authored blind · labels frozen pre-run · FROZEN result 87/110)
+
+**Authorship, stated plainly:** written by a separate blind session that never read the engine; labels + rationales frozen at authoring; **developer-authored, no human validation, no independence claim beyond the blind-session separation.** Ran ONCE locally (TestClient, externals STUBBED OFF: no LLM narration, no TTS, no network; community blocklist = seeded fixtures only) at engine `8df6052`. Raw with exact inputs: `docs/heldout_v4.json` — 23 misses preserved verbatim.
+
+| Frozen metric | Value | Target |
+|---|---|---|
+| Total | **87/110** | — |
+| Harmful recall | **27/41 (65.9%)** | >90% — **badly missed** |
+| Legitimate false positives | **2/43 (4.7%)** | <5% — **met** |
+| Uncertainty handled (context asked) | 12/16 | — |
+| False reassurance on unjudgeable input | 4/16 | the worst failure class |
+| Unsupported-input handling | 7/10 | — |
+| Pairs fully correct | 4/7 | — |
+
+**Read:** the blind author reached families the rulebook had never met — money-doubling deposits, gift-parcel customs fees, prepaid-task teams, loan-app contact-list extortion, LIC-bonus release charges, IT-refund "verification amounts" — and recall collapsed exactly there. That is the honest headline of a keyword engine: excellent precision (0 danger-mislabels; FP target met), generalization bounded by its pattern inventory.
+
+**Post-publication family fixes (extortion/disclosure variants, benefit-release advance fees, investment-doubling + gift-parcel + prepaid-task families, completed-action and secondhand-anecdote registers, bare-demand/QR-referent/gibberish assessment gates) → per the pre-declared rule this set is now RECLASSIFIED as development/regression data.** The re-run — a regression measurement, NOT unseen accuracy — is `docs/heldout_v4_regression.json`: **100/110 · recall 33/41 · FP 0/43 · uncertainty 16/16 · false reassurance 0/16 · danger precision 9/9** (hi 31/35 · en 35/40 · hinglish 34/35). The frozen 87/110 stands as the last blind measurement; the next blind battery is the only thing that can claim more.
+
+**Label dispute recorded (not silently "fixed"):** v4-105 (`upi://pay?pa=merchant@okaxis&am=abc`) is labeled unsupported; the engine's documented semantic keeps a valid payee with a discarded invalid amount = assessed. Both defensible; the miss stays counted against us and the disagreement is recorded here instead of editing the label.
+
+---
+*(sections below predate the v4 battery)*
+
 
 Three kinds of evidence, kept separate on purpose. Development results show responsiveness to failure; the regression suite shows nothing already fixed can silently return; **only the held-out battery measures generalization** — its rules were frozen before the inputs were written, it ran exactly once against production, and its misses are published unedited.
 

@@ -347,7 +347,8 @@ ok("bank account+IFSC alone: identifier ask",
 q1 = c.post("/api/check", json={"type": "text", "payload": "Can you send it now?"}).json()
 q2 = c.post("/api/check", json={"type": "text", "payload": "yeh upi id sahi hai na"}).json()
 ok("referent-less questions ask what 'it' is",
-   q1["assessment"] == "needs_context" and q1["needs_context"]["reason"] == "no_referent"
+   q1["assessment"] == "needs_context"
+   and q1["needs_context"]["reason"] in ("no_referent", "bare_demand")
    and q2["assessment"] == "needs_context")
 # threats WITH an ask still convict, and rich clean texts stay assessed
 coer = c.post("/api/check", json={"type": "text",

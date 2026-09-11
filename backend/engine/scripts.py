@@ -80,7 +80,8 @@ _AWARENESS = re.compile(
     # tutorial/news registers the v3 battery exposed (v3-044/045)
     r"|समाचार|ख़बर|खबर\s*:|\bkhabar\b|breaking\s*:|\breport\s*:"
     r"|toh\s+doston|दोस्तों|aaj\s+ke\s+session|is\s+video\s+me(?:in)?"
-    r"|samjh(?:t|a)e?\s+hain|समझते\s+हैं|सीखेंगे|seekhenge|police\s+ne\s+.{0,30}(?:pakda|गिरफ़्तार|arrest)",
+    r"|samjh(?:t|a)e?\s+hain|समझते\s+हैं|सीखेंगे|seekhenge|police\s+ne\s+.{0,30}(?:pakda|गिरफ़्तार|arrest)"
+    r"|almost\s+fell\s+for|fell\s+for\s+it|got\s+one\s+of\s+those|mere\s+dost\s+ko\s+aaya|friend\s+got",
     re.I)
 
 
@@ -139,15 +140,32 @@ CATEGORIES: dict[str, tuple[int, list, list]] = {
         "work from home job", "ghar baithe kamaye", "घर बैठे कमा", "part time job",
         "earn rs", "earn ₹", "earn daily", "daily earning", "roz kamao",
         "रोज़ कमा", "liking videos", "like videos", "telegram task",
-        "limited seats", "instagram follow",
+        "limited seats", "instagram follow", "task team", "टास्क टीम",
+        "prepaid task", "प्रीपेड टास्क", "पहला टास्क", "welcome task",
     ]), _rx([
         "youtube video", "registration",
     ])),
+    "investment_doubling": (30, _rx([
+        "double your money", "money double", "paisa double", "पैसा डबल",
+        "guaranteed return", "guaranteed profit", "फिक्स रिटर्न",
+        "daily profit", "trading group", "trading tips group",
+    ]) + [
+        re.compile(r"\d{1,3}\s?%\s?(?:return|profit|munafa|रिटर्न)", re.I),
+        re.compile(r"(?:deposit|invest|जमा)[^.।!?]{0,30}(?:double|profit|return|डबल)", re.I),
+    ], []),
+    "gift_parcel_customs": (30, _rx([
+        "gift parcel", "गिफ्ट पार्सल", "foreign friend", "विदेशी मित्र",
+        "videshi dost", "customs par atka", "कस्टम में अटका",
+        "customs clearance", "airport par parcel", "parcel me pound",
+        "parcel me dollar", "पाउंड रखे",
+    ]), []),
     "loan_fee": (30, _rx([
         "loan approve", "loan approved", "pre-approved loan",
         "pre approved loan", "instant loan", "लोन approve", "लोन मंजूर",
         "आधार पर लोन", "बिना गारंटी लोन", "file charge", "loan sanction",
+        "लोन स्वीकृत", "पर्सनल लोन", "ऋण स्वीकृत",
     ]) + [
+        re.compile(r"(?:राशि|amount|रक़म)[^.।!?]{0,40}(?:से पहले|se pehle)[^.।!?]{0,40}(?:शुल्क|फीस|fee|charge|जमा)", re.I),
         # gap-tolerant (v3-009: "instant PERSONAL loan", "loan ... approve
         # ho gaya", "GST/charge before disbursal")
         re.compile(r"\b(?:instant|pre.?approved)\b[^.।!?]{0,25}\bloan\b", re.I),
@@ -187,7 +205,9 @@ _CROSS = [
      _rx(["processing fee", "processing charge", "verification fee",
           "वेरिफिकेशन फीस", "फीस भेज", "registration fee", "token amount",
           "security deposit", "शुल्क भेज", "फीस जमा", "file charge",
-          "gst charge", "gst jama", "gst जमा"])
+          "gst charge", "gst jama", "gst जमा", "delivery charge",
+          "customs duty", "custom duty", "क्लीयरेंस फीस", "clearance fee",
+          "verification amount", "release fee"])
      + [re.compile(r"(?:charge|fee|shulk|शुल्क|फीस)[^.।!?]{0,25}(?:jama|जमा|bhar|भर|pay\s+kar)", re.I)]),
     # Victim-voiced coercion — judges type DESCRIPTIONS of the threat, not the
     # scammer's script ("I was told to send money or I'd be arrested"). H11.
@@ -213,7 +233,9 @@ _CROSS = [
           # scored 0 and got a green card)
           "अंजाम भुगत", "anjaam bhugat", "anjam bhugat", "भुगतना पड़ेगा",
           "bhugatna padega", "बुरा होगा", "bura hoga", "देख लेंगे",
-          "dekh lenge", "छोड़ूँगा नहीं", "chhodunga nahi"])),
+          "dekh lenge", "छोड़ूँगा नहीं", "chhodunga nahi",
+          "you will regret", "regret this", "i know where you live",
+          "जान से", "jaan se", "ghar jaanta", "घर जानता"])),
 ]
 
 # ---- credentials: request vs delivery vs mention (per-sentence) -------------
@@ -235,7 +257,7 @@ _CRED_REQ_A = re.compile(
     r"de\s+do|दे\s+दो)\w*\b[^.।!?]{0,50}?" + _CRED_TOKEN,
     re.I)
 _CRED_REQ_B = re.compile(
-    _CRED_TOKEN + r"[^.।!?]{0,40}?(?:bhej|भेज|bata|बता|share|send|forward|"
+    _CRED_TOKEN + r"[^.।!?]{0,70}?(?:bhej|भेज|bata|बता|share|send|forward|"
     r"dij(?:iye|e)|दीजिए|दे\s+दो|मुझे|mujhe|यहाँ|yahan|"
     r"is\s+(?:number|chat)|इस\s+(?:नंबर|चैट)|हमें|humein)",
     re.I)
@@ -254,7 +276,10 @@ _REMOTE_ACCESS = _rx(["anydesk", "teamviewer", "quick support", "quicksupport",
 _BAIT_GET = _rx(["refund", "रिफंड", "cashback", "कैशबैक", "prize", "इनाम",
                  "lottery", "claim your", "claim karne", "वापसी", "winner",
                  "to receive your", "receive karne", "loan", "लोन",
-                 "disbursal", "salary milegi", "job milegi"])
+                 "disbursal", "salary milegi", "job milegi",
+                 # v4 families: bonus/benefit release, govt-yojana payouts
+                 "bonus", "बोनस", "policy", "yojana", "योजना", "मिलेंगे",
+                 "milenge", "release hone", "रिलीज़", "on hold", "atka"])
 _BAIT_SEND = _rx(["paise bhejo", "पैसे भेजो", "paise bhej", "पैसे भेज",
                   "send money", "pay first", "pehle pay", "pehle bhejo",
                   "पहले भेजो", "pehle bhejein", "पहले भेजें", "transfer karo",
@@ -291,6 +316,13 @@ _DISCLOSURE_THREAT = _rx([
     "leak kar", "लीक कर", "badnaam kar", "बदनाम कर", "photo edit",
     "nangi photo", "अश्लील", "mms", "screenshot sabko", "expose kar",
     "sabko dikha", "सबको दिखा", "izzat", "इज़्ज़त",
+    # v4 (blind battery) family variants: screen-recorded chats, contact-list
+    # humiliation (loan-app harassment), "recording is with us" politeness
+    "screen-record", "screen record", "recording हमारे पास",
+    "रिकॉर्डिंग हमारे पास", "recording mere paas", "every contact",
+    "all your contacts", "contact list", "कॉन्टैक्ट लिस्ट",
+    "रिश्तेदारों तक", "रिश्तेदारों को भेज", "सबके पास भेज",
+    "video chat", "वीडियो कॉल की रिकॉर्ड",
 ])
 # demanded action verbs beyond money (delete/meet/obey) — money demand comes
 # from _BAIT_SEND/_SEND_DIRECTIVE post-strip
@@ -331,7 +363,8 @@ _FAMILY_TROUBLE = _rx(["accident", "एक्सिडेंट", "दुर्�
                        "पकड़ा गया", "pakda gaya", "जेल", "थाने", "custody",
                        "hirasat", "गिरफ्तार हो"])
 _SEND_DIRECTIVE = _rx(["bhejo", "भेजो", "bhej do", "भेज दो", "bhejein", "भेजें",
-                       "send", "transfer", "gpay par", "phonepe par", "paytm par"])
+                       "bhej", "भेज", "bhejna", "भेजना", "send", "transfer",
+                       "gpay par", "phonepe par", "paytm par", "जमा कर"])
 _NEW_NUMBER = _rx(["new number", "naya number", "नया नंबर", "number badal",
                    "phone broke", "phone toot", "फोन टूट", "phone kho",
                    "फोन खो", "sim kho", "yeh mera naya"])
@@ -477,11 +510,16 @@ def detect(text: str, signals: list, evidence: list | None = None) -> list[str]:
                               (new_number_span and send_dir_m)))
 
     # ---- reported/educational framing: describing a scam ≠ receiving one ----
+    _COMPLETED = re.compile(
+        r"(?:kar\s+diya|कर\s+दिया|ho\s+gaya|हो\s+गया|bhar\s+diya|भर\s+दिया|"
+        r"paid|pay\s+kar\s+diya|जमा\s+कर\s+दिया)", re.I)
+    completed_self = bool(_COMPLETED.search(text)) and not directive_evidence
     aware_m = _AWARENESS.search(text)
-    reported = bool(aware_m) and not directive_evidence
+    reported = (bool(aware_m) or completed_self) and not directive_evidence
     if reported:
-        _ev(evidence, "reported_speech", aware_m.group(0), None,
-            aware_m.start(), aware_m.end())
+        frame_m = aware_m or _COMPLETED.search(text)
+        _ev(evidence, "reported_speech", frame_m.group(0), None,
+            frame_m.start(), frame_m.end())
         signals.append(make_signal(
             "reported_or_educational", "deterministic", 0,
             "Reads as reporting/teaching about scams",

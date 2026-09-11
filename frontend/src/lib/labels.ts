@@ -44,6 +44,8 @@ export const CATEGORY_UI: Record<ScamCategory, LangText> = {
   olx_army: { hi: "OLX / आर्मी धोखा", en: "OLX / army scam" },
   customer_care: { hi: "नकली कस्टमर केयर", en: "Fake customer care" },
   job_scam: { hi: "नौकरी धोखा", en: "Job scam" },
+  investment_doubling: { hi: "पैसा-डबल investment", en: "money-doubling scheme" },
+  gift_parcel_customs: { hi: "गिफ्ट-पार्सल customs", en: "gift-parcel customs" },
   loan_fee: { hi: "लोन फ़ीस धोखा", en: "Loan-fee scam" },
   other: { hi: "अन्य धोखा", en: "Other scam" },
 };
