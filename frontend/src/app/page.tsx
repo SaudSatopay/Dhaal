@@ -142,7 +142,9 @@ export default function Home() {
         </div>
 
         <footer className="flex items-center justify-between pb-2 pt-8">
-          <span className="plate text-inksoft">MUJ HACKX 4.0 · FINTECH PS#7</span>
+          <span className="plate text-inksoft">
+            MUJ HACKX 4.0 · FINTECH PS#7 · {process.env.NEXT_PUBLIC_BUILD}
+          </span>
           {health === "up" ? (
             <span className="plate -rotate-2 border-2 border-ink px-2 py-0.5">
               SHIELD ONLINE

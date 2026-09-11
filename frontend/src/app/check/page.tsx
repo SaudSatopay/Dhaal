@@ -141,6 +141,7 @@ export default function CheckPage() {
   const streamRef = useRef<MediaStream | null>(null); // track cleanup even if onstop never fires
   const watchdogRef = useRef<ReturnType<typeof setTimeout> | null>(null); // 20s auto-stop
   const [micRetry, setMicRetry] = useState(false); // ASR fell back — don't show fixture text
+  const [micRequesting, setMicRequesting] = useState(false); // permission prompt in flight
 
   useEffect(() => {
     if (result && resultRef.current) {
@@ -210,8 +211,22 @@ export default function CheckPage() {
     setMicRetry(false);
     setTranscript("");
     setResult(null);
+    // In-app browsers (WhatsApp/Instagram webviews) hang getUserMedia forever
+    // with no prompt — the H11 "button does literally nothing" symptom. Show a
+    // requesting state IMMEDIATELY and race an 8s timeout so the UI always moves.
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setMicError(true);
+      return;
+    }
+    setMicRequesting(true);
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const stream = (await Promise.race([
+        navigator.mediaDevices.getUserMedia({ audio: true }),
+        new Promise<never>((_, rej) =>
+          setTimeout(() => rej(new Error("mic-timeout")), 8000)
+        ),
+      ])) as MediaStream;
+      setMicRequesting(false);
       streamRef.current = stream;
       const mime = typeof MediaRecorder !== "undefined" && MediaRecorder.isTypeSupported
         ? MIME_CANDIDATES.find((m) => MediaRecorder.isTypeSupported(m))
@@ -244,6 +259,7 @@ export default function CheckPage() {
       // detached handler) — auto-stop at 20s, plenty for any scam script
       watchdogRef.current = setTimeout(() => stopRecording(), 20000);
     } catch {
+      setMicRequesting(false);
       setMicError(true);
       setRecording(false);
     }
@@ -464,7 +480,7 @@ export default function CheckPage() {
                 )}
                 <button
                   onClick={recording ? stopRecording : startRecording}
-                  disabled={transcribing}
+                  disabled={transcribing || micRequesting}
                   className={`flex h-24 w-24 items-center justify-center rounded-full border-[3px] border-ink transition-colors ${
                     recording ? "bg-danger text-paper" : "bg-saffron text-ink shadow-poster-sm"
                   } disabled:opacity-40`}
@@ -474,7 +490,13 @@ export default function CheckPage() {
                 </button>
               </span>
               <div className="mt-2.5 min-h-5 text-sm text-inksoft">
-                {recording ? (
+                {micRequesting ? (
+                  <span className="blink font-semibold text-ink">
+                    {lang === "hi"
+                      ? "माइक की permission माँग रहे हैं… (popup देखें)"
+                      : "Requesting mic permission… (watch for the popup)"}
+                  </span>
+                ) : recording ? (
                   <span className="font-semibold text-dangerdeep">
                     {pick(lang, S_CHECK.recListening)[0]}{" "}
                     <span className="font-mono font-semibold">{recSeconds}s</span> —{" "}
