@@ -16,12 +16,13 @@ def run_signal_engine(
     input_type: str = "text",
     indicators: dict | None = None,
     allow_network: bool = False,
+    expected_intent: str | None = None,
 ):
     """Returns (verdict, score, signals, category) per docs/CONTRACTS.md."""
     text = (payload or "").strip()
     signals: list[dict] = []
 
-    upi_info = upi.detect(text, input_type, signals)
+    upi_info = upi.detect(text, input_type, signals, expected_intent=expected_intent)
     url_info = urls.detect(text, signals, allow_network=allow_network)
     domains.detect(url_info["hosts"], signals)
     script_cats = scripts.detect(text, signals)

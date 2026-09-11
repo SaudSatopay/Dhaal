@@ -20,9 +20,10 @@ Say: *"हर किसी के phone में यह message आया ह�
 
 ## Beat 2 — the QR trap (upload → collect exposed)
 
-Upload `demo/qr_collect_15000.png` (keep it printed too — scanning a printed QR looks better on stage).
+Upload `demo/qr_collect_15000.png` (keep it printed too). When Dhaal asks your intention, tap **"मुझे पैसे आने हैं · RECEIVE"** — the verdict now leads with the intent-mismatch line.
 Expected: **"यह ₹15,000 का COLLECT request है — approve करते ही पैसे कटेंगे।"**
 Say: *"India का सबसे misunderstood scam — QR से पैसे 'आने' वाले थे, कटने वाले थे।"*
+**Beat 2b (the unseen-scam catch):** upload `demo/qr_legit_pay.png` — a PERFECTLY clean pay-QR, zero scam words — and again tap RECEIVE. Dhaal still warns: *"यह वही ठगी है जो keyword-detector कभी नहीं पकड़ सकता — Dhaal ने आपकी नीयत और QR की हरकत का टकराव पकड़ा।"*
 
 ## Beat 3 — we don't cry wolf (paste → clean)
 
@@ -54,6 +55,8 @@ Say: *"दादी के पैसे, पोते की एक tap — ब�
 
 Phone A: check `+919876500001` → danger, **"86 लोगों ने रिपोर्ट किया"** (count is live from Atlas — say whatever the screen says). Report it → laptop `/intel` moderation → verify → Phone B: paste the SAME number → **count +1, instant danger**.
 Say: *"हर report, हर भारतीय की ढाल मज़बूत करती है। Jaipur में आज जला, Jodhpur में कल नहीं जलेगा।"*
+
+**Beat 6b (accountability, 15 seconds):** on `/intel`, REJECT the report you just verified → second phone, same number → the warning count drops back. *"गलती हुई तो वापस भी होती है — blocklist जवाबदेह है।"*
 
 ## Beat 7 — the war map
 

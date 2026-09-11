@@ -333,3 +333,38 @@ first · npm run build green before every push · walk beats 1-3 after each
 feature · freeze discipline: if midnight hits, finish the commit you're on,
 nothing new after.
 ```
+
+
+---
+
+# H13 PROMPT — PARVA: intent-mismatch UI + "what they want" panel (LAST pre-freeze feature)
+
+```
+git pull --rebase FIRST (backend shipped: expected_intent param + intent_mismatch
+signal + analysis block — docs/CONTRACTS.md "H12+ additions"). I'm Parva —
+Product lane. Identity check; commits as me, no AI attribution.
+
+THE FEATURE (our differentiator — Dhaal catches scams with ZERO scam words by
+spotting that the payload does the OPPOSITE of what the user expects):
+
+1. INTENT QUESTION — when the input is a QR image or a upi:// / VPA payload,
+   before running the check show three poster-style chips:
+   "मुझे पैसे भेजने हैं · PAY" / "मुझे पैसे आने हैं · RECEIVE" / "बस जाँचना है · JUST CHECK".
+   Pass "pay" / "receive" / null as expected_intent on /api/check. Default
+   flow (text/voice) unchanged — no extra friction there.
+
+2. MISMATCH HERO — when signals contain intent_mismatch, render its line as
+   the TOP element of the verdict card, bigger than other signals, in the
+   danger treatment: "आपको पैसे आने थे — यह QR ₹15,000 आपसे कटवाएगा।"
+   This sentence is the demo's new money shot.
+
+3. "यह क्या चाहता है · WHAT THEY WANT" PANEL — render response.analysis above
+   the signal list as a compact ink-frame table: claimed identity (if any),
+   asking_for rows (with amount), money direction (out = red arrow ↗ "आपके
+   खाते से"), pressure chips (urgency/secrecy/threat/coercion). Skip empty
+   fields. This is the "engine understood the request" moment for judges.
+
+RULES: contract is already live — zero API changes · poster identity · mobile-
+first · build green · walk beat 2 both ways (pay vs receive on the same QR!)
+· push, ping Saud. THIS IS THE LAST FEATURE — freeze after it lands.
+```

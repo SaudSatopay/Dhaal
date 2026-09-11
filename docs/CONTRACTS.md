@@ -74,7 +74,7 @@ API shapes, data models, env names. **Owning lane pushes the contract change BEF
 
 ### `POST /api/check` — **live** (deterministic engine + Claude narration; Claude down/no key ⇒ template explanations with `mocked: true`. Persistence: Atlas when `MONGODB_URI` set, per-call memory failover)
 ```json
-{"type": "text|url|upi|qr_text|voice_transcript", "payload": "...", "lang": "hi-IN", "speak": false, "ward_link_id": null}
+{"type": "text|url|upi|qr_text|voice_transcript", "payload": "...", "lang": "hi-IN", "speak": false, "ward_link_id": null, "expected_intent": "pay|receive|verify|null"}
 ```
 → full `check` object. If `speak:true`, `tts_audio_b64` = base64 WAV of `explanation_hi` (Bulbul), cached on the stored check; TTS failure ⇒ `null`, never an error. If `ward_link_id` set and verdict ≠ `no_known_risk`, backend auto-creates a `guardian_request` and includes `"guardian_request_id"` in the response.
 
@@ -110,3 +110,10 @@ Errors, all endpoints: `{"error": "human-readable message"}`.
 4. **Digital-arrest call script** (Hindi, for voice beat) → danger
 5. **Community flywheel number** `+91-98XXX…` — pre-seeded 43 reports so the second-device check hits blocklist instantly
 6. **Seeded intel**: ~200 verified reports across Jaipur/Jodhpur/Udaipur, 7 categories, last 7 days (trends board)
+
+
+## H12+ additions (additive, backward-compatible)
+
+- **`expected_intent`** on `POST /api/check` ("pay"|"receive"|"verify"|null): the user's stated goal, asked by the UI on QR/UPI checks. When "receive" meets ANY upi:// payload (pay or collect — both move money OUT on approval), the engine fires **`intent_mismatch` (+40, deterministic)** — catches keyword-free traps ("scan this QR to receive your refund" on a clean pay-QR).
+- **`analysis`** on every check response — the structured "what they want" panel, derived from detected signals (no extra LLM call): `{claimed_identity, asking_for: [{what, hi, amount}], money_direction: "out_of_your_account"|"none_detected", pressure: [{tag, hi}]}`.
+- `guardian .../decision` now REQUIRES `link_id` matching the request's pairing (403 otherwise). Verify is idempotent per decision AND reversible: reject-after-verify withdraws the blocklist contribution. Moderation endpoints require `X-Mod-Key` when `MOD_KEY` is set; on Vercel a missing key fails CLOSED.

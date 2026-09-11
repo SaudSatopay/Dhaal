@@ -83,12 +83,48 @@ class CheckIn(BaseModel):
     lang: str = "hi-IN"
     speak: bool = False
     ward_link_id: str | None = None
+    expected_intent: str | None = None  # "pay" | "receive" | "verify" — user's stated goal
+
+
+_PRESSURE_IDS = {"urgency_framing": ("urgency", "जल्दबाज़ी"),
+                 "secrecy_pressure": ("secrecy", "गोपनीयता का दबाव"),
+                 "threat_framing": ("threat", "धमकी"),
+                 "coercion_extortion": ("coercion", "ज़बरदस्ती")}
+
+
+def _analysis(payload: str, signals: list) -> dict:
+    """Structured 'what they want' — derived deterministically from the parsed
+    signals (H12+ intermediate representation; no extra LLM call, no guesses)."""
+    ids = {s["id"]: s for s in signals}
+    claimed = None
+    for sid in ("payee_impersonation", "lookalike_domain"):
+        if sid in ids:
+            m = re.search(r"(poses as|imitates the real|imitates) ([A-Z0-9]+)",
+                          ids[sid]["detail_en"] + " " + ids[sid]["title_en"])
+            claimed = (m.group(2) if m else None) or claimed
+    asking = []
+    if "upi_collect_request" in ids or "intent_mismatch" in ids:
+        am = re.search(r"[?&]am=([\d.]+)", payload)
+        asking.append({"what": "approve a payment", "hi": "payment approve कराना",
+                       "amount": am.group(1) if am else None})
+    if "credential_request" in ids:
+        asking.append({"what": "your OTP/PIN/password", "hi": "आपका OTP/PIN/पासवर्ड", "amount": None})
+    if "fee_demand" in ids or "advance_fee_refund" in ids:
+        asking.append({"what": "an upfront fee", "hi": "पहले फीस", "amount": None})
+    money_out = "upi_collect_request" in ids or "intent_mismatch" in ids \
+        or "advance_fee_refund" in ids or "fee_demand" in ids
+    pressure = [{"tag": v[0], "hi": v[1]} for k, v in _PRESSURE_IDS.items() if k in ids]
+    return {"claimed_identity": claimed,
+            "asking_for": asking,
+            "money_direction": "out_of_your_account" if money_out else "none_detected",
+            "pressure": pressure}
 
 
 @app.post("/api/check")
 def check(body: CheckIn):
     verdict, score, signals, category = run_signal_engine(
-        body.payload, body.type, STORE.indicators_map(), allow_network=not MOCK_MODE
+        body.payload, body.type, STORE.indicators_map(), allow_network=not MOCK_MODE,
+        expected_intent=body.expected_intent,
     )
 
     # Claude narrates FROM the detected signals (zero verdict weight);
@@ -117,6 +153,8 @@ def check(body: CheckIn):
         "verdict": verdict, "score": score, "signals": signals,
         "explanation_hi": exp_hi, "explanation_en": exp_en,
         "scam_category": category,
+        "analysis": _analysis(body.payload, signals),
+        "expected_intent": body.expected_intent,
         "tts_audio_b64": None,
         "mocked": mocked,
         "created_at": _now(),

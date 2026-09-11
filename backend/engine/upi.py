@@ -8,10 +8,14 @@ UPI_URI_RE = re.compile(r"upi://[^\s\"'<>]+", re.I)
 _REFUND_WORDS = ("refund", "रिफंड", "cashback", "कैशबैक", "वापसी", "reward")
 
 
-def detect(text: str, input_type: str, signals: list) -> dict:
+def detect(text: str, input_type: str, signals: list,
+           expected_intent: str | None = None) -> dict:
     """Parses upi:// URIs (QR payloads land here as qr_text). Returns
-    {'is_collect': bool, 'vpas': set} for the blocklist stage."""
-    info = {"is_collect": False, "vpas": extract_vpas(text)}
+    {'is_collect': bool, 'vpas': set, 'has_uri': bool, 'amount': str}.
+    expected_intent ("pay"|"receive"|"verify") enables the intent-mismatch
+    check — the user's stated expectation vs what the payload actually does."""
+    info = {"is_collect": False, "vpas": extract_vpas(text),
+            "has_uri": False, "amount": ""}
     low = text.lower()
 
     for uri in UPI_URI_RE.findall(text):
@@ -20,6 +24,9 @@ def detect(text: str, input_type: str, signals: list) -> dict:
         pa = qs.get("pa", "").lower()
         pn = qs.get("pn", "")
         amount = qs.get("am", "")
+        info["has_uri"] = True
+        if amount:
+            info["amount"] = amount
         if pa:
             info["vpas"].add(pa)
 
@@ -61,6 +68,25 @@ def detect(text: str, input_type: str, signals: list) -> dict:
                 f"Payee name/ID imitates {str(brand).upper()} but is not a verified merchant handle.",
                 f"Payee का नाम/ID {str(brand).upper()} जैसा है पर verified merchant नहीं है।",
             ))
+
+    # INTENT MISMATCH (H12+, the differentiator): every upi:// payload — pay OR
+    # collect — moves money OUT of the approver's account. If the user expected
+    # to RECEIVE money, the contradiction itself is the strongest evidence, and
+    # it fires even on a perfectly clean-looking merchant pay-QR with zero scam
+    # keywords ("scan this QR to receive your refund" trap).
+    if expected_intent == "receive" and (info["is_collect"] or info["has_uri"]):
+        amt = f"₹{info['amount']} " if info["amount"] else ""
+        if info["is_collect"]:
+            d_en = f"You expected money IN — approving this collect request sends {amt}OUT."
+            d_hi = f"आपको पैसे आने थे — यह collect request approve करते ही {amt}आपके खाते से कटेंगे।"
+        else:
+            d_en = f"You expected money IN — but this is a PAY QR: scanning it sends {amt}from YOUR account. Receiving money never needs you to scan a payment QR."
+            d_hi = f"आपको पैसे आने थे — पर यह PAY QR है: इसे भरते ही {amt}आपके खाते से जाएँगे। पैसे पाने के लिए कभी QR नहीं भरना पड़ता।"
+        signals.append(make_signal(
+            "intent_mismatch", "deterministic", 40,
+            "Does the OPPOSITE of what you expect", "जो आप चाहते हैं, उससे उल्टा",
+            d_en, d_hi,
+        ))
 
     # Brand token in ANY VPA's local part (free text included — H11 field miss:
     # support.paytm01@okhdfcbank pasted bare scored only +15). A brand on a

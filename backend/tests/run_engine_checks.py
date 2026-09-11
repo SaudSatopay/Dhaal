@@ -136,6 +136,31 @@ check("H12.4 ordinary mode=01 pay QR clean (NPCI: mode=01 = QR-initiated, not co
       "no_known_risk", itype="qr_text", indicators={},
       forbid_signal="upi_collect_request")
 
+
+# --- H12+ intent mismatch (the differentiator): expectation vs payload action ---
+def check_intent(name, payload, intent, want_verdict, want_signal=None, forbid_signal=None):
+    global PASS
+    v, s, sigs, _ = run_signal_engine(payload, "qr_text", {}, expected_intent=intent)
+    ids = [x["id"] for x in sigs]
+    ok = v == want_verdict and (not want_signal or want_signal in ids)         and (not forbid_signal or forbid_signal not in ids)
+    print(("ok " if ok else "FAIL"), f"{name}: verdict={v} signals={ids}")
+    if not ok:
+        sys.exit(f"FAILED: {name}")
+    PASS += 1
+
+check_intent("intent: clean pay-QR but user expected to RECEIVE",
+             "upi://pay?pa=merchant123@ybl&pn=Store&am=15000&cu=INR&mode=01",
+             "receive", "suspicious", want_signal="intent_mismatch")
+check_intent("intent: collect + expected receive escalates",
+             "upi://collect?pa=refund.helpdesk@okaxis&am=15000",
+             "receive", "danger", want_signal="intent_mismatch")
+check_intent("intent: normal shopping (pay+pay) stays clean",
+             "upi://pay?pa=merchant123@ybl&am=250", "pay",
+             "no_known_risk", forbid_signal="intent_mismatch")
+check_intent("intent: no intent given = unchanged behavior",
+             "upi://pay?pa=merchant123@ybl&am=250", None,
+             "no_known_risk", forbid_signal="intent_mismatch")
+
 print("ok  junk inputs survive")
 PASS += 1
 
