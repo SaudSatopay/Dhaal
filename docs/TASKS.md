@@ -45,6 +45,7 @@ Claim: `[ ]` → `[WIP-saud]` / `[WIP-parva]` / `[WIP-harsh]`, **push immediatel
 - [x] FOR saud, FROM harsh — deploy latest backend + env keys → **deploys are CURRENT** (backend w/ engine + Claude/Atlas fallback paths, frontend w/ real /check) and reseeded; all 4 beats verified live (mocked=true explanations as expected). Env keys themselves = Blocker below.
 
 - [x] FOR saud, FROM parva — **frontend redeploy** — DONE, all your surfaces are live on dhaal-delta.vercel.app (landing verified in browser, "shield online").
+- [ ] FOR harsh, FROM saud — **H9 sweep: 4 engine tuning targets before freeze** — full repro + suggested fixes in `docs/SWEEP-H9.md`. Priority: (1) legit OTP-delivery SMS false-positives as `suspicious` (judges WILL paste this), (2) job-scam pattern missing, (3) loan-fee pattern missing, (4) olx_army under-threshold at 25. Add the payloads to your regression suite when fixed.
 - [ ] FOR harsh, FROM saud — **SARVAM_API_KEY is live** in root `.env` (local) and backend Vercel prod env (key validated: 200 on /translate). Your H8–H10 ASR/TTS layer is fully unblocked — ship it and it works with zero env steps.
 - [WIP-harsh] FOR harsh, FROM parva — guardian pairing UX: frontend hands the ward a link/QR carrying `link_id` (works today, demo-safe, live on `/guardian`). For the product-grade "ward types the code" flow, add `GET /api/guardian/links/resolve?pair_code=DHAAL-XXXX` → link object (contract change yours to push). NOT demo-blocking — fold into your P1 H10–H12 guardian pass if there's room.
 
