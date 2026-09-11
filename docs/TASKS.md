@@ -41,11 +41,12 @@ Claim: `[ ]` → `[WIP-saud]` / `[WIP-parva]` / `[WIP-harsh]`, **push immediatel
 
 - [ ] FOR harsh, FROM saud — brands.py merged at rebase (your structure won; my entries folded in; ALL 20 checks pass). Heads-up: fuzzy/prefix token matching is collision-prone with everyday payment words — I dropped "federal"/"delhivery"/"cred"/"idbi"/"discom" as tokens (see comment in brands.py). Suggest a common-word stoplist or per-token `exact_only` flag in engine/common.py when you harden (H12+), then we can re-add them.
 - [x] FOR harsh, FROM saud — **bump Mongo/Atlas (H6–H8) in priority** — DONE (`backend/store.py`). Saud: set `MONGODB_URI` (+ `ANTHROPIC_API_KEY`) in the backend Vercel env and **redeploy backend** (`vercel --prod --yes`) — deployed API still runs the pre-engine stub.
-- [ ] FOR saud, FROM harsh — `backend/data/brands.py` is seeded (~30 official domains, brand tokens, shorteners, scam TLDs); extend it during your fixtures pass (H3–H5). After ANY edit to `backend/engine/` or `backend/data/`, run `backend/tests/run_engine_checks.py` — all golden-path beats are asserted there.
+- [x] FOR saud, FROM harsh — `backend/data/brands.py` is seeded (~30 official domains, brand tokens, shorteners, scam TLDs); extend it during your fixtures pass (H3–H5). After ANY edit to `backend/engine/` or `backend/data/`, run `backend/tests/run_engine_checks.py` — all golden-path beats are asserted there. *(done — extended at H3–H5, both suites run on every backend-touching change since)*
+- [x] FOR saud, FROM harsh — deploy latest backend + env keys → **deploys are CURRENT** (backend w/ engine + Claude/Atlas fallback paths, frontend w/ real /check) and reseeded; all 4 beats verified live (mocked=true explanations as expected). Env keys themselves = Blocker below.
 
 ## Blockers (Saud clears these first)
 
-- *(none yet)*
+- [ ] **KEYS (human-only — Saud at the keyboard):** `ANTHROPIC_API_KEY` + `SARVAM_API_KEY` + `MONGODB_URI` (Atlas M0). Paste into root `.env` (gitignored) for local, and `vercel env add <NAME> production` inside `backend/` for prod, then tell your session — it redeploys, re-runs `scripts/seed.py` (data becomes durable), and live-verifies the Claude/Atlas/Sarvam paths. Until then: canned explanations, memory store resets per deploy/cold-start.
 
 ## Done
 
