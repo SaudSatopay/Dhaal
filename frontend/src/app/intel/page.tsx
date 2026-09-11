@@ -1,21 +1,16 @@
 "use client";
 
 // Community intel console (golden-path beats 6+7). Runs on the LAPTOP/projector:
-// left = trends war map, right = moderation queue. Verify here → indicator goes
-// live for every /api/check within seconds — the flywheel moment.
+// the ONE deliberate dark surface — ink war room, saffron accents, mono numerals —
+// against the paper-light phone surfaces. Left = trends war map, right = moderation
+// queue. Verify here → indicator goes live for every /api/check within seconds.
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { api } from "@/lib/api";
 import { CATEGORY_UI } from "@/lib/labels";
-import type { IndicatorType, Report, ScamCategory, Trends } from "@/lib/types";
-import TopBar from "@/components/TopBar";
-
-const TYPE_ICON: Record<IndicatorType, string> = {
-  phone: "📞",
-  upi: "₹",
-  domain: "🌐",
-  script: "💬",
-};
+import type { Report, ScamCategory, Trends } from "@/lib/types";
+import { ICheck, ICross, TypeMark } from "@/components/icons";
 
 function catLabel(c: string): { hi: string; en: string } {
   return CATEGORY_UI[c as ScamCategory] ?? { hi: c, en: c };
@@ -49,13 +44,15 @@ function DayLine({ days }: { days: { day: string; count: number }[] }) {
   return (
     <div>
       <svg viewBox={`0 0 ${W} ${H + 16}`} className="w-full" role="img" aria-label="verified reports per day">
-        <polygon points={area} className="fill-blue-500/10" />
+        <line x1={PAD} y1={H - PAD} x2={W - PAD} y2={H - PAD} stroke="var(--color-inkline)" strokeWidth="1.5" />
+        <polygon points={area} fill="var(--color-saffron)" opacity="0.12" />
         <polyline
           points={pts}
-          className="fill-none stroke-blue-600 dark:stroke-blue-400"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
+          fill="none"
+          stroke="var(--color-saffron)"
+          strokeWidth="2.5"
+          strokeLinecap="square"
+          strokeLinejoin="miter"
         />
         {days.map((d, i) => (
           <circle key={d.day} cx={x(i)} cy={y(d.count)} r="7" className="fill-transparent">
@@ -63,26 +60,29 @@ function DayLine({ days }: { days: { day: string; count: number }[] }) {
           </circle>
         ))}
         {days.map((d, i) => (
-          <circle
+          <rect
             key={`v-${d.day}`}
-            cx={x(i)}
-            cy={y(d.count)}
-            r="2.5"
-            className="pointer-events-none fill-blue-600 dark:fill-blue-400"
+            x={x(i) - 2.5}
+            y={y(d.count) - 2.5}
+            width="5"
+            height="5"
+            className="pointer-events-none"
+            fill="var(--color-saffron)"
           />
         ))}
         <text
-          x={x(days.length - 1) - 4}
+          x={x(days.length - 1) - 5}
           y={y(last.count) - 8}
           textAnchor="end"
-          className="fill-neutral-600 text-[11px] font-semibold tabular-nums dark:fill-neutral-300"
+          fill="var(--color-paper)"
+          className="font-mono text-[11px] font-semibold tabular-nums"
         >
           {last.count}
         </text>
-        <text x={PAD} y={H + 12} className="fill-neutral-400 text-[10px]">
+        <text x={PAD} y={H + 12} fill="var(--color-fog)" className="font-mono text-[10px]">
           {fmt(days[0].day)}
         </text>
-        <text x={W - PAD} y={H + 12} textAnchor="end" className="fill-neutral-400 text-[10px]">
+        <text x={W - PAD} y={H + 12} textAnchor="end" fill="var(--color-fog)" className="font-mono text-[10px]">
           {fmt(last.day)}
         </text>
       </svg>
@@ -93,22 +93,22 @@ function DayLine({ days }: { days: { day: string; count: number }[] }) {
 function CategoryBars({ cats }: { cats: { category: ScamCategory; count: number }[] }) {
   const max = Math.max(...cats.map((c) => c.count)) || 1;
   return (
-    <ul className="space-y-2">
+    <ul className="space-y-2.5">
       {cats.map((c) => {
         const l = catLabel(c.category);
         return (
-          <li key={c.category} className="grid grid-cols-[9rem,1fr,2.5rem] items-center gap-2">
+          <li key={c.category} className="grid grid-cols-[9rem_1fr_2.5rem] items-center gap-2">
             <div className="min-w-0">
-              <div className="truncate text-sm font-medium leading-tight">{l.hi}</div>
-              <div className="truncate text-[11px] text-neutral-500">{l.en}</div>
+              <div className="truncate text-sm font-semibold leading-tight">{l.hi}</div>
+              <div className="plate truncate text-fog">{l.en}</div>
             </div>
-            <div className="h-2.5 rounded-full bg-neutral-200 dark:bg-neutral-800">
+            <div className="h-2.5 border border-inkline bg-inkpanel">
               <div
-                className="h-2.5 rounded-full bg-blue-600 dark:bg-blue-500"
+                className="h-full bg-saffron"
                 style={{ width: `${Math.max(6, (c.count / max) * 100)}%` }}
               />
             </div>
-            <div className="text-right text-sm font-semibold tabular-nums text-neutral-700 dark:text-neutral-200">
+            <div className="text-right font-mono text-sm font-semibold tabular-nums">
               {c.count}
             </div>
           </li>
@@ -120,27 +120,31 @@ function CategoryBars({ cats }: { cats: { category: ScamCategory; count: number 
 
 function TrendsBoard({ trends }: { trends: Trends }) {
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       {/* hero stat */}
-      <div className="rounded-2xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
-        <div className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
-          इस हफ्ते Rajasthan में · this week in Rajasthan
-        </div>
-        <div className="mt-1 flex items-baseline gap-2">
-          <span className="text-5xl font-extrabold tabular-nums">{trends.total_reports}</span>
-          <span className="text-sm text-neutral-500">verified scam reports</span>
+      <div className="border-2 border-inkline bg-inkpanel p-4">
+        <div className="plate text-saffron">इस हफ्ते RAJASTHAN में · THIS WEEK</div>
+        <div className="mt-1 flex items-baseline gap-3">
+          <span className="font-mono text-6xl font-semibold tabular-nums leading-none">
+            {trends.total_reports}
+          </span>
+          <span className="text-sm text-fog">
+            verified
+            <br />
+            scam reports
+          </span>
         </div>
         {typeof trends.live_reports === "number" && trends.live_reports > 0 && (
-          <div className="mt-1 text-xs font-medium text-emerald-600 dark:text-emerald-400">
-            +{trends.live_reports} अभी live verify हुईं · verified live in this session
+          <div className="plate mt-2 text-saffron">
+            +{trends.live_reports} VERIFIED LIVE THIS SESSION
           </div>
         )}
       </div>
 
       {/* 7-day line */}
-      <div className="rounded-2xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
-        <h3 className="text-sm font-semibold">
-          रोज़ की रिपोर्टें <span className="font-normal text-neutral-500">· reports per day</span>
+      <div className="border-2 border-inkline bg-inkpanel p-4">
+        <h3 className="text-sm font-bold">
+          रोज़ की रिपोर्टें <span className="plate ml-1 font-normal text-fog">PER DAY</span>
         </h3>
         <div className="mt-2">
           <DayLine days={trends.by_day} />
@@ -148,9 +152,9 @@ function TrendsBoard({ trends }: { trends: Trends }) {
       </div>
 
       {/* category bars */}
-      <div className="rounded-2xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
-        <h3 className="text-sm font-semibold">
-          किस तरह के धोखे <span className="font-normal text-neutral-500">· by scam type</span>
+      <div className="border-2 border-inkline bg-inkpanel p-4">
+        <h3 className="text-sm font-bold">
+          किस तरह के धोखे <span className="plate ml-1 font-normal text-fog">BY SCAM TYPE</span>
         </h3>
         <div className="mt-3">
           <CategoryBars cats={trends.by_category} />
@@ -158,17 +162,19 @@ function TrendsBoard({ trends }: { trends: Trends }) {
       </div>
 
       {/* top indicators */}
-      <div className="rounded-2xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
-        <h3 className="text-sm font-semibold">
-          सबसे ज़्यादा रिपोर्ट हुए <span className="font-normal text-neutral-500">· most reported</span>
+      <div className="border-2 border-inkline bg-inkpanel p-4">
+        <h3 className="text-sm font-bold">
+          सबसे ज़्यादा रिपोर्ट हुए <span className="plate ml-1 font-normal text-fog">MOST REPORTED</span>
         </h3>
-        <ul className="mt-2 divide-y divide-neutral-100 dark:divide-neutral-800">
+        <ul className="mt-2 divide-y divide-inkline">
           {trends.top_indicators.slice(0, 6).map((ind, i) => (
             <li key={ind._id ?? ind.value} className="flex items-center gap-3 py-2">
-              <span className="w-5 text-right text-xs font-bold text-neutral-400">{i + 1}</span>
-              <span aria-hidden>{TYPE_ICON[ind.type] ?? "❓"}</span>
+              <span className="w-5 shrink-0 text-right font-mono text-xs text-fog">
+                {String(i + 1).padStart(2, "0")}
+              </span>
+              <TypeMark type={ind.type} className="h-4 w-4 shrink-0 text-fog" />
               <span className="min-w-0 flex-1 truncate font-mono text-sm">{ind.value}</span>
-              <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-bold tabular-nums text-red-700 dark:bg-red-950/60 dark:text-red-300">
+              <span className="shrink-0 border border-saffron px-1.5 font-mono text-xs font-semibold tabular-nums text-saffron">
                 {ind.report_count}×
               </span>
             </li>
@@ -179,11 +185,8 @@ function TrendsBoard({ trends }: { trends: Trends }) {
       {/* cities */}
       <div className="flex flex-wrap gap-2">
         {trends.cities.map((c) => (
-          <span
-            key={c.city}
-            className="rounded-full border border-neutral-300 bg-white px-3 py-1 text-sm dark:border-neutral-700 dark:bg-neutral-900"
-          >
-            {c.city} <span className="font-semibold tabular-nums">· {c.count}</span>
+          <span key={c.city} className="border border-inkline px-2.5 py-1 text-sm text-fog">
+            {c.city} <span className="font-mono font-semibold tabular-nums text-paper">{c.count}</span>
           </span>
         ))}
       </div>
@@ -203,41 +206,42 @@ function QueueCard({
   busy: boolean;
 }) {
   const l = catLabel(report.category);
+  const pending = report.status === "pending";
   return (
-    <li className="rounded-2xl border border-neutral-200 bg-white p-3 dark:border-neutral-800 dark:bg-neutral-900">
+    <li className={`border-2 bg-inkpanel p-3 ${pending ? "border-saffron" : "border-inkline"}`}>
       <div className="flex items-start justify-between gap-2">
-        <span className="break-all font-mono text-sm leading-snug">
-          {TYPE_ICON[report.indicator_type] ?? "❓"}{" "}
-          {report.payload.length > 90 ? `${report.payload.slice(0, 90)}…` : report.payload}
+        <span className="flex min-w-0 items-start gap-2 break-all font-mono text-sm leading-snug">
+          <TypeMark type={report.indicator_type} className="mt-0.5 h-4 w-4 shrink-0 text-fog" />
+          <span>
+            {report.payload.length > 90 ? `${report.payload.slice(0, 90)}…` : report.payload}
+          </span>
         </span>
-        <span className="shrink-0 text-[11px] text-neutral-400">{timeAgo(report.created_at)}</span>
+        <span className="plate shrink-0 text-fog">{timeAgo(report.created_at)}</span>
       </div>
-      <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px]">
-        <span className="rounded-full bg-neutral-100 px-2 py-0.5 font-medium dark:bg-neutral-800">
+      <div className="mt-2 flex flex-wrap items-center gap-1.5">
+        <span className="plate border border-inkline px-1.5 py-0.5 text-fog">
           {l.hi} · {l.en}
         </span>
-        <span className="rounded-full bg-neutral-100 px-2 py-0.5 dark:bg-neutral-800">
-          📍 {report.city}
-        </span>
-        <span className="rounded-full bg-neutral-100 px-2 py-0.5 uppercase dark:bg-neutral-800">
+        <span className="plate border border-inkline px-1.5 py-0.5 text-fog">{report.city}</span>
+        <span className="plate border border-inkline px-1.5 py-0.5 text-fog">
           {report.indicator_type}
         </span>
       </div>
-      {report.note && <p className="mt-2 text-sm text-neutral-600 dark:text-neutral-400">“{report.note}”</p>}
+      {report.note && <p className="mt-2 text-sm italic text-fog">“{report.note}”</p>}
       <div className="mt-3 flex gap-2">
         <button
           onClick={() => onDecide(report._id, "verify")}
           disabled={busy}
-          className="flex-1 rounded-xl bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-40"
+          className="flex flex-1 items-center justify-center gap-2 border-2 border-saffron bg-saffron px-3 py-2 text-sm font-bold text-ink hover:bg-saffron/85 disabled:opacity-40"
         >
-          ✓ Verify — ढाल में जोड़ो
+          <ICheck className="h-4 w-4" /> VERIFY — ढाल में जोड़ो
         </button>
         <button
           onClick={() => onDecide(report._id, "reject")}
           disabled={busy}
-          className="rounded-xl border border-neutral-300 px-3 py-2 text-sm font-medium text-neutral-600 hover:bg-neutral-100 disabled:opacity-40 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800"
+          className="flex items-center gap-1.5 border-2 border-inkline px-3 py-2 text-sm font-semibold text-fog hover:border-fog hover:text-paper disabled:opacity-40"
         >
-          ✗ Reject
+          <ICross className="h-3.5 w-3.5" /> Reject
         </button>
       </div>
     </li>
@@ -294,13 +298,13 @@ export default function IntelPage() {
       });
       setQueue((q) => (q ? q.filter((r) => r._id !== id) : q));
       if (action === "verify") {
-        setFlash("✓ Verified — अब हर जाँच में यह blocklist live है · live for every check now");
+        setFlash("VERIFIED — अब हर जाँच में यह blocklist live है");
         if (flashTimer.current) clearTimeout(flashTimer.current);
         flashTimer.current = setTimeout(() => setFlash(""), 5000);
         loadTrends();
       }
     } catch {
-      setFlash("action fail हुई — दोबारा try करें · action failed, retry");
+      setFlash("ACTION FAILED — दोबारा try करें");
       if (flashTimer.current) clearTimeout(flashTimer.current);
       flashTimer.current = setTimeout(() => setFlash(""), 5000);
       loadQueue();
@@ -310,17 +314,32 @@ export default function IntelPage() {
   }
 
   return (
-    <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950">
-      <TopBar title_hi="सबकी रिपोर्ट, सबकी सुरक्षा" title_en="Community intel console" />
+    <div className="min-h-screen bg-ink text-paper">
+      {/* war-room masthead */}
+      <header className="sticky top-0 z-10 border-b-2 border-inkline bg-ink">
+        <div className="mx-auto flex max-w-5xl items-center gap-3 px-4 py-2.5">
+          <Link href="/" aria-label="Dhaal home" className="flex items-baseline gap-1.5 hover:opacity-80">
+            <span aria-hidden="true" className="text-lg leading-none">←</span>
+            <span className="font-display text-2xl font-extrabold leading-none">ढाल</span>
+          </Link>
+          <div className="min-w-0 border-l-2 border-inkline pl-3">
+            <div className="truncate font-bold leading-tight">धोखों का नक्शा</div>
+            <div className="plate truncate text-fog">COMMUNITY INTEL · WAR ROOM</div>
+          </div>
+          <span className="plate ml-auto shrink-0 border border-saffron px-2 py-0.5 text-saffron">
+            <span className="blink">●</span> LIVE
+          </span>
+        </div>
+      </header>
 
       <main className="mx-auto max-w-5xl p-4 pb-16">
         {apiDown && (
-          <div className="mb-4 rounded-xl border-2 border-red-300 bg-red-50 p-3 text-sm font-medium text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300">
-            API नहीं मिल रही — connection जाँचें · can’t reach the API, retrying…
+          <div className="plate mb-4 border-2 border-saffron p-3 text-saffron">
+            API नहीं मिल रही — RETRYING…
           </div>
         )}
         {flash && (
-          <div className="mb-4 rounded-xl border-2 border-emerald-300 bg-emerald-50 p-3 text-sm font-semibold text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-300">
+          <div className="mb-4 border-2 border-saffron bg-inkpanel p-3 font-semibold text-saffron">
             {flash}
           </div>
         )}
@@ -330,21 +349,24 @@ export default function IntelPage() {
           <section className="lg:order-2">
             <h2 className="flex items-center justify-between font-bold">
               <span>
-                Moderation queue{" "}
-                <span className="text-sm font-normal text-neutral-500">· जाँच बाकी</span>
+                Moderation queue <span className="plate ml-1 font-normal text-fog">जाँच बाकी</span>
               </span>
               {queue && (
-                <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-sm font-bold tabular-nums text-amber-800 dark:bg-amber-950/60 dark:text-amber-300">
+                <span
+                  className={`px-2 font-mono text-sm font-semibold tabular-nums ${
+                    queue.length > 0 ? "bg-saffron text-ink" : "border border-inkline text-fog"
+                  }`}
+                >
                   {queue.length}
                 </span>
               )}
             </h2>
             {queue === null ? (
-              <div className="mt-3 h-24 animate-pulse rounded-2xl bg-neutral-200 dark:bg-neutral-900" />
+              <div className="mt-3 h-24 animate-pulse border-2 border-inkline bg-inkpanel" />
             ) : queue.length === 0 ? (
-              <p className="mt-3 rounded-2xl border border-dashed border-neutral-300 p-4 text-center text-sm text-neutral-500 dark:border-neutral-700">
-                कोई pending report नहीं — सब जाँची जा चुकीं ✓<br />
-                <span className="text-xs">new reports land here within 3 seconds</span>
+              <p className="mt-3 border-2 border-dashed border-inkline p-4 text-center text-sm text-fog">
+                कोई pending report नहीं — सब जाँची जा चुकीं
+                <span className="plate mt-1 block">NEW REPORTS LAND HERE WITHIN 3S</span>
               </p>
             ) : (
               <ul className="mt-3 space-y-3">
@@ -358,7 +380,7 @@ export default function IntelPage() {
           {/* trends war map */}
           <section className="lg:order-1">
             <h2 className="font-bold">
-              War map <span className="text-sm font-normal text-neutral-500">· धोखों का नक्शा</span>
+              War map <span className="plate ml-1 font-normal text-fog">धोखों का नक्शा</span>
             </h2>
             {trends ? (
               <div className="mt-3">
@@ -366,8 +388,8 @@ export default function IntelPage() {
               </div>
             ) : (
               <div className="mt-3 space-y-4">
-                <div className="h-28 animate-pulse rounded-2xl bg-neutral-200 dark:bg-neutral-900" />
-                <div className="h-40 animate-pulse rounded-2xl bg-neutral-200 dark:bg-neutral-900" />
+                <div className="h-28 animate-pulse border-2 border-inkline bg-inkpanel" />
+                <div className="h-40 animate-pulse border-2 border-inkline bg-inkpanel" />
               </div>
             )}
           </section>
