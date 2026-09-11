@@ -1,53 +1,133 @@
+"""upi:// URI semantics — parse FACTS first, judge risk second (H14 refactor).
+
+parse_uris() is suspicion-free: it reports what each URI *is* (action, payee,
+amount, validity) per the NPCI deep-linking spec, identically regardless of
+what the user expected. detect() then derives risk signals FROM those facts
+plus the user's stated expectation. mode=01 stays what H12 established: QR-
+initiated, NOT collect.
+
+Parse statuses (mutually exclusive per URI):
+  valid       — supported action (pay|collect) with a payee VPA
+  incomplete  — supported action but no payee (pa=): not an executable request
+  unsupported — a upi scheme action we don't model (mandate etc.): no claims
+  malformed   — unparseable / conflicting duplicate params / no action at all
+"""
+
 import re
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, unquote_plus, urlparse
 
 from data.brands import BRAND_OWN_SUFFIXES, SUSPICIOUS_VPA_WORDS
 from engine.common import brand_token_match, extract_vpas, host_tokens, make_signal
 
-UPI_URI_RE = re.compile(r"upi://[^\s\"'<>]+", re.I)
+UPI_URI_RE = re.compile(r"upi://[^\s\"'<>]*", re.I)
 _REFUND_WORDS = ("refund", "रिफंड", "cashback", "कैशबैक", "वापसी", "reward")
+_SUPPORTED_ACTIONS = ("pay", "collect")
+_AMOUNT_RE = re.compile(r"\d{1,7}(\.\d{1,2})?")
+_VPA_SHAPE = re.compile(r"^[a-z0-9._-]{2,256}@[a-z][a-z0-9]{1,64}$", re.I)
+
+
+def parse_uris(text: str) -> list[dict]:
+    """Every upi:// URI in the text as a fact record — no risk judgement."""
+    out = []
+    for uri in UPI_URI_RE.findall(text):
+        rec = {"uri": uri[:300], "status": "malformed", "action": "unknown",
+               "payee_vpa": None, "payee_name": None, "amount": None,
+               "currency": None, "amount_invalid": False}
+        try:
+            parsed = urlparse(uri)
+        except ValueError:
+            out.append(rec)
+            continue
+        action = (parsed.netloc or parsed.path.strip("/")).strip().lower()
+        rec["action"] = action or "unknown"
+        try:
+            qs_lists = parse_qs(parsed.query, keep_blank_values=True)
+        except ValueError:
+            qs_lists = {}
+        # duplicate params that disagree = tampering/ambiguity — never guess
+        conflicting = any(len(set(v)) > 1 for v in qs_lists.values())
+        qs = {k.lower(): v[0].strip() for k, v in qs_lists.items()}
+
+        pa = unquote_plus(qs.get("pa", "")).strip().lower()
+        if pa and not _VPA_SHAPE.fullmatch(pa):
+            pa = ""  # a payee that isn't a VPA shape is no payee
+        pn = unquote_plus(qs.get("pn", "")).strip()[:100]
+        am_raw = unquote_plus(qs.get("am", "")).strip()
+        amount = None
+        if am_raw:
+            if _AMOUNT_RE.fullmatch(am_raw) and float(am_raw) > 0:
+                amount = am_raw
+            else:
+                rec["amount_invalid"] = True
+        cu = qs.get("cu", "").upper() or None
+
+        rec.update({"payee_vpa": pa or None, "payee_name": pn or None,
+                    "amount": amount, "currency": cu if amount else None})
+        if conflicting or not action:
+            rec["status"] = "malformed"
+        elif action not in _SUPPORTED_ACTIONS:
+            rec["status"] = "unsupported"
+        elif not pa:
+            rec["status"] = "incomplete"
+        else:
+            rec["status"] = "valid"
+        out.append(rec)
+    return out
+
+
+def summarize_parse(uris: list[dict]) -> dict | None:
+    """One facts block for the whole input. Multiple differing payment URIs are
+    reported as 'multiple' — amounts/payees are never merged across requests."""
+    if not uris:
+        return None
+    base = {"uri_count": len(uris), "uris": uris}
+    if len(uris) == 1:
+        u = uris[0]
+        base.update({"status": u["status"], "action": u["action"],
+                     "payee_vpa": u["payee_vpa"], "payee_name": u["payee_name"],
+                     "amount": u["amount"], "currency": u["currency"]})
+        return base
+    firsts = {(u["payee_vpa"], u["amount"], u["action"]) for u in uris}
+    if len(firsts) == 1:  # true duplicates of one request
+        u = uris[0]
+        base.update({"status": u["status"], "action": u["action"],
+                     "payee_vpa": u["payee_vpa"], "payee_name": u["payee_name"],
+                     "amount": u["amount"], "currency": u["currency"]})
+    else:
+        base.update({"status": "multiple", "action": "unknown", "payee_vpa": None,
+                     "payee_name": None, "amount": None, "currency": None})
+    return base
 
 
 def detect(text: str, input_type: str, signals: list,
            expected_intent: str | None = None) -> dict:
-    """Parses upi:// URIs (QR payloads land here as qr_text). Returns
-    {'is_collect': bool, 'vpas': set, 'has_uri': bool, 'amount': str}.
-    expected_intent ("pay"|"receive"|"verify") enables the intent-mismatch
-    check — the user's stated expectation vs what the payload actually does."""
-    info = {"is_collect": False, "vpas": extract_vpas(text),
-            "has_uri": False, "amount": ""}
+    """Risk signals derived from parsed facts + expectation. Returns
+    {'is_collect', 'vpas', 'has_uri', 'amount', 'uris', 'parse', 'claimed_brand'}."""
+    uris = parse_uris(text)
+    parse = summarize_parse(uris)
+    info = {"is_collect": False, "vpas": extract_vpas(text), "has_uri": bool(uris),
+            "amount": parse["amount"] if parse else "", "uris": uris,
+            "parse": parse, "claimed_brand": None}
     low = text.lower()
 
-    for uri in UPI_URI_RE.findall(text):
-        parsed = urlparse(uri)
-        qs = {k: v[0] for k, v in parse_qs(parsed.query).items()}
-        pa = qs.get("pa", "").lower()
-        pn = qs.get("pn", "")
-        amount = qs.get("am", "")
-        info["has_uri"] = True
-        if amount:
-            info["amount"] = amount
-        if pa:
-            info["vpas"].add(pa)
+    executable = [u for u in uris if u["status"] == "valid"]
+    for u in uris:
+        if u["payee_vpa"]:
+            info["vpas"].add(u["payee_vpa"])
 
         # UPI deep-link mechanics: collect = approving PULLS money out.
-        # H12 fix (external review, NPCI linking spec): mode=01 means
-        # "QR-initiated" — ordinary merchant static QRs carry it. It does NOT
-        # indicate collect; only the collect authority/path does.
-        is_collect = (
-            "collect" in parsed.netloc.lower()
-            or "collect" in parsed.path.lower()
-        )
-        if is_collect:
+        # (mode=01 means QR-initiated, NOT collect — H12/NPCI.)
+        if u["action"] == "collect" and u["status"] in ("valid", "incomplete"):
             info["is_collect"] = True
-            amt = f"₹{amount} " if amount else ""
+            amt = f"₹{u['amount']} " if u["amount"] else ""
             signals.append(make_signal(
                 "upi_collect_request", "deterministic", 45,
                 "This is a COLLECT request", "यह COLLECT request है",
                 f"Approving sends {amt}OUT of your account — money will not come in.",
                 f"Approve करते ही {amt}आपके खाते से कटेंगे — पैसे आएँगे नहीं।",
             ))
-            if any(w in (pa + " " + pn.lower() + " " + low) for w in _REFUND_WORDS):
+            pa, pn = u["payee_vpa"] or "", (u["payee_name"] or "").lower()
+            if any(w in (pa + " " + pn + " " + low) for w in _REFUND_WORDS):
                 signals.append(make_signal(
                     "collect_refund_bait", "deterministic", 25,
                     "'Refund' that takes money", "'Refund' जो पैसे लेता है",
@@ -55,42 +135,53 @@ def detect(text: str, input_type: str, signals: list,
                     "असली refund सीधे खाते में आता है — कभी भी collect request approve करके नहीं।",
                 ))
 
-        # payee claiming to be a brand (name or VPA) — real brands use
-        # verified merchant handles, not lookalike names on personal VPAs
-        brand = brand_token_match(host_tokens(pn.lower())) or (
-            pa and brand_token_match(host_tokens(pa.split("@")[0]))
+        # payee claiming to be a brand (name or VPA local part)
+        pn_l = (u["payee_name"] or "").lower()
+        pa_l = u["payee_vpa"] or ""
+        brand = brand_token_match(host_tokens(pn_l)) or (
+            pa_l and brand_token_match(host_tokens(pa_l.split("@")[0]))
         )
         if brand:
-            signals.append(make_signal(
-                "payee_impersonation", "deterministic", 30,
-                f"Payee poses as {str(brand).upper()}",
-                f"Payee खुद को {str(brand).upper()} बता रहा है",
-                f"Payee name/ID imitates {str(brand).upper()} but is not a verified merchant handle.",
-                f"Payee का नाम/ID {str(brand).upper()} जैसा है पर verified merchant नहीं है।",
-            ))
+            own = BRAND_OWN_SUFFIXES.get(str(brand), ())
+            suffix = "@" + pa_l.partition("@")[2] if pa_l else ""
+            if not (suffix and suffix in own):
+                info["claimed_brand"] = str(brand)
+                signals.append(make_signal(
+                    "payee_impersonation", "deterministic", 30,
+                    f"Payee poses as {str(brand).upper()}",
+                    f"Payee खुद को {str(brand).upper()} बता रहा है",
+                    f"Payee name/ID imitates {str(brand).upper()} but is not a verified merchant handle.",
+                    f"Payee का नाम/ID {str(brand).upper()} जैसा है पर verified merchant नहीं है।",
+                ))
 
-    # INTENT MISMATCH (H12+, the differentiator): every upi:// payload — pay OR
-    # collect — moves money OUT of the approver's account. If the user expected
-    # to RECEIVE money, the contradiction itself is the strongest evidence, and
-    # it fires even on a perfectly clean-looking merchant pay-QR with zero scam
-    # keywords ("scan this QR to receive your refund" trap).
-    if expected_intent == "receive" and (info["is_collect"] or info["has_uri"]):
-        amt = f"₹{info['amount']} " if info["amount"] else ""
-        if info["is_collect"]:
-            d_en = f"You expected money IN — approving this collect request sends {amt}OUT."
-            d_hi = f"आपको पैसे आने थे — यह collect request approve करते ही {amt}आपके खाते से कटेंगे।"
+    # INTENT MISMATCH — only against an EXECUTABLE payment request (valid
+    # parse). Every valid upi:// request, pay or collect, moves money OUT of
+    # the approver's account; if the user expected money IN, that conflict is
+    # itself the evidence — no scam keywords needed. Wording is precise: the
+    # QR *opens* a payment request; authorizing it sends money. Scanning alone
+    # does not transfer anything.
+    if expected_intent == "receive" and executable:
+        u = executable[0]
+        amt = f"₹{u['amount']} का " if u["amount"] else ""
+        amt_en = f"a ₹{u['amount']} " if u["amount"] else "a "
+        if u["action"] == "collect":
+            d_en = f"You expected money IN — this is {amt_en}collect request: approving it sends money OUT of your account."
+            d_hi = f"आपको पैसे आने थे — यह {amt}collect request है: approve करते ही पैसे आपके खाते से कटेंगे।"
         else:
-            d_en = f"You expected money IN — but this is a PAY QR: scanning it sends {amt}from YOUR account. Receiving money never needs you to scan a payment QR."
-            d_hi = f"आपको पैसे आने थे — पर यह PAY QR है: इसे भरते ही {amt}आपके खाते से जाएँगे। पैसे पाने के लिए कभी QR नहीं भरना पड़ता।"
+            d_en = (f"You expected money IN — but this QR opens {amt_en}payment request. "
+                    "Authorizing that payment sends money FROM your account. "
+                    "Receiving money never requires you to authorize a payment.")
+            d_hi = (f"आपको पैसे आने थे — पर यह QR {amt}payment request खोलता है। "
+                    "उसे authorize करते ही पैसे आपके खाते से जाएँगे। "
+                    "पैसे पाने के लिए कभी payment authorize नहीं करना पड़ता।")
         signals.append(make_signal(
             "intent_mismatch", "deterministic", 40,
             "Does the OPPOSITE of what you expect", "जो आप चाहते हैं, उससे उल्टा",
             d_en, d_hi,
         ))
 
-    # Brand token in ANY VPA's local part (free text included — H11 field miss:
-    # support.paytm01@okhdfcbank pasted bare scored only +15). A brand on a
-    # foreign PSP suffix is impersonation; the brand's own suffixes are exempt.
+    # Brand token in ANY VPA's local part (free text included — H11):
+    # brand on a foreign PSP suffix is impersonation; own suffixes exempt.
     for vpa in sorted(info["vpas"]):
         # skip URL-userinfo lookalikes (…//sbi.co.in@evil.xyz) — that text is a
         # URL trick, not a VPA; engine/urls.py owns it (userinfo_url_trick).
@@ -101,6 +192,7 @@ def detect(text: str, input_type: str, signals: list,
         if brand:
             own = BRAND_OWN_SUFFIXES.get(str(brand), ())
             if ("@" + suffix) not in own:
+                info["claimed_brand"] = info["claimed_brand"] or str(brand)
                 signals.append(make_signal(
                     "payee_impersonation", "deterministic", 30,
                     f"UPI ID poses as {str(brand).upper()}",
@@ -110,8 +202,7 @@ def detect(text: str, input_type: str, signals: list,
                 ))
                 break
 
-    # Bait words in ANY VPA in the input — upi:// payee or free text alike
-    # (H9 sweep: quickloan.help@okaxis pasted in an SMS body must fire too).
+    # Bait words in ANY VPA in the input — upi:// payee or free text alike.
     for vpa in sorted(info["vpas"]):
         if any(w in vpa.split("@")[0] for w in SUSPICIOUS_VPA_WORDS):
             signals.append(make_signal(

@@ -32,12 +32,15 @@ def detect(hosts, signals: list) -> None:
         hit = _lookalike(host)
         if hit:
             what, how = hit
-            signals.append(make_signal(
+            sig = make_signal(
                 "lookalike_domain", "deterministic", 40,
                 "Lookalike domain", "नकली मिलती-जुलती वेबसाइट",
                 f"{host} {how} ({what}).",
                 f"{host} असली {what} जैसा दिखता है पर official नहीं है।",
-            ))
+            )
+            # structured identity fact — consumers must never regex prose
+            sig["claimed_brand"] = str(what)
+            signals.append(sig)
 
         if host.startswith("xn--") or ".xn--" in host:
             signals.append(make_signal(

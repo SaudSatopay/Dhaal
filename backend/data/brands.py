@@ -31,6 +31,7 @@ OFFICIAL_DOMAINS = {
     "amazon.in", "flipkart.com", "meesho.com", "olx.in",
     "indiapost.gov.in", "bluedart.com", "delhivery.com",
     "netflix.com", "whatsapp.com", "telegram.org", "hotstar.com",
+    "swiggy.com", "zomato.com", "myntra.com",
 }
 
 # Tokens that mean "this claims to be that brand". Matched against
@@ -49,6 +50,7 @@ BRAND_TOKENS = [
     "amazon", "flipkart", "meesho", "olx",
     "indiapost", "bluedart",
     "netflix", "whatsapp", "telegram", "hotstar",
+    "swiggy", "zomato", "myntra",
 ]
 # Deliberately NOT tokens (fuzzy/prefix collisions with everyday payment words —
 # domains above stay whitelisted): "federal"≈general · "delhivery"≈delivery ·

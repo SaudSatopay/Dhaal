@@ -2,9 +2,17 @@
 is high-confidence by definition, so ONE verified report is enough to turn
 the verdict: weight 65 clears the danger threshold on its own."""
 
+import re
+
 from engine.common import extract_phones, make_signal, norm_phone
 
 WEIGHT = 65
+
+
+def _bounded(value: str, low: str) -> bool:
+    """Identifier match with boundaries — 'olx.in' must not hit 'prolx.info',
+    'a@ok' must not hit 'ba@okx' (H14: precise canonical matching)."""
+    return re.search(r"(?<![\w.-])" + re.escape(value) + r"(?![\w-])", low) is not None
 
 
 def detect(text: str, hosts, vpas, indicators: dict, signals: list) -> str | None:
@@ -19,9 +27,12 @@ def detect(text: str, hosts, vpas, indicators: dict, signals: list) -> str | Non
         if itype == "phone":
             hit = (norm_phone(v) or v) in phone_set
         elif itype == "domain":
-            hit = v in host_set or v in low
+            # exact host, or any subdomain of the listed domain, or bounded in prose
+            hit = (v in host_set
+                   or any(h.endswith("." + v) for h in host_set)
+                   or _bounded(v, low))
         elif itype == "upi":
-            hit = v in vpas or v in low
+            hit = v in vpas or _bounded(v, low)
         else:  # script snippets
             hit = v in low
         if not hit:

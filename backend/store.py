@@ -61,9 +61,11 @@ class MemoryStore:
         for d in self.data["indicators"].values():
             if d["value"] == value:
                 d["report_count"] += 1
+                d["last_seen"] = _now()  # freshness (H14): stale intel is visible
                 return dict(d)
         doc = {"_id": _id("ind"), "type": itype, "value": value,
-               "report_count": 1, "first_seen": _now(), "category": category}
+               "report_count": 1, "first_seen": _now(), "last_seen": _now(),
+               "category": category}
         self.data["indicators"][doc["_id"]] = doc
         return dict(doc)
 
@@ -91,6 +93,10 @@ class MongoStore:
         self.db = self.client[os.getenv("DB_NAME", "dhaal")]
         self.client.admin.command("ping")
         self.db.indicators.create_index("value", unique=True)
+        # H14 guardian auth: token-hash and pair-code lookups must not scan
+        self.db.guardian_links.create_index("guardian_token_sha256", sparse=True)
+        self.db.guardian_links.create_index("ward_token_sha256", sparse=True)
+        self.db.guardian_links.create_index("pair_code")
         if self.db.indicators.count_documents({}) == 0:
             self.db.indicators.insert_many([dict(i) for i in FX.SEED_INDICATORS])
 
@@ -116,6 +122,7 @@ class MongoStore:
         return self.db.indicators.find_one_and_update(
             {"value": value},
             {"$inc": {"report_count": 1},
+             "$set": {"last_seen": _now()},  # freshness (H14)
              "$setOnInsert": {"_id": _id("ind"), "type": itype, "value": value,
                               "first_seen": _now(), "category": category}},
             upsert=True, return_document=ReturnDocument.AFTER,
@@ -139,13 +146,18 @@ class MongoStore:
 
 
 class FailoverStore:
-    """Try Atlas, fall back to memory per call — the demo never 500s on wifi."""
+    """Try Atlas, fall back to memory per call — the demo never 500s on wifi.
+    Honesty contract (H14): the memory shadow is NOT a replica; while degraded,
+    reads may miss recent community intel and writes are not durable. The API
+    layer surfaces this via recently_degraded()."""
 
     _METHODS = ("insert", "get", "list", "update", "indicators_map",
                 "upsert_indicator", "decrement_indicator")
+    DEGRADED_WINDOW_S = 60
 
     def __init__(self, primary: MongoStore, shadow: MemoryStore):
         self.primary, self.shadow = primary, shadow
+        self._last_fallback: float | None = None
 
     def __getattr__(self, method):
         if method not in self._METHODS:
@@ -158,11 +170,16 @@ class FailoverStore:
                 print(f"[latency] atlas_ms={(time.perf_counter() - t0) * 1000:.0f} op={method}")
                 return out
             except Exception as e:
+                self._last_fallback = time.monotonic()
                 print(f"[latency] atlas_ms={(time.perf_counter() - t0) * 1000:.0f} "
                       f"op={method} err={type(e).__name__} — memory fallback")
                 return getattr(self.shadow, method)(*args, **kwargs)
 
         return call
+
+    def recently_degraded(self) -> bool:
+        return (self._last_fallback is not None
+                and time.monotonic() - self._last_fallback < self.DEGRADED_WINDOW_S)
 
     def active_name(self) -> str:
         return self.primary.active_name()
@@ -177,4 +194,7 @@ def get_store():
         return FailoverStore(MongoStore(uri), memory)
     except Exception as e:
         print(f"[store] atlas unreachable at startup ({type(e).__name__}) — memory store")
+        # Atlas WAS configured — this memory store is a degraded stand-in, and
+        # the API layer must say so rather than imply durable community intel.
+        memory.recently_degraded = lambda: True  # type: ignore[attr-defined]
         return memory

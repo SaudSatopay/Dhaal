@@ -17,11 +17,14 @@ PASS = 0
 
 
 def check(name, payload, want_verdict, *, itype="text", indicators=None,
-          want_signal=None, want_category=None, forbid_signal=None):
+          want_signal=None, want_category=None, forbid_signal=None,
+          expected_intent=None, want_fact=None):
+    """want_fact: dotted path into the facts block -> expected value,
+    e.g. {"parse.status": "valid", "money_direction": "out_of_your_account"}."""
     global PASS
-    verdict, score, signals, category = run_signal_engine(
+    verdict, score, signals, category, facts = run_signal_engine(
         payload, itype, indicators if indicators is not None else INDICATORS,
-        allow_network=False,
+        allow_network=False, expected_intent=expected_intent,
     )
     ids = [s["id"] for s in signals]
     ok = verdict == want_verdict
@@ -31,6 +34,11 @@ def check(name, payload, want_verdict, *, itype="text", indicators=None,
         ok = ok and forbid_signal not in ids
     if want_category:
         ok = ok and category == want_category
+    for path, want in (want_fact or {}).items():
+        node = facts
+        for part in path.split("."):
+            node = (node or {}).get(part)
+        ok = ok and node == want
     status = "ok " if ok else "FAIL"
     print(f"{status} {name}: verdict={verdict} score={score} cat={category} signals={ids}")
     if not ok:
@@ -114,8 +122,10 @@ check("H9.4 olx army collect bait",
       "suspicious", indicators={}, want_signal="collect_to_receive_bait")
 
 # --- junk never crashes ---
-for junk in ("", "   ", "🙏🙏🙏", "a" * 5000, "upi://", "http://"):
-    v, s, sg, c = run_signal_engine(junk, "text", INDICATORS)
+for junk in ("", "   ", "🙏🙏🙏", "a" * 5000, "upi://", "http://",
+             "upi://pay", "upi://pay?", "upi://mandate?pa=x@ybl",
+             "upi://pay?pa=%%%&am=abc", "upi://pay?pa=a@ybl&am=1&pa=b@ybl"):
+    v, s, sg, c, f = run_signal_engine(junk, "text", INDICATORS)
     assert v in ("danger", "suspicious", "no_known_risk"), junk
 
 # --- H12 external-review battery (all five reproduced, then fixed) ---
@@ -140,7 +150,7 @@ check("H12.4 ordinary mode=01 pay QR clean (NPCI: mode=01 = QR-initiated, not co
 # --- H12+ intent mismatch (the differentiator): expectation vs payload action ---
 def check_intent(name, payload, intent, want_verdict, want_signal=None, forbid_signal=None):
     global PASS
-    v, s, sigs, _ = run_signal_engine(payload, "qr_text", {}, expected_intent=intent)
+    v, s, sigs, _, _f = run_signal_engine(payload, "qr_text", {}, expected_intent=intent)
     ids = [x["id"] for x in sigs]
     ok = v == want_verdict and (not want_signal or want_signal in ids)         and (not forbid_signal or forbid_signal not in ids)
     print(("ok " if ok else "FAIL"), f"{name}: verdict={v} signals={ids}")
@@ -163,5 +173,109 @@ check_intent("intent: no intent given = unchanged behavior",
 
 print("ok  junk inputs survive")
 PASS += 1
+
+# --- H14 external-review battery: clause-level semantics -------------------
+# benign — negation, reported speech, self-help, legit agent flows
+check("H14 benign: WFH routine sentence",
+      "I work from home every Friday.", "no_known_risk", indicators={},
+      forbid_signal="script_job_scam")
+check("H14 benign: awareness workshop (reported speech)",
+      "Our school is holding a cyber crime awareness workshop.",
+      "no_known_risk", indicators={}, forbid_signal="script_digital_arrest")
+check("H14 benign: negated demand ('do not send money')",
+      "Your refund is approved. Do not send money to anyone.",
+      "no_known_risk", indicators={}, forbid_signal="advance_fee_refund")
+check("H14 benign: negated charge ('no delivery charge')",
+      "Your prize has shipped. No delivery charge is payable.",
+      "no_known_risk", indicators={}, forbid_signal="advance_fee_refund")
+check("H14 benign: password self-help question",
+      "How do I reset my password?", "no_known_risk", indicators={},
+      forbid_signal="credential_request")
+check("H14 benign: OTP to delivery agent (legit platform flow)",
+      "आपका पार्सल आज शाम 6 बजे तक पहुँचेगा। delivery boy को message वाला OTP दिखा दें।",
+      "no_known_risk", indicators={}, forbid_signal="credential_request")
+check("H14 benign: OTP to Ola driver (legit platform flow)",
+      "Ola driver 2 min में पहुँच रहा है। OTP 4412 driver को बताएँ।",
+      "no_known_risk", indicators={}, forbid_signal="credential_request")
+check("H14 benign: lecture DESCRIBING digital arrest",
+      "Aaj college me cyber safety lecture tha, professor ne bataya ki digital arrest "
+      "wale CBI bolke darate hain aur paise mangte hain.",
+      "no_known_risk", indicators={}, forbid_signal="script_digital_arrest")
+# harmful — the safety-advice suffix must not launder the ask
+check("H14 harmful: polite forward-the-code + advice suffix",
+      "Kindly forward the one-time code you just received to this chat. "
+      "Do not share it with anyone else.",
+      "suspicious", indicators={}, want_signal="credential_request")
+check("H14 harmful: negated OTP but password requested next sentence",
+      "Never share your OTP. Send me your password to restore access.",
+      "suspicious", indicators={}, want_signal="credential_request")
+check("H14 harmful: remote-access request",
+      "Anydesk download karke 9-digit code bata dijiye, hum aapka KYC ghar baithe kar denge.",
+      "suspicious", indicators={}, want_signal="credential_request")
+# held-out v2 miss families, generalized (not exact-string patches)
+check("H14 v2-miss: TRAI SIM deactivation + fee",
+      "This is TRAI. Your SIM will be deactivated in 2 hours due to illegal activity. "
+      "Press 1 and pay the verification fee to keep your number active.",
+      "danger", indicators={}, want_signal="script_kyc_expiry")
+check("H14 v2-miss: chain-forward code bait",
+      "To activate WhatsApp Gold forward this message to 10 groups and enter the "
+      "verification code we sent you here: wa-gold.vip",
+      "danger", indicators={}, want_signal="chain_forward_bait")
+check("H14 v2-miss: .apk sideload lure",
+      "क्रेडिट कार्ड के points आज expire हो रहे हैं! points को cash में बदलने के लिए "
+      "app download करें: points-redeem.apk",
+      "suspicious", indicators={}, want_signal="apk_sideload")
+check("H14 v2-miss: brand-subdomain lookalike (swiggy)",
+      "Your Swiggy order #8812 could not be delivered. Reschedule at "
+      "swiggy-redeliver.xyz within 6 hours or order stands cancelled.",
+      "danger", indicators={}, want_signal="lookalike_domain")
+check("H14 v2-miss: family emergency + isolation",
+      "URGENT: Your son met with an accident, admitted in hospital. Send 20000 "
+      "immediately for operation on this GPay number. Don't call, he is in ICU.",
+      "danger", indicators={}, want_signal="family_emergency_pressure")
+check("H14 v2-miss: victim-voiced police video call",
+      "पापा को video call पर पुलिस वर्दी वाले ने कहा कि भाई पकड़ा गया है, "
+      "अभी 40 हज़ार भेजो नहीं तो FIR होगी। पैसे भेज दें क्या?",
+      "danger", indicators={}, want_signal="family_emergency_pressure")
+check("H14 ambiguous: 'new number' family ask -> verify, not convict",
+      "Hi Dad, this is my new number. My phone broke. Please transfer 8000 to my "
+      "friend. I will explain tonight.",
+      "suspicious", indicators={}, want_signal="unverified_family_request",
+      forbid_signal="script_digital_arrest")
+
+# --- H14 facts pipeline: same QR ⇒ same facts, expectation only gates mismatch
+_PAY_QR = "upi://pay?pa=ramlal@okaxis&pn=Ramlal%20Kirana&am=120"
+check("H14 facts: pay QR + expect pay — facts parsed, no mismatch",
+      _PAY_QR, "no_known_risk", itype="qr_text", indicators={},
+      expected_intent="pay", forbid_signal="intent_mismatch",
+      want_fact={"parse.status": "valid", "parse.action": "pay",
+                 "parse.amount": "120", "parse.payee_vpa": "ramlal@okaxis",
+                 "money_direction": "out_of_your_account"})
+check("H14 facts: SAME QR + expect receive — same facts, mismatch fires",
+      _PAY_QR, "suspicious", itype="qr_text", indicators={},
+      expected_intent="receive", want_signal="intent_mismatch",
+      want_fact={"parse.status": "valid", "parse.action": "pay",
+                 "parse.amount": "120", "parse.payee_vpa": "ramlal@okaxis",
+                 "money_direction": "out_of_your_account"})
+check("H14 facts: incomplete URI (no payee) is not a valid pay claim",
+      "upi://pay?pn=Store&am=500", "no_known_risk", itype="qr_text",
+      indicators={}, forbid_signal="intent_mismatch",
+      want_fact={"parse.status": "incomplete", "money_direction": "unknown"})
+check("H14 facts: incomplete URI + expect receive — no mismatch without a parsed request",
+      "upi://pay?pn=Store&am=500", "no_known_risk", itype="qr_text",
+      indicators={}, expected_intent="receive", forbid_signal="intent_mismatch")
+check("H14 facts: unsupported action stays unknown",
+      "upi://mandate?pa=x@ybl&am=99", "no_known_risk", itype="qr_text",
+      indicators={}, want_fact={"parse.status": "unsupported"})
+check("H14 facts: invalid amount never guessed",
+      "upi://pay?pa=xy@ybl&am=12,000", "no_known_risk", itype="qr_text",
+      indicators={}, want_fact={"parse.status": "valid", "parse.amount": None})
+check("H14 facts: two differing URIs never merge amounts",
+      "upi://pay?pa=a@ybl&am=100 upi://pay?pa=b@ybl&am=900",
+      "no_known_risk", itype="qr_text", indicators={},
+      want_fact={"parse.status": "multiple", "parse.amount": None})
+check("H14 facts: conflicting duplicate params = malformed",
+      "upi://pay?pa=a@ybl&am=1&pa=b@ybl", "no_known_risk", itype="qr_text",
+      indicators={}, want_fact={"parse.status": "malformed"})
 
 print(f"\nALL {PASS} CHECKS PASSED")

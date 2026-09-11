@@ -1,0 +1,646 @@
+{
+  "authored_blind": true,
+  "authored_at": "2026-09-11",
+  "cases": [
+    {
+      "id": "v3-001",
+      "lang": "hi",
+      "type": "text",
+      "payload": "मैं दिल्ली क्राइम ब्रांच से बोल रहा हूँ। आपके आधार से जुड़े एक पार्सल में प्रतिबंधित सामान मिला है और आपके नाम गिरफ्तारी वारंट जारी हुआ है। मामला रफा-दफा करने के लिए अभी ₹75000 इस खाते में जमा कराएँ, वरना पुलिस दो घंटे में घर पहुँच जाएगी।",
+      "expected_intent": "pay",
+      "expect_assessment": "assessed",
+      "expect_risk": "flag",
+      "rationale": "Impersonates police and threatens arrest over a fake parcel to extort an urgent payment - textbook digital arrest scam."
+    },
+    {
+      "id": "v3-002",
+      "lang": "en",
+      "type": "voice_transcript",
+      "payload": "This is Inspector Verma from the Cyber Crime Division. A courier parcel in your name has been intercepted with illegal contents, and your bank accounts will be frozen within the hour. To clear your name you must transfer fifty thousand rupees to the verification account I will now share, and you must not disconnect this call or inform anyone.",
+      "expected_intent": "pay",
+      "expect_assessment": "assessed",
+      "expect_risk": "flag",
+      "rationale": "Fake officer uses arrest and account-freeze threats plus isolation pressure to force an immediate transfer - digital arrest fraud."
+    },
+    {
+      "id": "v3-003",
+      "lang": "hinglish",
+      "type": "text",
+      "payload": "Dear customer, aapka SBI YONO account aaj raat block ho jayega kyunki KYC pending hai. Turant verify karein warna account permanently band ho jayega: http://sbi-kyc-verify.in/update",
+      "expected_intent": null,
+      "expect_assessment": "assessed",
+      "expect_risk": "flag",
+      "rationale": "Account-suspension urgency with a lookalike SBI domain to harvest credentials - KYC phishing."
+    },
+    {
+      "id": "v3-004",
+      "lang": "hi",
+      "type": "text",
+      "payload": "प्रिय ग्राहक, आपकी HDFC नेट बैंकिंग सेवा अस्थायी रूप से निलंबित कर दी गई है। पुनः चालू करने के लिए यहाँ लॉगिन करें: http://hdfc-secure-login.co और अपना यूज़र आईडी तथा पासवर्ड दर्ज करें।",
+      "expected_intent": null,
+      "expect_assessment": "assessed",
+      "expect_risk": "flag",
+      "rationale": "Fake suspension notice on a spoofed HDFC domain asking for username and password - credential phishing."
+    },
+    {
+      "id": "v3-005",
+      "lang": "en",
+      "type": "text",
+      "payload": "Dear Consumer, your electricity connection will be disconnected today at 9:30 PM as your previous month bill is not updated in our system. To avoid disconnection please call our officer immediately at 9812345670.",
+      "expected_intent": null,
+      "expect_assessment": "assessed",
+      "expect_risk": "flag",
+      "rationale": "Threatens a same-night power cut and routes the victim to a personal mobile number - classic electricity disconnection scam."
+    },
+    {
+      "id": "v3-006",
+      "lang": "hinglish",
+      "type": "text",
+      "payload": "Aapka mobile number aaj raat 8 baje band kar diya jayega kyunki aapki SIM ki KYC update nahi hui. Number band hone se bachane ke liye abhi 9876501234 par call karke agent ko verification OTP bata dein.",
+      "expected_intent": null,
+      "expect_assessment": "assessed",
+      "expect_risk": "flag",
+      "rationale": "SIM-deactivation threat that funnels the victim into revealing an OTP to a fake agent - telecom KYC scam."
+    },
+    {
+      "id": "v3-007",
+      "lang": "hi",
+      "type": "text",
+      "payload": "बधाई हो! आपका मोबाइल नंबर KBC लकी ड्रॉ में ₹25,00,000 का इनाम जीता है। इनाम पाने के लिए ₹4999 रिफंडेबल प्रोसेसिंग शुल्क इस UPI पर भेजें: kbc.winner@okaxis",
+      "expected_intent": "pay",
+      "expect_assessment": "assessed",
+      "expect_risk": "flag",
+      "rationale": "Fake lottery win demanding an advance processing fee before releasing a prize - advance-fee fraud."
+    },
+    {
+      "id": "v3-008",
+      "lang": "en",
+      "type": "text",
+      "payload": "Congratulations! You have been selected for a work-from-home job paying Rs. 5,000 per day for liking videos. To activate your account and receive your first task, pay a one-time registration fee of Rs. 1,500 to onboarding.jobs@ybl.",
+      "expected_intent": "pay",
+      "expect_assessment": "assessed",
+      "expect_risk": "flag",
+      "rationale": "Too-good job offer demanding an upfront registration fee - work-from-home task fraud."
+    },
+    {
+      "id": "v3-009",
+      "lang": "hinglish",
+      "type": "text",
+      "payload": "Sir aapka ₹5,00,000 ka instant personal loan bina documents ke approve ho gaya hai. Amount account me transfer hone se pehle GST aur processing charge ₹6,800 abhi is account me jama karna zaroori hai.",
+      "expected_intent": "pay",
+      "expect_assessment": "assessed",
+      "expect_risk": "flag",
+      "rationale": "Pre-approved loan requiring an advance fee before disbursal - loan-fee fraud."
+    },
+    {
+      "id": "v3-010",
+      "lang": "en",
+      "type": "text",
+      "payload": "This is Amazon customer care regarding your cancelled order. A refund of Rs. 2,499 is pending. To receive it, install the AnyDesk app, share the 9-digit code with us, and approve the request we send to your UPI app.",
+      "expected_intent": "receive",
+      "expect_assessment": "assessed",
+      "expect_risk": "flag",
+      "rationale": "Fake refund that pairs remote-access installation with a UPI approval that actually debits the victim - customer-care refund scam."
+    },
+    {
+      "id": "v3-011",
+      "lang": "hi",
+      "type": "text",
+      "payload": "नमस्ते, यह आपके बैंक की सत्यापन टीम से है। खाता पुष्टि के लिए कृपया अभी-अभी आए 6 अंकों के OTP मुझे बता दीजिए। अपनी सुरक्षा के लिए यह OTP किसी और के साथ साझा न करें।",
+      "expected_intent": null,
+      "expect_assessment": "assessed",
+      "expect_risk": "flag",
+      "rationale": "A caller asks the victim to reveal the OTP while adding a do-not-share line to seem authentic - OTP harvesting."
+    },
+    {
+      "id": "v3-012",
+      "lang": "hinglish",
+      "type": "text",
+      "payload": "Verification complete karne ke liye jo code abhi aapke phone par aaya hai wo mujhe bata dijiye. Dhyan rahe, yeh code kisi aur ko mat batana, sirf humein.",
+      "expected_intent": null,
+      "expect_assessment": "assessed",
+      "expect_risk": "flag",
+      "rationale": "Requests the victim's OTP and disguises the ask with safety advice pointed only at the scammer - credential harvesting."
+    },
+    {
+      "id": "v3-013",
+      "lang": "en",
+      "type": "text",
+      "payload": "Great news! You have received a cashback reward of Rs. 750. To credit it, open your PhonePe app, tap the pending request, and enter your UPI PIN to receive the money.",
+      "expected_intent": "receive",
+      "expect_assessment": "assessed",
+      "expect_risk": "flag",
+      "rationale": "Frames a collect request as incoming cashback, but entering the PIN debits the victim - receive-money trick."
+    },
+    {
+      "id": "v3-014",
+      "lang": "hinglish",
+      "type": "text",
+      "payload": "Beta ye mera naya number hai, purana SIM band ho gaya. Main abhi ek meeting me phas gaya hoon, turant ₹15,000 is number ke GPay par bhej do, kal subah wapas kar dunga.",
+      "expected_intent": "pay",
+      "expect_assessment": "assessed",
+      "expect_risk": "flag",
+      "rationale": "Impersonates a family member on a new number with an urgent transfer request - new-number impersonation."
+    },
+    {
+      "id": "v3-015",
+      "lang": "hi",
+      "type": "text",
+      "payload": "पापा, मेरा फ़ोन गिरकर टूट गया है, यह मेरे दोस्त का नंबर है। कॉलेज की फ़ीस आज ही जमा करनी है वरना मेरा नाम कट जाएगा, कृपया ₹22000 इस UPI पर तुरंत भेज दें: fees.today@okicici",
+      "expected_intent": "pay",
+      "expect_assessment": "assessed",
+      "expect_risk": "flag",
+      "rationale": "Family-emergency impersonation invents a fee deadline to rush a transfer to an unknown VPA - new-number scam."
+    },
+    {
+      "id": "v3-016",
+      "lang": "en",
+      "type": "text",
+      "payload": "I have gained access to your phone and recorded you through your camera. Unless you transfer Rs. 20,000 to the UPI ID secure.collect@ybl within 24 hours, I will send the videos to all your contacts.",
+      "expected_intent": "pay",
+      "expect_assessment": "assessed",
+      "expect_risk": "flag",
+      "rationale": "Extortion threat demanding money to suppress fabricated compromising material - sextortion payment scam."
+    },
+    {
+      "id": "v3-017",
+      "lang": "hinglish",
+      "type": "text",
+      "payload": "Humein aapke ghar ka pata maalum hai. Apne parivaar ki safety chahte ho to aaj raat tak ₹50,000 is account me daal do, warna anjaam bahut bura hoga.",
+      "expected_intent": "pay",
+      "expect_assessment": "assessed",
+      "expect_risk": "flag",
+      "rationale": "Menacing threat to family safety tied to a same-night money demand - extortion."
+    },
+    {
+      "id": "v3-018",
+      "lang": "en",
+      "type": "text",
+      "payload": "Your SBI reward points worth Rs. 4,500 expire today. Redeem now at http://www.sbi-rewardz.com/redeem by logging in with your account number and the OTP sent to you.",
+      "expected_intent": null,
+      "expect_assessment": "assessed",
+      "expect_risk": "flag",
+      "rationale": "Expiring-rewards lure on a lookalike SBI domain seeking account number and OTP - phishing."
+    },
+    {
+      "id": "v3-019",
+      "lang": "hinglish",
+      "type": "text",
+      "payload": "Congratulations! Aapko Flipkart Big Billion Days ka special inaam mila hai. Apna gift claim karne ke liye ye app abhi download aur install karein: http://flipkart-offer.in/reward.apk",
+      "expected_intent": null,
+      "expect_assessment": "assessed",
+      "expect_risk": "flag",
+      "rationale": "Prize lure pushing an APK from a fake Flipkart domain - malicious app-install scam."
+    },
+    {
+      "id": "v3-020",
+      "lang": "hi",
+      "type": "text",
+      "payload": "अपने बैंक खाते को सुरक्षित रखने के लिए बैंक का नया सिक्योरिटी ऐप अभी इंस्टॉल करें: http://secure-bank-update.in/app.apk वरना 24 घंटे में खाता ब्लॉक हो जाएगा।",
+      "expected_intent": null,
+      "expect_assessment": "assessed",
+      "expect_risk": "flag",
+      "rationale": "Coerces installation of an APK from an unofficial domain under threat of account block - malware lure."
+    },
+    {
+      "id": "v3-021",
+      "lang": "en",
+      "type": "text",
+      "payload": "Forward this message to 10 WhatsApp groups and you will receive Rs. 2,000 as part of our 15th anniversary gift! Ignoring it may deactivate your account. Claim here: http://whatsapp-gift25.com",
+      "expected_intent": null,
+      "expect_assessment": "assessed",
+      "expect_risk": "flag",
+      "rationale": "Chain-forward bait promising cash and threatening account loss via a fake domain - forwarding scam."
+    },
+    {
+      "id": "v3-022",
+      "lang": "hi",
+      "type": "text",
+      "payload": "आपका पैन कार्ड आपके बैंक खाते से लिंक नहीं है, इस कारण आपका खाता 24 घंटे में बंद कर दिया जाएगा। लिंक कराने के लिए इस नंबर पर व्हाट्सएप करें और मांगी गई जानकारी व OTP भेजें: 9800011223",
+      "expected_intent": null,
+      "expect_assessment": "assessed",
+      "expect_risk": "flag",
+      "rationale": "Fake PAN-linking deadline pushing the victim to a WhatsApp number to hand over details and OTP - KYC phishing."
+    },
+    {
+      "id": "v3-023",
+      "lang": "hinglish",
+      "type": "text",
+      "payload": "Bijli vibhag suchna: aapka pichhla bill system me update nahi hua, isliye aaj raat 9:30 baje aapka connection kaat diya jayega. Turant is officer se baat karke online payment karein: 9765432101",
+      "expected_intent": null,
+      "expect_assessment": "assessed",
+      "expect_risk": "flag",
+      "rationale": "Electricity board impersonation threatening a night disconnection and steering to a personal number - utility scam."
+    },
+    {
+      "id": "v3-024",
+      "lang": "en",
+      "type": "qr",
+      "payload": "upi://pay?pa=refund.dept@okhdfcbank&pn=Refund%20Processing&am=4999.00&cu=INR&tn=Scan%20to%20receive%20your%20refund",
+      "expected_intent": "receive",
+      "expect_assessment": "assessed",
+      "expect_risk": "flag",
+      "rationale": "A valid pay URI presented as a refund to be received would actually debit Rs. 4999 from the scanner."
+    },
+    {
+      "id": "v3-025",
+      "lang": "hinglish",
+      "type": "qr",
+      "payload": "upi://pay?pa=lucky.winner@ybl&pn=Prize%20Claim&am=500.00&cu=INR&tn=Scan%20karke%20cashback%20paayein",
+      "expected_intent": "receive",
+      "expect_assessment": "assessed",
+      "expect_risk": "flag",
+      "rationale": "QR marketed as scan-to-get-cashback is a genuine pay request that sends money out, not in."
+    },
+    {
+      "id": "v3-026",
+      "lang": "hi",
+      "type": "text",
+      "payload": "यह पेटीएम कस्टमर केयर है। आपका ₹1999 का रिफंड अटका हुआ है। रिफंड पाने के लिए हमारे द्वारा भेजी गई रिक्वेस्ट को अपने ऐप में स्वीकार करें और UPI पिन दर्ज करें।",
+      "expected_intent": "receive",
+      "expect_assessment": "assessed",
+      "expect_risk": "flag",
+      "rationale": "Fake customer care frames a collect request as a refund; approving it with the PIN debits the victim."
+    },
+    {
+      "id": "v3-027",
+      "lang": "en",
+      "type": "text",
+      "payload": "123456 is the OTP for your purchase of Rs. 2,499 at Reliance Digital on your HDFC Bank Debit Card. Do not share this OTP with anyone. It is valid for 5 minutes.",
+      "expected_intent": null,
+      "expect_assessment": "assessed",
+      "expect_risk": "clean",
+      "rationale": "Bank is delivering an OTP for a transaction the user initiated and warning against sharing it - no one is soliciting it."
+    },
+    {
+      "id": "v3-028",
+      "lang": "hi",
+      "type": "text",
+      "payload": "आपके खाते XX7788 से ₹1,250.00 का भुगतान 11-सित-26 को SWIGGY को UPI द्वारा हुआ। उपलब्ध शेष ₹18,430.00। यदि यह आपने नहीं किया तो 1800112233 पर कॉल करें। -ICICI बैंक",
+      "expected_intent": null,
+      "expect_assessment": "assessed",
+      "expect_risk": "clean",
+      "rationale": "Standard post-transaction debit alert with the bank's official helpline - informational, not a solicitation."
+    },
+    {
+      "id": "v3-029",
+      "lang": "hinglish",
+      "type": "text",
+      "payload": "Aapke account XX4521 me ₹35,000.00 salary credit hui hai 01-Sep-26 ko. Available balance ₹52,310.00. -Axis Bank",
+      "expected_intent": null,
+      "expect_assessment": "assessed",
+      "expect_risk": "clean",
+      "rationale": "Routine salary credit notification from the bank with no action requested - benign alert."
+    },
+    {
+      "id": "v3-030",
+      "lang": "en",
+      "type": "text",
+      "payload": "Your order is out for delivery. Please share the delivery OTP 7391 with the delivery agent at your doorstep to confirm receipt. -Amazon",
+      "expected_intent": null,
+      "expect_assessment": "assessed",
+      "expect_risk": "clean",
+      "rationale": "Delivery-confirmation OTP meant to be shown to the courier in person is a legitimate handover, not credential theft."
+    },
+    {
+      "id": "v3-031",
+      "lang": "hinglish",
+      "type": "text",
+      "payload": "Aapki Uber aa rahi hai. Driver Ramesh (DL1A2345) ko trip shuru karne ke liye OTP 4408 bata dein.",
+      "expected_intent": null,
+      "expect_assessment": "assessed",
+      "expect_risk": "clean",
+      "rationale": "Ride-start OTP given to the driver in person is a normal, legitimate flow."
+    },
+    {
+      "id": "v3-032",
+      "lang": "hi",
+      "type": "text",
+      "payload": "बेटा, तुम्हारी किताबों के लिए मैंने ₹5000 तुम्हारे खाते में भेज दिए हैं। पहुँच जाएँ तो बता देना। -पापा",
+      "expected_intent": null,
+      "expect_assessment": "assessed",
+      "expect_risk": "clean",
+      "rationale": "Parent informing a child of money already sent - ordinary family money talk with no request."
+    },
+    {
+      "id": "v3-033",
+      "lang": "hi",
+      "type": "text",
+      "payload": "कल की डिनर पार्टी छह लोगों की ₹2400 की बनी, यानी हर एक की ₹400। फुरसत में मेरे GPay पर भेज देना, कोई जल्दी नहीं।",
+      "expected_intent": "pay",
+      "expect_assessment": "assessed",
+      "expect_risk": "clean",
+      "rationale": "Casual split-bill message among friends with no urgency or threat - benign."
+    },
+    {
+      "id": "v3-034",
+      "lang": "hinglish",
+      "type": "text",
+      "payload": "Yaar movie ke tickets ke ₹300 mujhe bhej dena jab time mile, meri UPI 9876540011@paytm hai. Thanks!",
+      "expected_intent": "pay",
+      "expect_assessment": "assessed",
+      "expect_risk": "clean",
+      "rationale": "Friendly reimbursement request for shared tickets with no pressure - benign personal payment."
+    },
+    {
+      "id": "v3-035",
+      "lang": "hi",
+      "type": "text",
+      "payload": "नमस्ते, सितंबर माह का किराया ₹15000 देय है। आप मकान मालिक की UPI आईडी rajesh.kumar@oksbi पर भेज सकते हैं। धन्यवाद।",
+      "expected_intent": "pay",
+      "expect_assessment": "assessed",
+      "expect_risk": "clean",
+      "rationale": "Expected monthly rent reminder with the landlord's UPI ID and no coercion - legitimate."
+    },
+    {
+      "id": "v3-036",
+      "lang": "en",
+      "type": "qr",
+      "payload": "upi://pay?pa=cafecoffeeday.blr@hdfcbank&pn=Cafe%20Coffee%20Day&mc=5814&tn=Bill%20Payment&am=320.00&cu=INR",
+      "expected_intent": "pay",
+      "expect_assessment": "assessed",
+      "expect_risk": "clean",
+      "rationale": "Ordinary merchant pay QR with a business category code and bill amount - normal outbound payment."
+    },
+    {
+      "id": "v3-037",
+      "lang": "hinglish",
+      "type": "qr",
+      "payload": "upi://pay?pa=sharmakirana@okaxis&pn=Sharma%20Kirana%20Store&am=145.00&cu=INR&tn=Grocery",
+      "expected_intent": "pay",
+      "expect_assessment": "assessed",
+      "expect_risk": "clean",
+      "rationale": "Standard neighbourhood store merchant QR for a grocery payment - benign."
+    },
+    {
+      "id": "v3-038",
+      "lang": "en",
+      "type": "qr",
+      "payload": "upi://pay?pa=bholateastall@ybl&pn=Bhola%20Tea%20Stall&cu=INR",
+      "expected_intent": "pay",
+      "expect_assessment": "assessed",
+      "expect_risk": "clean",
+      "rationale": "Static merchant QR where the payer enters the amount - an ordinary pay code with no red flags."
+    },
+    {
+      "id": "v3-039",
+      "lang": "en",
+      "type": "text",
+      "payload": "Dear Customer, your BESCOM electricity bill of Rs. 1,340 for August 2026 is due on 20-Sep-2026. Please pay through the official BESCOM portal or app. -BESCOM",
+      "expected_intent": "pay",
+      "expect_assessment": "assessed",
+      "expect_risk": "clean",
+      "rationale": "Routine utility bill reminder pointing to official channels with no threat or personal number - legitimate."
+    },
+    {
+      "id": "v3-040",
+      "lang": "hinglish",
+      "type": "text",
+      "payload": "Aapka Airtel postpaid bill ₹799 ka payment 18-Sep tak due hai. Kripya Airtel Thanks app se pay karein. Dhanyavaad.",
+      "expected_intent": "pay",
+      "expect_assessment": "assessed",
+      "expect_risk": "clean",
+      "rationale": "Normal postpaid bill reminder directing to the official app - benign."
+    },
+    {
+      "id": "v3-041",
+      "lang": "en",
+      "type": "text",
+      "payload": "Last day! Flat 50% off on all footwear. Sale ends tonight at 11:59 PM. Shop now on the Myntra app.",
+      "expected_intent": null,
+      "expect_assessment": "assessed",
+      "expect_risk": "clean",
+      "rationale": "Marketing urgency about a sale with no payment demand or credentials sought from the reader - benign."
+    },
+    {
+      "id": "v3-042",
+      "lang": "hi",
+      "type": "text",
+      "payload": "सिर्फ आज! सभी स्मार्टफ़ोन पर 40% तक की छूट। ऑफ़र आज रात 12 बजे समाप्त। अभी Flipkart ऐप पर खरीदें।",
+      "expected_intent": null,
+      "expect_assessment": "assessed",
+      "expect_risk": "clean",
+      "rationale": "Sale-ending promotional message with no payment or data request aimed at the reader - benign marketing."
+    },
+    {
+      "id": "v3-043",
+      "lang": "en",
+      "type": "text",
+      "payload": "Cyber Safety Tip: No bank or company will ever ask for your OTP, PIN, or CVV. If you receive such a call, hang up and report it to the cybercrime helpline 1930.",
+      "expected_intent": null,
+      "expect_assessment": "assessed",
+      "expect_risk": "clean",
+      "rationale": "Educational advisory warning against sharing credentials - it discourages the scam rather than perpetrating it."
+    },
+    {
+      "id": "v3-044",
+      "lang": "hinglish",
+      "type": "voice_transcript",
+      "payload": "Toh doston, aaj ke session me samjhte hain ki digital arrest scam kaise chalta hai. Scammer police officer banke call karta hai aur darata hai - yaad rakhein, asli police kabhi phone par paise nahi maangti.",
+      "expected_intent": null,
+      "expect_assessment": "assessed",
+      "expect_risk": "clean",
+      "rationale": "A lecture explaining how a scam works and warning listeners - teaching content, not an attack."
+    },
+    {
+      "id": "v3-045",
+      "lang": "hi",
+      "type": "text",
+      "payload": "समाचार: साइबर पुलिस ने केवाईसी अपडेट के नाम पर ठगी करने वाले गिरोह को गिरफ़्तार किया, जो लोगों को फ़र्ज़ी लिंक भेजकर बैंक जानकारी चुराते थे।",
+      "expected_intent": null,
+      "expect_assessment": "assessed",
+      "expect_risk": "clean",
+      "rationale": "News report about a scam bust - describing fraud, not attempting it."
+    },
+    {
+      "id": "v3-046",
+      "lang": "en",
+      "type": "text",
+      "payload": "Beware: fraudsters are calling people pretending to be from the electricity board, threatening to cut power unless you pay at once. Never pay or share details on such calls.",
+      "expected_intent": null,
+      "expect_assessment": "assessed",
+      "expect_risk": "clean",
+      "rationale": "A warning that describes the disconnection scam and tells readers not to comply - protective, benign."
+    },
+    {
+      "id": "v3-047",
+      "lang": "hinglish",
+      "type": "text",
+      "payload": "Please note: aapke scholarship ke liye koi fee nahi lagti. Agar koi registration ya processing charge maange to paise mat bhejna, wo fraud hai.",
+      "expected_intent": null,
+      "expect_assessment": "assessed",
+      "expect_risk": "clean",
+      "rationale": "Message explicitly negates any fee and warns against paying - the opposite of a payment demand."
+    },
+    {
+      "id": "v3-048",
+      "lang": "hi",
+      "type": "text",
+      "payload": "सूचना: प्रवेश पूरी तरह नि:शुल्क है, किसी भी चरण पर कोई भुगतान आवश्यक नहीं। किसी एजेंट को पैसे न भेजें।",
+      "expected_intent": null,
+      "expect_assessment": "assessed",
+      "expect_risk": "clean",
+      "rationale": "Official notice stating admission is free and instructing not to pay anyone - negation of a demand."
+    },
+    {
+      "id": "v3-049",
+      "lang": "en",
+      "type": "text",
+      "payload": "How do I reset my Gmail password if I forgot it and no longer have my old recovery phone number?",
+      "expected_intent": null,
+      "expect_assessment": "assessed",
+      "expect_risk": "clean",
+      "rationale": "A personal how-to question about password recovery with no payment or scam element - benign."
+    },
+    {
+      "id": "v3-050",
+      "lang": "hinglish",
+      "type": "text",
+      "payload": "Mujhe apna Netflix ka password change karna hai lekin setting nahi mil rahi, kahan se karun?",
+      "expected_intent": null,
+      "expect_assessment": "assessed",
+      "expect_risk": "clean",
+      "rationale": "Self-help question about changing a streaming password - no payment or threat involved."
+    },
+    {
+      "id": "v3-051",
+      "lang": "hi",
+      "type": "text",
+      "payload": "अरे, Amazon वाला पार्सल आख़िरकार आ गया! ट्रैक करने में मदद के लिए शुक्रिया, कल खोलकर देखता हूँ।",
+      "expected_intent": null,
+      "expect_assessment": "assessed",
+      "expect_risk": "clean",
+      "rationale": "Everyday chat mentioning a parcel with gratitude and no payment context - ambient word used innocently."
+    },
+    {
+      "id": "v3-052",
+      "lang": "en",
+      "type": "text",
+      "payload": "My brother got posted to an army base near Jaipur last week. We're planning to visit him during Diwali.",
+      "expected_intent": null,
+      "expect_assessment": "assessed",
+      "expect_risk": "clean",
+      "rationale": "Family conversation that happens to mention the army - no payment or scam content."
+    },
+    {
+      "id": "v3-053",
+      "lang": "hinglish",
+      "type": "text",
+      "payload": "Kal police station gaye the passport verification ke liye, sab theek ho gaya. Parso court me chacha ke property case ki date hai.",
+      "expected_intent": null,
+      "expect_assessment": "assessed",
+      "expect_risk": "clean",
+      "rationale": "Routine talk about a passport verification and a family court date - trigger words used innocently."
+    },
+    {
+      "id": "v3-054",
+      "lang": "hi",
+      "type": "text",
+      "payload": "कोर्ट में आज पापा के केस की तारीख थी, वकील ने कहा अगली सुनवाई अगले महीने है। शाम को साथ में चाय पीने चलें?",
+      "expected_intent": null,
+      "expect_assessment": "assessed",
+      "expect_risk": "clean",
+      "rationale": "Casual family update about a legal hearing with no payment ask - innocent use of court and case."
+    },
+    {
+      "id": "v3-055",
+      "lang": "en",
+      "type": "text",
+      "payload": "9811440022",
+      "expected_intent": null,
+      "expect_assessment": "needs_context",
+      "expect_risk": null,
+      "rationale": "A bare phone number with no message or context cannot be assessed and needs a follow-up question."
+    },
+    {
+      "id": "v3-056",
+      "lang": "hinglish",
+      "type": "text",
+      "payload": "rahul.verma@okhdfcbank",
+      "expected_intent": null,
+      "expect_assessment": "needs_context",
+      "expect_risk": null,
+      "rationale": "A lone UPI ID with no direction or surrounding context is not judgeable on its own."
+    },
+    {
+      "id": "v3-057",
+      "lang": "hi",
+      "type": "text",
+      "payload": "पैसे भेज दो",
+      "expected_intent": null,
+      "expect_assessment": "needs_context",
+      "expect_risk": null,
+      "rationale": "A two-word request with no amount, recipient, or context needs clarification before any verdict."
+    },
+    {
+      "id": "v3-058",
+      "lang": "hinglish",
+      "type": "text",
+      "payload": "bhai kitna bhejun",
+      "expected_intent": null,
+      "expect_assessment": "needs_context",
+      "expect_risk": null,
+      "rationale": "An incomplete question about how much to send lacks any context to assess."
+    },
+    {
+      "id": "v3-059",
+      "lang": "hi",
+      "type": "text",
+      "payload": "अंजाम भुगतना पड़ेगा, सोच लेना।",
+      "expected_intent": null,
+      "expect_assessment": "needs_context",
+      "expect_risk": null,
+      "rationale": "A bare threat with no payment demand or context cannot be labelled and requires follow-up."
+    },
+    {
+      "id": "v3-060",
+      "lang": "hi",
+      "type": "text",
+      "payload": "खाता संख्या 123456789012, IFSC SBIN0001234",
+      "expected_intent": null,
+      "expect_assessment": "needs_context",
+      "expect_risk": null,
+      "rationale": "Bare bank account details with no message give no direction or purpose to assess."
+    },
+    {
+      "id": "v3-061",
+      "lang": "hinglish",
+      "type": "text",
+      "payload": "yeh upi id sahi hai na",
+      "expected_intent": null,
+      "expect_assessment": "needs_context",
+      "expect_risk": null,
+      "rationale": "A verification question with no ID or context attached cannot be evaluated as stated."
+    },
+    {
+      "id": "v3-062",
+      "lang": "en",
+      "type": "text",
+      "payload": "Can you send it now?",
+      "expected_intent": null,
+      "expect_assessment": "needs_context",
+      "expect_risk": null,
+      "rationale": "A short ask with no amount, recipient, or context is ambiguous and needs clarification."
+    },
+    {
+      "id": "v3-063",
+      "lang": "en",
+      "type": "text",
+      "payload": "upi://",
+      "expected_intent": null,
+      "expect_assessment": "unsupported_input",
+      "expect_risk": null,
+      "rationale": "A UPI scheme with no host or parameters cannot be parsed as a payment instruction."
+    },
+    {
+      "id": "v3-064",
+      "lang": "en",
+      "type": "qr",
+      "payload": "upi://pay?am=500.00&cu=INR&tn=Payment",
+      "expected_intent": null,
+      "expect_assessment": "unsupported_input",
+      "expect_risk": null,
+      "rationale": "A UPI pay URI with no payee (pa=) has no identifiable recipient and cannot be read as a valid payment code."
+    }
+  ]
+}
