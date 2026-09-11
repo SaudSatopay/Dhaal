@@ -1,0 +1,748 @@
+{
+ "summary": {
+  "comparison": "heldout_v2 set on NEW engine (NOT independent — v2 misses fed H14 development)",
+  "old_engine_published": {
+   "commit": "aa7f715",
+   "total": "51/60",
+   "scam": "24/30",
+   "benign_clean": "21/24",
+   "insufficient": "6/6"
+  },
+  "new_engine": {
+   "total": "57/60",
+   "scam": "28/30",
+   "benign_clean": "23/24",
+   "insufficient": "6/6"
+  }
+ },
+ "cases": [
+  {
+   "id": "s01",
+   "expect": "flag",
+   "assessment": "assessed",
+   "verdict": "danger",
+   "score": 65,
+   "signals": [
+    "script_digital_arrest",
+    "coercion_extortion",
+    "llm_pattern_note"
+   ],
+   "error": null,
+   "pass": true
+  },
+  {
+   "id": "s02",
+   "expect": "flag",
+   "assessment": "assessed",
+   "verdict": "suspicious",
+   "score": 55,
+   "signals": [
+    "script_digital_arrest",
+    "fee_demand",
+    "llm_pattern_note"
+   ],
+   "error": null,
+   "pass": true
+  },
+  {
+   "id": "s03",
+   "expect": "flag",
+   "assessment": "assessed",
+   "verdict": "danger",
+   "score": 60,
+   "signals": [
+    "script_kyc_expiry",
+    "fee_demand",
+    "urgency_framing",
+    "llm_pattern_note"
+   ],
+   "error": null,
+   "pass": true
+  },
+  {
+   "id": "s04",
+   "expect": "flag",
+   "assessment": "assessed",
+   "verdict": "danger",
+   "score": 75,
+   "signals": [
+    "coercion_extortion",
+    "family_emergency_pressure",
+    "urgency_framing",
+    "llm_pattern_note"
+   ],
+   "error": null,
+   "pass": true
+  },
+  {
+   "id": "s05",
+   "expect": "flag",
+   "assessment": "assessed",
+   "verdict": "suspicious",
+   "score": 40,
+   "signals": [
+    "script_electricity",
+    "urgency_framing",
+    "llm_pattern_note"
+   ],
+   "error": null,
+   "pass": true
+  },
+  {
+   "id": "s06",
+   "expect": "flag",
+   "assessment": "assessed",
+   "verdict": "danger",
+   "score": 100,
+   "signals": [
+    "lookalike_domain",
+    "script_kyc_expiry",
+    "suspicious_tld",
+    "urgency_framing",
+    "llm_pattern_note"
+   ],
+   "error": null,
+   "pass": true
+  },
+  {
+   "id": "s07",
+   "expect": "flag",
+   "assessment": "assessed",
+   "verdict": "suspicious",
+   "score": 40,
+   "signals": [
+    "script_kyc_expiry",
+    "urgency_framing",
+    "llm_pattern_note"
+   ],
+   "error": null,
+   "pass": true
+  },
+  {
+   "id": "s08",
+   "expect": "flag",
+   "assessment": "assessed",
+   "verdict": "suspicious",
+   "score": 40,
+   "signals": [
+    "script_electricity",
+    "url_shortener",
+    "llm_pattern_note"
+   ],
+   "error": null,
+   "pass": true
+  },
+  {
+   "id": "s09",
+   "expect": "flag",
+   "assessment": "assessed",
+   "verdict": "danger",
+   "score": 85,
+   "signals": [
+    "lookalike_domain",
+    "script_kyc_expiry",
+    "suspicious_tld",
+    "llm_pattern_note"
+   ],
+   "error": null,
+   "pass": true
+  },
+  {
+   "id": "s10",
+   "expect": "flag",
+   "assessment": "assessed",
+   "verdict": "suspicious",
+   "score": 40,
+   "signals": [
+    "lookalike_domain",
+    "llm_pattern_note"
+   ],
+   "error": null,
+   "pass": true
+  },
+  {
+   "id": "s24",
+   "expect": "flag",
+   "assessment": "assessed",
+   "verdict": "suspicious",
+   "score": 40,
+   "signals": [
+    "lookalike_domain",
+    "llm_pattern_note"
+   ],
+   "error": null,
+   "pass": true
+  },
+  {
+   "id": "s11",
+   "expect": "flag",
+   "assessment": "assessed",
+   "verdict": "danger",
+   "score": 85,
+   "signals": [
+    "intent_mismatch",
+    "payee_impersonation",
+    "suspicious_vpa",
+    "llm_pattern_note"
+   ],
+   "error": null,
+   "pass": true
+  },
+  {
+   "id": "s12",
+   "expect": "flag",
+   "assessment": "assessed",
+   "verdict": "no_known_risk",
+   "score": 0,
+   "signals": [],
+   "error": null,
+   "pass": false
+  },
+  {
+   "id": "s13",
+   "expect": "flag",
+   "assessment": "assessed",
+   "verdict": "suspicious",
+   "score": 45,
+   "signals": [
+    "script_lottery",
+    "suspicious_vpa",
+    "llm_pattern_note"
+   ],
+   "error": null,
+   "pass": true
+  },
+  {
+   "id": "s14",
+   "expect": "flag",
+   "assessment": "assessed",
+   "verdict": "suspicious",
+   "score": 40,
+   "signals": [
+    "collect_to_receive_bait",
+    "urgency_framing",
+    "llm_pattern_note"
+   ],
+   "error": null,
+   "pass": true
+  },
+  {
+   "id": "s15",
+   "expect": "flag",
+   "assessment": "assessed",
+   "verdict": "no_known_risk",
+   "score": 0,
+   "signals": [],
+   "error": null,
+   "pass": false
+  },
+  {
+   "id": "s16",
+   "expect": "flag",
+   "assessment": "assessed",
+   "verdict": "suspicious",
+   "score": 30,
+   "signals": [
+    "credential_request",
+    "llm_pattern_note"
+   ],
+   "error": null,
+   "pass": true
+  },
+  {
+   "id": "s17",
+   "expect": "flag",
+   "assessment": "assessed",
+   "verdict": "suspicious",
+   "score": 55,
+   "signals": [
+    "credential_request",
+    "script_kyc_expiry",
+    "llm_pattern_note"
+   ],
+   "error": null,
+   "pass": true
+  },
+  {
+   "id": "s18",
+   "expect": "flag",
+   "assessment": "assessed",
+   "verdict": "danger",
+   "score": 75,
+   "signals": [
+    "credential_request",
+    "chain_forward_bait",
+    "suspicious_tld",
+    "llm_pattern_note"
+   ],
+   "error": null,
+   "pass": true
+  },
+  {
+   "id": "s19",
+   "expect": "flag",
+   "assessment": "assessed",
+   "verdict": "suspicious",
+   "score": 50,
+   "signals": [
+    "script_lottery",
+    "fee_demand",
+    "llm_pattern_note"
+   ],
+   "error": null,
+   "pass": true
+  },
+  {
+   "id": "s20",
+   "expect": "flag",
+   "assessment": "assessed",
+   "verdict": "suspicious",
+   "score": 45,
+   "signals": [
+    "script_job_scam",
+    "urgency_framing",
+    "llm_pattern_note"
+   ],
+   "error": null,
+   "pass": true
+  },
+  {
+   "id": "s21",
+   "expect": "flag",
+   "assessment": "assessed",
+   "verdict": "suspicious",
+   "score": 50,
+   "signals": [
+    "script_loan_fee",
+    "fee_demand",
+    "llm_pattern_note"
+   ],
+   "error": null,
+   "pass": true
+  },
+  {
+   "id": "s22",
+   "expect": "flag",
+   "assessment": "assessed",
+   "verdict": "suspicious",
+   "score": 30,
+   "signals": [
+    "credential_request",
+    "llm_pattern_note"
+   ],
+   "error": null,
+   "pass": true
+  },
+  {
+   "id": "s23",
+   "expect": "flag",
+   "assessment": "assessed",
+   "verdict": "suspicious",
+   "score": 30,
+   "signals": [
+    "apk_sideload",
+    "llm_pattern_note"
+   ],
+   "error": null,
+   "pass": true
+  },
+  {
+   "id": "s25",
+   "expect": "flag",
+   "assessment": "assessed",
+   "verdict": "danger",
+   "score": 100,
+   "signals": [
+    "lookalike_domain",
+    "payee_impersonation",
+    "suspicious_tld",
+    "suspicious_vpa",
+    "llm_pattern_note"
+   ],
+   "error": null,
+   "pass": true
+  },
+  {
+   "id": "s26",
+   "expect": "flag",
+   "assessment": "assessed",
+   "verdict": "danger",
+   "score": 60,
+   "signals": [
+    "lookalike_domain",
+    "suspicious_tld",
+    "llm_pattern_note"
+   ],
+   "error": null,
+   "pass": true
+  },
+  {
+   "id": "s27",
+   "expect": "flag",
+   "assessment": "assessed",
+   "verdict": "suspicious",
+   "score": 50,
+   "signals": [
+    "coercion_extortion",
+    "suspicious_tld",
+    "llm_pattern_note"
+   ],
+   "error": null,
+   "pass": true
+  },
+  {
+   "id": "s28",
+   "expect": "flag",
+   "assessment": "assessed",
+   "verdict": "suspicious",
+   "score": 30,
+   "signals": [
+    "payee_impersonation"
+   ],
+   "error": null,
+   "pass": true
+  },
+  {
+   "id": "s29",
+   "expect": "flag",
+   "assessment": "assessed",
+   "verdict": "suspicious",
+   "score": 55,
+   "signals": [
+    "credential_request",
+    "script_customer_care"
+   ],
+   "error": null,
+   "pass": true
+  },
+  {
+   "id": "s30",
+   "expect": "flag",
+   "assessment": "assessed",
+   "verdict": "danger",
+   "score": 65,
+   "signals": [
+    "family_emergency_pressure",
+    "secrecy_pressure",
+    "urgency_framing",
+    "llm_pattern_note"
+   ],
+   "error": null,
+   "pass": true
+  },
+  {
+   "id": "b01",
+   "expect": "clean",
+   "assessment": "assessed",
+   "verdict": "no_known_risk",
+   "score": 0,
+   "signals": [],
+   "error": null,
+   "pass": true
+  },
+  {
+   "id": "b02",
+   "expect": "clean",
+   "assessment": "assessed",
+   "verdict": "no_known_risk",
+   "score": 0,
+   "signals": [],
+   "error": null,
+   "pass": true
+  },
+  {
+   "id": "b03",
+   "expect": "clean",
+   "assessment": "assessed",
+   "verdict": "no_known_risk",
+   "score": 0,
+   "signals": [],
+   "error": null,
+   "pass": true
+  },
+  {
+   "id": "b04",
+   "expect": "clean",
+   "assessment": "assessed",
+   "verdict": "suspicious",
+   "score": 30,
+   "signals": [
+    "payee_impersonation",
+    "llm_pattern_note"
+   ],
+   "error": null,
+   "pass": false
+  },
+  {
+   "id": "b05",
+   "expect": "clean",
+   "assessment": "assessed",
+   "verdict": "no_known_risk",
+   "score": 0,
+   "signals": [
+    "reported_or_educational",
+    "llm_pattern_note"
+   ],
+   "error": null,
+   "pass": true
+  },
+  {
+   "id": "b06",
+   "expect": "clean",
+   "assessment": "assessed",
+   "verdict": "no_known_risk",
+   "score": 25,
+   "signals": [
+    "script_electricity",
+    "llm_pattern_note"
+   ],
+   "error": null,
+   "pass": true
+  },
+  {
+   "id": "b07",
+   "expect": "clean",
+   "assessment": "assessed",
+   "verdict": "no_known_risk",
+   "score": 0,
+   "signals": [],
+   "error": null,
+   "pass": true
+  },
+  {
+   "id": "b08",
+   "expect": "clean",
+   "assessment": "assessed",
+   "verdict": "no_known_risk",
+   "score": 0,
+   "signals": [],
+   "error": null,
+   "pass": true
+  },
+  {
+   "id": "b09",
+   "expect": "clean",
+   "assessment": "assessed",
+   "verdict": "no_known_risk",
+   "score": 0,
+   "signals": [],
+   "error": null,
+   "pass": true
+  },
+  {
+   "id": "b10",
+   "expect": "clean",
+   "assessment": "assessed",
+   "verdict": "no_known_risk",
+   "score": 0,
+   "signals": [],
+   "error": null,
+   "pass": true
+  },
+  {
+   "id": "b11",
+   "expect": "clean",
+   "assessment": "assessed",
+   "verdict": "no_known_risk",
+   "score": 0,
+   "signals": [],
+   "error": null,
+   "pass": true
+  },
+  {
+   "id": "b12",
+   "expect": "clean",
+   "assessment": "assessed",
+   "verdict": "no_known_risk",
+   "score": 0,
+   "signals": [],
+   "error": null,
+   "pass": true
+  },
+  {
+   "id": "b13",
+   "expect": "clean",
+   "assessment": "assessed",
+   "verdict": "no_known_risk",
+   "score": 15,
+   "signals": [
+    "urgency_framing",
+    "llm_pattern_note"
+   ],
+   "error": null,
+   "pass": true
+  },
+  {
+   "id": "b14",
+   "expect": "clean",
+   "assessment": "assessed",
+   "verdict": "no_known_risk",
+   "score": 0,
+   "signals": [],
+   "error": null,
+   "pass": true
+  },
+  {
+   "id": "b15",
+   "expect": "clean",
+   "assessment": "assessed",
+   "verdict": "no_known_risk",
+   "score": 25,
+   "signals": [
+    "script_kyc_expiry"
+   ],
+   "error": null,
+   "pass": true
+  },
+  {
+   "id": "b16",
+   "expect": "clean",
+   "assessment": "assessed",
+   "verdict": "no_known_risk",
+   "score": 0,
+   "signals": [],
+   "error": null,
+   "pass": true
+  },
+  {
+   "id": "b17",
+   "expect": "clean",
+   "assessment": "assessed",
+   "verdict": "no_known_risk",
+   "score": 0,
+   "signals": [],
+   "error": null,
+   "pass": true
+  },
+  {
+   "id": "b18",
+   "expect": "clean",
+   "assessment": "assessed",
+   "verdict": "no_known_risk",
+   "score": 0,
+   "signals": [],
+   "error": null,
+   "pass": true
+  },
+  {
+   "id": "b19",
+   "expect": "clean",
+   "assessment": "assessed",
+   "verdict": "no_known_risk",
+   "score": 0,
+   "signals": [],
+   "error": null,
+   "pass": true
+  },
+  {
+   "id": "b20",
+   "expect": "clean",
+   "assessment": "assessed",
+   "verdict": "no_known_risk",
+   "score": 0,
+   "signals": [],
+   "error": null,
+   "pass": true
+  },
+  {
+   "id": "b21",
+   "expect": "clean",
+   "assessment": "assessed",
+   "verdict": "no_known_risk",
+   "score": 0,
+   "signals": [],
+   "error": null,
+   "pass": true
+  },
+  {
+   "id": "b22",
+   "expect": "clean",
+   "assessment": "assessed",
+   "verdict": "no_known_risk",
+   "score": 0,
+   "signals": [],
+   "error": null,
+   "pass": true
+  },
+  {
+   "id": "b23",
+   "expect": "clean",
+   "assessment": "assessed",
+   "verdict": "no_known_risk",
+   "score": 0,
+   "signals": [],
+   "error": null,
+   "pass": true
+  },
+  {
+   "id": "b24",
+   "expect": "clean",
+   "assessment": "assessed",
+   "verdict": "no_known_risk",
+   "score": 0,
+   "signals": [],
+   "error": null,
+   "pass": true
+  },
+  {
+   "id": "c01",
+   "expect": "context",
+   "assessment": "needs_context",
+   "verdict": null,
+   "score": 0,
+   "signals": [],
+   "error": null,
+   "pass": true
+  },
+  {
+   "id": "c02",
+   "expect": "context",
+   "assessment": "needs_context",
+   "verdict": null,
+   "score": 0,
+   "signals": [],
+   "error": null,
+   "pass": true
+  },
+  {
+   "id": "c03",
+   "expect": "context",
+   "assessment": "needs_context",
+   "verdict": null,
+   "score": 0,
+   "signals": [],
+   "error": null,
+   "pass": true
+  },
+  {
+   "id": "c04",
+   "expect": "context",
+   "assessment": "needs_context",
+   "verdict": null,
+   "score": 0,
+   "signals": [],
+   "error": null,
+   "pass": true
+  },
+  {
+   "id": "c05",
+   "expect": "context",
+   "assessment": "needs_context",
+   "verdict": null,
+   "score": 0,
+   "signals": [],
+   "error": null,
+   "pass": true
+  },
+  {
+   "id": "c06",
+   "expect": "context",
+   "assessment": "needs_context",
+   "verdict": null,
+   "score": 0,
+   "signals": [],
+   "error": null,
+   "pass": true
+  }
+ ]
+}

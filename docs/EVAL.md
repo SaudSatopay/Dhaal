@@ -62,6 +62,25 @@ All 11 misses, unedited, each with the gap it names:
 
 **Read:** the four insufficient-info misses are the ugliest — each handed a green card to an unjudgeable input, exactly what the assessment outcome exists to prevent; the gate is length/shape-based and needs threat-without-ask and referent-less-question triggers. The three false positives are all reported-speech registers (tutorial, news headline, small talk near trigger words) — the awareness layer works (4 other discussion cases passed) but its marker list is enumerable-and-incomplete by construction. The four scam misses are two pattern-adjacency defects, one Devanagari phrasing hole, and one wholly missing family (sextortion). **Per freeze discipline nothing was fixed before publication; targets missed are reported missed.** These eleven rows are the next battery's development set.
 
+## 3a-bis · Before/after on the frozen v2 set (comparison — NOT independent evidence)
+
+The v2 60-case set re-run against the H14 engine, same inputs, same grading. Its misses fed H14 development, so this measures *targeted improvement*, not generalization (that is v3's job). Raw: `docs/heldout_v2_on_new_engine.json`.
+
+| Slice | Old engine (`aa7f715`, published) | New engine (`95b3b5b`) |
+|---|---|---|
+| Total | 51/60 | **57/60** |
+| Scam recall | 24/30 | **28/30** |
+| Benign precision | 21/24 | **23/24** |
+| Insufficient info | 6/6 | 6/6 |
+
+The three new-engine misses on this set, unedited — two are **regressions** introduced by H14's own precision trades, one by a data addition:
+
+- `s12` (was caught): "…QR scan karein aur apna **UPI PIN daalein**" — token-before-verb order with "daal" missing from the direction list; the clause rework narrowed a phrasing the old blunt matcher caught.
+- `s15` (was caught): "Share this **code** with our executive" — bare "code" was deliberately dropped from credential tokens to avoid promo-code false positives; this shares a root cause with v3-012.
+- `b04` (was clean): genuine `zomato@paytm` merchant QR now flags `payee_impersonation` — "zomato" was added as a brand token (to catch `swiggy-redeliver.xyz`-class lookalikes) without registering Zomato's own aggregator handles in `BRAND_OWN_SUFFIXES`.
+
+All three stay as published per the freeze; they head the post-event fix list together with v3's eleven.
+
 ## 3b · Held-out battery v2 — 60 cases (historical · rules frozen at `aa7f715` · published 51/60)
 
 60 new cases authored after the freeze, from scam typology (1930/RBI/news categories) — including deliberately hard negatives. Grading was pre-declared in the runner (`backend/tests/run_heldout_v2.py`); the battery ran exactly once; raw run in `docs/heldout_v2.json`. Same-author caveat as v1: cases are written by the team, post-freeze — independent, not adversarial third-party.
