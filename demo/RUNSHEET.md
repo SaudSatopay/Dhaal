@@ -62,6 +62,10 @@ Say: *"हर report, हर भारतीय की ढाल मज़बू
 
 Laptop: `/intel` trends — *"इस हफ्ते Rajasthan में 200+ verified reports: KYC scams सबसे ऊपर।"* 10 seconds, don't linger.
 
+## Beat 7b — WhatsApp bot (where scams actually live)
+
+*"Scam WhatsApp par aata hai — to ढाल bhi WhatsApp par hai."* Judge forwards ANY message (or our Beat-1 card) to the Dhaal WhatsApp number → verdict lands back **in the same chat** in ~6s, with signals. Setup before demo: judges send the sandbox join code once (printed on the QR card). This beat needs zero app install — the shield meets people where the scam finds them.
+
 ## Beat 8 — the judge's own pocket (closer)
 
 *"Sir/Ma'am — अपना inbox खोलिए। कोई भी suspicious message forward कीजिए।"* Run it live.

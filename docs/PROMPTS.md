@@ -368,3 +368,20 @@ RULES: contract is already live — zero API changes · poster identity · mobil
 first · build green · walk beat 2 both ways (pay vs receive on the same QR!)
 · push, ping Saud. THIS IS THE LAST FEATURE — freeze after it lands.
 ```
+
+
+## H13 ADDENDUM — PARVA (fold into the intent-UI session)
+
+```
+Backend shipped three more contract-additive fields (pull first):
+4. needs_context on check responses — when set, render an "और जानकारी चाहिए"
+   state instead of the green card: amber outline, the question_hi/en, and the
+   input refocused. A bare number must never look "cleared".
+5. guardian_phone (optional) at pairing — add the field to the pairing form;
+   on the ward's DANGER verdict card, if a pairing with a phone exists, show
+   "📞 {guardian_name} को call करें" as a tel: button — the STORED number,
+   never anything from the checked message. Label: "अपने भरोसे के इंसान से
+   पूछें".
+6. Mention the WhatsApp bot on the landing footer strip: "WhatsApp par bhi —
+   forward karo, jaanch pao" (number/join-code from Saud once Twilio is set).
+```
