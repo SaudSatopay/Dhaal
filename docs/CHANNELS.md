@@ -63,6 +63,15 @@ message up to **5 verified recipient numbers** — enough for the demo + judges.
 
 ## 2 · Dumbphone IVR — Exotel
 
+> **STATUS (H15, Saud's call: "drop Exotel"): PARKED.** Trial KYC cleared PAN
+> but then demanded a business certificate (Shop & Establishment / Udyam /
+> Trade License) — a real-document gate we won't file for overnight. The lane
+> itself is DONE and live: endpoints deployed, 22-check-covered, and prod
+> generates real spoken verdicts (ASR→engine→8 kHz Bulbul TTS). Judging story:
+> "code-complete, telco number pending DoT-mandated KYC" + the reproducible
+> curl demo below + the recorded verdict WAV. Un-parking later = finish KYC,
+> grab an ExoPhone, build the 5-applet flow, paste 5 env vars.
+
 Any phone (no internet, no app) calls an ExoPhone, tells the story after the
 beep, and hears Dhaal's spoken Hindi verdict — plus an SMS so the guidance
 stays in hand. **Prereq: Exotel account with KYC approved** — verify the trial
