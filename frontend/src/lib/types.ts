@@ -4,7 +4,7 @@ export type Verdict = "danger" | "suspicious" | "no_known_risk";
 
 export type InputType = "text" | "url" | "upi" | "qr_text" | "voice_transcript";
 
-export type SignalSource = "deterministic" | "community" | "llm_pattern";
+export type SignalSource = "deterministic" | "community" | "llm_pattern" | "user_context";
 
 export type ScamCategory =
   | "kyc_expiry"

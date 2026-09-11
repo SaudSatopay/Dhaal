@@ -60,6 +60,8 @@ export const SOURCE_UI: Record<SignalSource, LangText & { cls: string }> = {
     en: "0 VERDICT WEIGHT",
     cls: "border-inksoft text-inksoft border-dashed",
   },
+  // H16 §4B: signals born from the user's own clarification answer
+  user_context: { hi: "आपका जवाब", en: "YOUR ANSWER", cls: "border-saffdeep text-saffdeep" },
 };
 
 /* ---------------- shared ---------------- */

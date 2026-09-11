@@ -35,7 +35,7 @@ function WeightTrack({ weight }: { weight: number }) {
 }
 
 function SignalRow({ s, lang }: { s: Signal; lang: Lang }) {
-  const src = SOURCE_UI[s.source];
+  const src = SOURCE_UI[s.source] ?? SOURCE_UI.deterministic; // unknown sources never crash the card
   const [srcP, srcS] = pick(lang, src);
   const title = lang === "en" ? [s.title_en, s.title_hi] : [s.title_hi, s.title_en];
   const detail = lang === "en" ? [s.detail_en, s.detail_hi] : [s.detail_hi, s.detail_en];
