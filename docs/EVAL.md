@@ -81,6 +81,8 @@ The three new-engine misses on this set, unedited — two are **regressions** in
 
 All three stay as published per the freeze; they head the post-event fix list together with v3's eleven.
 
+**Post-publication fixes (H15, after both batteries — published numbers above are NOT revised):** b04 fixed generically (exact-brand local on a known PSP handle = plausible aggregator merchant; bait-prefixed brands still flag) · `LEGIT_UPI_SUFFIXES` now consumed (`vpa_unknown_handle`, weight 12 — a caution note, never a conviction) · threat-vocabulary rows + assessment gates for threat-without-ask, bare account+IFSC, and referent-less questions (v3-059/060/061/062 shapes now ask instead of clearing) · all regression-locked in the suites (185 checks). The NEXT fresh battery measures these; this file's scores stay honest.
+
 ## 3b · Held-out battery v2 — 60 cases (historical · rules frozen at `aa7f715` · published 51/60)
 
 60 new cases authored after the freeze, from scam typology (1930/RBI/news categories) — including deliberately hard negatives. Grading was pre-declared in the runner (`backend/tests/run_heldout_v2.py`); the battery ran exactly once; raw run in `docs/heldout_v2.json`. Same-author caveat as v1: cases are written by the team, post-freeze — independent, not adversarial third-party.
