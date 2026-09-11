@@ -58,6 +58,10 @@ Say: *"हर report, हर भारतीय की ढाल मज़बू
 
 **Beat 6b (accountability, 15 seconds):** on `/intel`, REJECT the report you just verified → second phone, same number → the warning count drops back. *"गलती हुई तो वापस भी होती है — blocklist जवाबदेह है।"*
 
+## Beat 1b — SCAM X-RAY (new money-shot inside beat 1, +15 seconds)
+
+After the खतरा stamp lands, scroll to **जाल का X-RAY**: the judge's own message with the traps highlighted IN the text. **Tap "वेरिफिकेशन फीस"** → the caption explains the upfront-money trick; **tap the phone number** → "पैसा यहीं जाएगा". Say: *"Dhaal sirf verdict nahi deta — message ke andar ungli rakh kar dikhata hai ki jaal kahan hai. Har highlight engine ka apna matched evidence hai — AI se paint nahi kiya."*
+
 ## Beat 7 — the war map
 
 Laptop: `/intel` trends — *"इस हफ्ते Rajasthan में 200+ verified reports: KYC scams सबसे ऊपर।"* 10 seconds, don't linger.
