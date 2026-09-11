@@ -221,6 +221,24 @@ export default function VerdictCard({
   const [why, whySub] = pick(lang, S_VERDICT.why);
   const [sealWord] = pick(lang, S_VERDICT.sealReports);
 
+  // H12+ intent-mismatch hero — the expectation-vs-payload catch renders as the
+  // TOP element, larger than any other signal (runsheet beat 2b money-shot).
+  const mismatch = check.signals.find((s) => s.id === "intent_mismatch");
+  const rest = mismatch ? check.signals.filter((s) => s.id !== "intent_mismatch") : check.signals;
+  const heroShown = !staged || revealed >= 1;
+  const shownRest = rest.slice(0, Math.max(0, revealed - (mismatch ? 1 : 0)));
+
+  // H12+ structured analysis — "what they want", straight from the response
+  const an = check.analysis;
+  const anAsking = an?.asking_for ?? [];
+  const anPressure = an?.pressure ?? [];
+  const anMoneyOut = an?.money_direction === "out_of_your_account";
+  const anHasContent = !!an && (!!an.claimed_identity || anAsking.length > 0 || anMoneyOut || anPressure.length > 0);
+  const inr = (a: string | number) => {
+    const n = Number(a);
+    return Number.isFinite(n) ? `₹${n.toLocaleString("en-IN")}` : String(a);
+  };
+
   return (
     <section
       aria-live="polite"
@@ -277,12 +295,77 @@ export default function VerdictCard({
         )}
       </div>
 
+      {/* H12+ mismatch hero — full danger treatment, above everything else */}
+      {mismatch && (
+        <div className={`border-b-[3px] border-ink bg-dangertint p-4 ${heroShown ? (staged ? "row-reveal" : "") : "invisible"}`}>
+          <p className="plate text-dangerdeep">
+            {pick(lang, S_VERDICT.mismatchPlate)[0]} · {pick(lang, S_VERDICT.mismatchPlate)[1]} · +{mismatch.weight}
+          </p>
+          <p className="mt-1.5 font-display text-2xl font-bold leading-snug text-dangerdeep">
+            {lang === "en" ? mismatch.detail_en : mismatch.detail_hi}
+          </p>
+          <p className="mt-1 text-sm leading-snug text-inksoft">
+            {lang === "en" ? mismatch.detail_hi : mismatch.detail_en}
+          </p>
+        </div>
+      )}
+
       {/* plain-language explanation */}
       <div className="border-b-2 border-line p-4">
         <p className="text-lg leading-relaxed">{explanation[0]}</p>
         <p className="mt-1.5 text-sm leading-relaxed text-inksoft">{explanation[1]}</p>
         {listenButton}
       </div>
+
+      {/* H12+ analysis — "what they want" ink-frame table */}
+      {anHasContent && (
+        <div className="border-b-2 border-line p-4">
+          <h3 className="plate text-inksoft">
+            {pick(lang, S_VERDICT.whatTheyWant)[0]} · {pick(lang, S_VERDICT.whatTheyWant)[1]}
+          </h3>
+          <div className="mt-2 divide-y-2 divide-line border-2 border-ink">
+            {an?.claimed_identity && (
+              <div className="flex items-baseline justify-between gap-3 p-2.5">
+                <span className="plate shrink-0 text-inksoft">{pick(lang, S_VERDICT.claims)[0]}</span>
+                <span className="font-mono text-sm font-bold">{an.claimed_identity}</span>
+              </div>
+            )}
+            {anAsking.map((a, i) => (
+              <div key={i} className="flex items-baseline justify-between gap-3 p-2.5">
+                <span className="plate shrink-0 text-inksoft">
+                  {i === 0 ? pick(lang, S_VERDICT.asking)[0] : ""}
+                </span>
+                <span className="text-right text-sm font-semibold">
+                  {lang === "en" ? a.what : a.hi}
+                  {a.amount != null && (
+                    <span className="ml-2 font-mono font-bold text-dangerdeep">{inr(a.amount)}</span>
+                  )}
+                </span>
+              </div>
+            ))}
+            {anMoneyOut && (
+              <div className="flex items-baseline justify-between gap-3 p-2.5">
+                <span className="plate shrink-0 text-inksoft">{pick(lang, S_VERDICT.moneyDir)[0]}</span>
+                <span className="text-sm font-bold text-dangerdeep">
+                  {pick(lang, S_VERDICT.moneyOut)[0]}
+                </span>
+              </div>
+            )}
+            {anPressure.length > 0 && (
+              <div className="flex items-center justify-between gap-3 p-2.5">
+                <span className="plate shrink-0 text-inksoft">{pick(lang, S_VERDICT.pressureL)[0]}</span>
+                <span className="flex flex-wrap justify-end gap-1.5">
+                  {anPressure.map((p) => (
+                    <span key={p.tag} className="plate border border-cautiondeep px-1.5 py-0.5 text-cautiondeep">
+                      {lang === "en" ? p.tag : p.hi}
+                    </span>
+                  ))}
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* signal-by-signal reasons */}
       <div className="p-4 pt-3">
@@ -295,7 +378,7 @@ export default function VerdictCard({
           </p>
         ) : (
           <ul className="mt-1 divide-y-2 divide-line">
-            {check.signals.slice(0, revealed).map((s) => (
+            {shownRest.map((s) => (
               <li key={s.id} className={staged ? "row-reveal row-sweep relative overflow-hidden" : ""}>
                 <SignalRow s={s} lang={lang} />
               </li>

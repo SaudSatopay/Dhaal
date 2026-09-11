@@ -28,6 +28,16 @@ export type Signal = {
   detail_hi: string;
 };
 
+// H12+ structured "what they want" — derived deterministically from signals
+export type Analysis = {
+  claimed_identity?: string | null;
+  asking_for?: { what: string; hi: string; amount?: string | number | null }[];
+  money_direction?: "out_of_your_account" | "none_detected" | string;
+  pressure?: { tag: string; hi: string }[];
+};
+
+export type ExpectedIntent = "pay" | "receive" | "verify" | null;
+
 export type Check = {
   _id: string;
   input: { type: InputType; payload: string; lang: string };
@@ -37,6 +47,10 @@ export type Check = {
   explanation_hi: string;
   explanation_en: string;
   scam_category: ScamCategory | null;
+  // H12+ additions (additive, backward-compatible)
+  analysis?: Analysis | null;
+  expected_intent?: ExpectedIntent;
+  needs_context?: { reason: string; question_hi: string; question_en: string } | null;
   tts_audio_b64: string | null;
   mocked: boolean;
   created_at: string;
@@ -75,6 +89,7 @@ export type GuardianLink = {
   _id: string;
   ward_name: string;
   guardian_name: string;
+  guardian_phone?: string; // H12+: the STORED trusted number for "call my person"
   pair_code: string;
   created_at: string;
 };

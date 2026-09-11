@@ -124,6 +124,12 @@ export const S_CHECK = {
   },
   micErrTitle: { hi: "माइक नहीं मिली", en: "Mic unavailable" },
   micErrPoint: { hi: "↓ नीचे टाइप करके जाँच सकते हैं", en: "↓ type below instead" },
+  intentQ: { hi: "आप क्या चाहते थे?", en: "What did you expect?" },
+  intentPay: { hi: "मुझे पैसे भेजने हैं", en: "I want to PAY" },
+  intentReceive: { hi: "मुझे पैसे आने हैं", en: "I expect to RECEIVE" },
+  intentJust: { hi: "बस जाँचना है", en: "Just checking" },
+  ctxTitle: { hi: "और जानकारी चाहिए", en: "Need more context" },
+  ctxAction: { hi: "पूरा message ऊपर paste करें", en: "Paste the full message above" },
 } satisfies Record<string, LangText>;
 
 /* ---------------- verdict card ---------------- */
@@ -131,6 +137,22 @@ export const S_VERDICT = {
   why: { hi: "ऐसा क्यों", en: "Why this verdict" },
   noSignals: { hi: "कोई खतरे का संकेत नहीं मिला", en: "No risk signals detected" },
   sealReports: { hi: "रिपोर्ट", en: "REPORTS" },
+  mismatchPlate: { hi: "उम्मीद के उलट", en: "INTENT MISMATCH" },
+  whatTheyWant: { hi: "यह क्या चाहता है", en: "What they want" },
+  claims: { hi: "पहचान का दावा", en: "Claims to be" },
+  asking: { hi: "माँग रहा है", en: "Asking for" },
+  moneyDir: { hi: "पैसा जाएगा", en: "Money moves" },
+  moneyOut: { hi: "आपके खाते से बाहर ↗", en: "OUT of your account ↗" },
+  pressureL: { hi: "दबाव के तरीके", en: "Pressure tactics" },
+  callAsk: { hi: "{name} से पूछें", en: "Call {name} first" },
+} satisfies Record<string, LangText>;
+
+/* ---------------- whatsapp strip ---------------- */
+export const S_WA = {
+  line: {
+    hi: "WhatsApp पर भी: +1 (737) 250-8034 · भेजें 'join twilio-trial' · scam forward करो, जाँच पाओ",
+    en: "Also on WhatsApp: +1 (737) 250-8034 · send 'join twilio-trial' · forward a scam, get the verdict",
+  },
 } satisfies Record<string, LangText>;
 
 /* ---------------- report button ---------------- */
@@ -239,6 +261,11 @@ export const S_GUARDIAN = {
   whoPh: { hi: "जैसे: सुनीता देवी (दादी)", en: "e.g. Sunita Devi (grandma)" },
   yourName: { hi: "आपका नाम", en: "Your name" },
   yourNamePh: { hi: "जैसे: राहुल", en: "e.g. Rahul" },
+  phoneLabel: { hi: "guardian का phone number (optional)", en: "Guardian’s phone (optional)" },
+  phoneHint: {
+    hi: "खतरे पर ward को 'इनसे पूछें' का call button मिलेगा — सिर्फ यही नंबर",
+    en: "On danger, the ward gets a call button — this stored number only",
+  },
   createBtn: { hi: "ढाल जोड़ो · Create pair", en: "Create pair" },
   creating: { hi: "बन रही है…", en: "Creating…" },
   youGuard: { hi: "आप {name} की ढाल हैं", en: "You guard {name}" },

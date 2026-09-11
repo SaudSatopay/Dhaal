@@ -160,7 +160,9 @@ function GuardianInbox({ pair, onUnpair }: { pair: GuardianPair; onUnpair: () =>
     setWardUrl(
       `${window.location.origin}/guardian?link=${pair.link_id}&g=${encodeURIComponent(
         pair.guardian_name
-      )}&w=${encodeURIComponent(pair.ward_name)}`
+      )}&w=${encodeURIComponent(pair.ward_name)}${
+        pair.guardian_phone ? `&p=${encodeURIComponent(pair.guardian_phone)}` : ""
+      }`
     );
   }, [pair]);
 
@@ -307,6 +309,7 @@ function CreatePair({ onCreated }: { onCreated: (p: GuardianPair) => void }) {
   const lang = useLang();
   const [wardName, setWardName] = useState("");
   const [guardianName, setGuardianName] = useState("");
+  const [guardianPhone, setGuardianPhone] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -316,13 +319,18 @@ function CreatePair({ onCreated }: { onCreated: (p: GuardianPair) => void }) {
     try {
       const link = await api<GuardianLink>("/api/guardian/links", {
         method: "POST",
-        body: JSON.stringify({ ward_name: wardName.trim(), guardian_name: guardianName.trim() }),
+        body: JSON.stringify({
+          ward_name: wardName.trim(),
+          guardian_name: guardianName.trim(),
+          guardian_phone: guardianPhone.trim(),
+        }),
       });
       onCreated({
         link_id: link._id,
         pair_code: link.pair_code,
         ward_name: link.ward_name,
         guardian_name: link.guardian_name,
+        guardian_phone: link.guardian_phone || undefined,
       });
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -355,6 +363,18 @@ function CreatePair({ onCreated }: { onCreated: (p: GuardianPair) => void }) {
           placeholder={pick(lang, S_GUARDIAN.yourNamePh)[0]}
           className="mt-1 w-full border-2 border-ink bg-paper p-3 placeholder:text-inksoft/60"
         />
+      </label>
+      <label className="mt-3 block">
+        <span className="plate text-inksoft">{pick(lang, S_GUARDIAN.phoneLabel)[0]}</span>
+        <input
+          type="tel"
+          inputMode="tel"
+          value={guardianPhone}
+          onChange={(e) => setGuardianPhone(e.target.value)}
+          placeholder="+91 98xxx xxxxx"
+          className="mt-1 w-full border-2 border-ink bg-paper p-3 font-mono placeholder:text-inksoft/50"
+        />
+        <span className="mt-1 block text-xs text-inksoft">{pick(lang, S_GUARDIAN.phoneHint)[0]}</span>
       </label>
       {error && <p className="mt-3 text-sm font-bold text-saffdeep">{error}</p>}
       <button
@@ -393,6 +413,7 @@ function JoinByCode({ onJoined }: { onJoined: (p: WardPair) => void }) {
         link_id: link._id,
         guardian_name: link.guardian_name,
         ward_name: link.ward_name,
+        guardian_phone: link.guardian_phone || undefined,
       });
     } catch {
       setError("conn");
@@ -494,6 +515,7 @@ function GuardianInner() {
         link_id: linkParam,
         guardian_name: params.get("g") || "आपका guardian",
         ward_name: params.get("w") || "",
+        guardian_phone: params.get("p") || undefined,
       };
       setWardPair(p);
       setWard(p);

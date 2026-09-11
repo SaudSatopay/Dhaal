@@ -61,6 +61,9 @@ Claim: `[ ]` → `[WIP-saud]` / `[WIP-parva]` / `[WIP-harsh]`, **push immediatel
 
 - [ ] FOR saud, FROM parva — **WOW-PASS DEPLOY**: 5 features on main, build green, beats 1–3 re-walked — scam-radar landing (live Rajasthan pings from trends), verdict theater (staged real-signal reveal + score count-up + stamp slam), masthead threat ticker on every page, /intel war desk rebuilt into the poster identity, /learn ठग-पहचानो simulator (engine as referee). Zero contract changes. `vercel --prod --yes` in `frontend/`.
 
+- [ ] FOR saud, FROM parva — **FINAL DEPLOY (freeze)**: intent-mismatch UI complete — QR/UPI intent chips, mismatch hero (beat 2b money-shot), what-they-want analysis panel, needs-context amber state, guardian trusted-call button, WhatsApp strip. Walked: same legit QR pay=clear vs receive=suspicious-40+hero, bare number→amber, tel: button. Two demo QRs now also served at /demo/*.png on the site. `vercel --prod --yes` in `frontend/` — then rules FREEZE.
+- [ ] FOR harsh, FROM parva — needs_context over-fires on parsed upi:// URIs (one token → `len(split())<4` gate): legit pay-QR + pay-intent returned needs_context instead of the clean verdict. UI now exempts `upi://` payloads from the amber panel (verdict renders normally), but the WhatsApp bot path appends the follow-up question from the same field — exclude parsed upi:// server-side when you're allowed to touch code again. NOT demo-blocking.
+
 ## Blockers (Saud clears these first)
 
 - [x] ~~KEYS~~ **ALL 3 KEYS DONE** — `MONGODB_URI` (Atlas live, `store:"atlas"`), `ANTHROPIC_API_KEY` (**Claude narration live in prod**, `mocked:false`, ~5.5s warm, explanations cite detected signals), `SARVAM_API_KEY` (validated 200, staged in prod env — activates the moment Harsh's ASR/TTS code lands). Local `.env` + Vercel prod env both complete. 🔐 rotate all three after the event (they passed through chat).

@@ -9,16 +9,16 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import jsQR from "jsqr";
 import { api, apiForm } from "@/lib/api";
-import type { Check, InputType, TranscribeResult } from "@/lib/types";
+import type { Check, ExpectedIntent, InputType, TranscribeResult } from "@/lib/types";
 import { EXAMPLES } from "@/lib/fixtures";
-import { S_CHECK, S_COMMON } from "@/lib/labels";
+import { S_CHECK, S_COMMON, S_VERDICT } from "@/lib/labels";
 import { apiLang, fmt, pick, useLang, type Lang, type LangText } from "@/lib/lang";
 import TopBar from "@/components/TopBar";
 import VerdictCard from "@/components/VerdictCard";
 import ReportButton from "@/components/ReportButton";
 import WardGate from "@/components/WardGate";
 import { getWardPair, type WardPair } from "@/lib/guardian";
-import { IMic, IPaste, IQr, IShield, IStop } from "@/components/icons";
+import { IArrowR, IMic, IPaste, IPhone, IQr, IShield, IStop } from "@/components/icons";
 
 type Tab = "paste" | "qr" | "voice";
 
@@ -142,6 +142,10 @@ export default function CheckPage() {
   // paste tab
   const [payload, setPayload] = useState("");
 
+  // H12+ intent question — QR / UPI payloads ask what the USER expected before
+  // checking; "receive" meeting any upi:// fires the intent_mismatch signal.
+  const [askIntent, setAskIntent] = useState<{ type: InputType; text: string } | null>(null);
+
   // qr tab
   const [qrPreview, setQrPreview] = useState<string | null>(null);
   const [qrDecoded, setQrDecoded] = useState<string | null>(null);
@@ -169,11 +173,17 @@ export default function CheckPage() {
     }
   }, [result]);
 
-  async function runCheck(type: InputType, text: string, speak = false) {
+  async function runCheck(
+    type: InputType,
+    text: string,
+    speak = false,
+    expectedIntent: ExpectedIntent = null
+  ) {
     if (!text.trim()) return;
     setBusy(true);
     setError("");
     setResult(null);
+    setAskIntent(null);
     try {
       const res = await api<Check>("/api/check", {
         method: "POST",
@@ -182,6 +192,7 @@ export default function CheckPage() {
           payload: text,
           lang: apiLang(lang),
           speak,
+          expected_intent: expectedIntent,
           ward_link_id: wardPair?.link_id ?? null,
         }),
       });
@@ -210,7 +221,8 @@ export default function CheckPage() {
       return;
     }
     setQrDecoded(text);
-    await runCheck("qr_text", text);
+    // QR = money about to move — ask the intent question before checking
+    setAskIntent({ type: "qr_text", text });
   }
 
   // ---------------- voice flow ----------------
@@ -413,7 +425,11 @@ export default function CheckPage() {
                   : ""}
               </span>
               <button
-                onClick={() => runCheck(detected, payload)}
+                onClick={() =>
+                  detected === "upi"
+                    ? setAskIntent({ type: "upi", text: payload })
+                    : runCheck(detected, payload)
+                }
                 disabled={busy || !payload.trim()}
                 className="shrink-0 border-[3px] border-ink bg-saffron px-6 py-2.5 font-display text-lg font-bold shadow-poster-sm transition-transform active:translate-x-[2px] active:translate-y-[2px] active:shadow-none disabled:opacity-40"
               >
@@ -590,6 +606,37 @@ export default function CheckPage() {
 
         {/* ---------------- Shared result area ---------------- */}
         <div ref={resultRef} className="mt-5 scroll-mt-20">
+          {/* H12+ intent question — three poster chips before a QR/UPI check */}
+          {askIntent && !busy && (
+            <section className="chit-in border-[3px] border-ink bg-paper p-4 shadow-poster-sm">
+              <p className="font-display text-xl font-bold leading-tight">
+                {pick(lang, S_CHECK.intentQ)[0]}
+              </p>
+              <p className="plate mt-0.5 text-inksoft">{pick(lang, S_CHECK.intentQ)[1]}</p>
+              <div className="mt-3 grid gap-2">
+                {(
+                  [
+                    { t: S_CHECK.intentPay, v: "pay" as ExpectedIntent, plate: "PAY" },
+                    { t: S_CHECK.intentReceive, v: "receive" as ExpectedIntent, plate: "RECEIVE" },
+                    { t: S_CHECK.intentJust, v: null as ExpectedIntent, plate: "CHECK" },
+                  ] as const
+                ).map((c) => (
+                  <button
+                    key={c.plate}
+                    onClick={() => runCheck(askIntent.type, askIntent.text, false, c.v)}
+                    className="flex items-center justify-between border-[3px] border-ink bg-paper px-4 py-2.5 text-left font-bold hover:bg-saffron"
+                  >
+                    <span>
+                      {pick(lang, c.t)[0]}
+                      <span className="plate ml-2 font-normal text-inksoft">· {c.plate}</span>
+                    </span>
+                    <IArrowR className="h-4 w-4 shrink-0" />
+                  </button>
+                ))}
+              </div>
+            </section>
+          )}
+
           {busy && <ScanShield lang={lang} />}
           {error && (
             <div className="border-[3px] border-ink bg-paper">
@@ -603,29 +650,71 @@ export default function CheckPage() {
               </div>
             </div>
           )}
-          {result && !busy && result.guardian_request_id && wardPair && (
-            <div className="mb-4">
-              <WardGate
-                key={result.guardian_request_id}
-                requestId={result.guardian_request_id}
-                guardianName={wardPair.guardian_name}
-                checkVerdict={result.verdict}
-              />
-            </div>
-          )}
-          {result && !busy && (
-            <VerdictCard
-              check={result}
-              theater
-              autoSpeak={resultFromVoice}
-              actions={
-                <ReportButton
-                  key={result._id}
-                  payload={result.input.payload}
-                  defaultCategory={result.scam_category}
+          {/* H12+ needs-context: a bare number/VPA must never look "cleared".
+              A parsed upi:// URI is NOT context-less (backend's one-token gate
+              over-fires on it — flagged to Harsh); its verdict renders normally. */}
+          {result && !busy && result.needs_context && !/^upi:\/\//i.test(result.input.payload) ? (
+            <section className="chit-in border-[3px] border-caution bg-paper p-4">
+              <p className="plate text-cautiondeep">
+                {pick(lang, S_CHECK.ctxTitle)[0]} · {pick(lang, S_CHECK.ctxTitle)[1]}
+              </p>
+              <p className="mt-2 text-lg font-semibold leading-snug">
+                {lang === "en" ? result.needs_context.question_en : result.needs_context.question_hi}
+              </p>
+              <p className="mt-1.5 text-sm text-inksoft">
+                {lang === "en" ? result.needs_context.question_hi : result.needs_context.question_en}
+              </p>
+              <button
+                onClick={() => {
+                  setResult(null);
+                  setTab("paste");
+                  setTimeout(() => document.getElementById("paste-box")?.focus(), 50);
+                }}
+                className="mt-3 border-[3px] border-ink bg-saffron px-5 py-2 font-display font-bold shadow-poster-sm transition-transform active:translate-x-[2px] active:translate-y-[2px] active:shadow-none"
+              >
+                {pick(lang, S_CHECK.ctxAction)[0]}
+              </button>
+            </section>
+          ) : (
+            <>
+              {result && !busy && result.guardian_request_id && wardPair && (
+                <div className="mb-4">
+                  <WardGate
+                    key={result.guardian_request_id}
+                    requestId={result.guardian_request_id}
+                    guardianName={wardPair.guardian_name}
+                    checkVerdict={result.verdict}
+                  />
+                </div>
+              )}
+              {result && !busy && (
+                <VerdictCard
+                  check={result}
+                  theater
+                  autoSpeak={resultFromVoice}
+                  actions={
+                    <div className="space-y-2.5">
+                      {/* trusted call — the STORED guardian number only, never one
+                          from the checked message */}
+                      {result.verdict === "danger" && wardPair?.guardian_phone && (
+                        <a
+                          href={`tel:${wardPair.guardian_phone}`}
+                          className="flex w-full items-center justify-center gap-2.5 border-[3px] border-ink bg-saffron px-4 py-2.5 font-display text-lg font-bold shadow-poster-sm transition-transform active:translate-x-[2px] active:translate-y-[2px] active:shadow-none"
+                        >
+                          <IPhone className="h-5 w-5" />
+                          {fmt(pick(lang, S_VERDICT.callAsk)[0], { name: wardPair.guardian_name })}
+                        </a>
+                      )}
+                      <ReportButton
+                        key={result._id}
+                        payload={result.input.payload}
+                        defaultCategory={result.scam_category}
+                      />
+                    </div>
+                  }
                 />
-              }
-            />
+              )}
+            </>
           )}
         </div>
       </main>

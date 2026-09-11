@@ -2,8 +2,21 @@
 // ward = the protected person (their /check sends ward_link_id),
 // guardian = the family member whose inbox polls the link.
 
-export type WardPair = { link_id: string; guardian_name: string; ward_name: string };
-export type GuardianPair = { link_id: string; guardian_name: string; ward_name: string; pair_code: string };
+// guardian_phone is the STORED trusted number (H12+) — the tel: button on a
+// danger verdict dials THIS, never a number found inside a checked message.
+export type WardPair = {
+  link_id: string;
+  guardian_name: string;
+  ward_name: string;
+  guardian_phone?: string;
+};
+export type GuardianPair = {
+  link_id: string;
+  guardian_name: string;
+  ward_name: string;
+  pair_code: string;
+  guardian_phone?: string;
+};
 
 const WARD_KEY = "dhaal_ward_link";
 const GUARDIAN_KEY = "dhaal_guardian_link";

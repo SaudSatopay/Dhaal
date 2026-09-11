@@ -9,7 +9,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api";
 import type { ScamCategory, Trends } from "@/lib/types";
-import { CATEGORY_UI, S_HOME } from "@/lib/labels";
+import { CATEGORY_UI, S_HOME, S_WA } from "@/lib/labels";
 import { pick, useLang, type Lang, type LangText } from "@/lib/lang";
 import LangToggle from "@/components/LangToggle";
 import { IArrowR, IGlobe, IShield, IShieldCheck, ISiren, IUsers } from "@/components/icons";
@@ -273,6 +273,11 @@ export default function Home() {
             ))}
           </nav>
         </div>
+
+        {/* WhatsApp bot strip — check without even opening the app */}
+        <p className="plate mt-6 border-2 border-line bg-paper2 px-3 py-2 text-center text-inksoft">
+          {pick(lang, S_WA.line)[0]}
+        </p>
 
         <footer className="flex items-center justify-between pb-2 pt-6">
           <span className="plate text-inksoft">
