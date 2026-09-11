@@ -1,35 +1,30 @@
 // Hindi-first UI label maps for contract enums. Verdict copy rule (docs/CONTRACTS.md):
 // never render the word "safe" — the green state is "no KNOWN risk".
+// `tone` keys the visual identity: danger/caution = hazard notice, clear = quiet chit.
 
 import type { ScamCategory, SignalSource, Verdict } from "./types";
 
 export const VERDICT_UI: Record<
   Verdict,
-  { hi: string; en: string; hint_hi: string; icon: string; banner: string; ring: string }
+  { hi: string; en: string; hint_hi: string; tone: "danger" | "caution" | "clear" }
 > = {
   danger: {
     hi: "खतरा",
     en: "DANGER",
     hint_hi: "रुक जाइए — पैसे मत भेजिए, कुछ मत भरिए",
-    icon: "🛑",
-    banner: "bg-red-600 text-white",
-    ring: "border-red-600",
+    tone: "danger",
   },
   suspicious: {
     hi: "सावधान",
     en: "SUSPICIOUS",
     hint_hi: "आगे बढ़ने से पहले खुद पक्का कीजिए",
-    icon: "⚠️",
-    banner: "bg-amber-500 text-black",
-    ring: "border-amber-500",
+    tone: "caution",
   },
   no_known_risk: {
     hi: "कोई ज्ञात खतरा नहीं",
     en: "NO KNOWN RISK",
     hint_hi: "फिर भी नाम और नंबर खुद जाँच लें",
-    icon: "🛡️",
-    banner: "bg-emerald-600 text-white",
-    ring: "border-emerald-600",
+    tone: "clear",
   },
 };
 
@@ -44,20 +39,22 @@ export const CATEGORY_UI: Record<ScamCategory, { hi: string; en: string }> = {
   other: { hi: "अन्य धोखा", en: "Other scam" },
 };
 
+// community wears the brand saffron — the flywheel IS the brand; engine wears ink;
+// llm notes stay visibly weightless.
 export const SOURCE_UI: Record<SignalSource, { hi: string; en: string; cls: string }> = {
   deterministic: {
     hi: "इंजन जाँच",
-    en: "rule engine",
-    cls: "bg-sky-100 text-sky-800 dark:bg-sky-900/60 dark:text-sky-200",
+    en: "RULE ENGINE",
+    cls: "border-ink text-ink",
   },
   community: {
-    hi: "समुदाय रिपोर्ट",
-    en: "community",
-    cls: "bg-purple-100 text-purple-800 dark:bg-purple-900/60 dark:text-purple-200",
+    hi: "समुदाय",
+    en: "COMMUNITY",
+    cls: "border-saffdeep text-saffdeep",
   },
   llm_pattern: {
     hi: "AI संकेत",
-    en: "AI note · 0 verdict weight",
-    cls: "bg-neutral-200 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400",
+    en: "0 VERDICT WEIGHT",
+    cls: "border-inksoft text-inksoft border-dashed",
   },
 };

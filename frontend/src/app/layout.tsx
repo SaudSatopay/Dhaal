@@ -1,22 +1,25 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Noto_Sans_Devanagari } from "next/font/google";
+import { Anek_Devanagari, IBM_Plex_Mono, Mukta } from "next/font/google";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
+// Type IS the design: Anek Devanagari for display lockups, Mukta for body,
+// IBM Plex Mono for numbers/indicators. Hindi first, English subtitles.
+const anek = Anek_Devanagari({
+  variable: "--font-anek",
+  subsets: ["devanagari", "latin"],
+  weight: ["500", "600", "700", "800"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
+const mukta = Mukta({
+  variable: "--font-mukta",
+  subsets: ["devanagari", "latin"],
+  weight: ["400", "500", "600", "700"],
 });
 
-// Hindi-first product — Devanagari deserves a real face, not the system fallback.
-// Latin glyphs come from Geist; Devanagari falls through to Noto.
-const notoDevanagari = Noto_Sans_Devanagari({
-  variable: "--font-noto-dev",
-  subsets: ["devanagari"],
+const plexMono = IBM_Plex_Mono({
+  variable: "--font-plex",
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
 });
 
 export const metadata: Metadata = {
@@ -29,7 +32,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} ${notoDevanagari.variable} h-full antialiased`}
+      className={`${anek.variable} ${mukta.variable} ${plexMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">{children}</body>
     </html>
