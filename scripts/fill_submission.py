@@ -224,7 +224,7 @@ lines(s, 0.9, 2.0, 11.5, 5.0, [
     ("h", "Domain research"),
     ("t", "Scam-script corpus from I4C advisories & documented fraud patterns: digital arrest, KYC-expiry, collect-request refund bait, OLX/army advance, job-task & loan-fee scams, electricity disconnection, victim-voiced coercion · upi:// deep-link collect-vs-pay semantics · NPCI PSP handle registry for VPA verification."),
     ("h", "Build"),
-    ("t", "Live app: dhaal-delta.vercel.app · API: dhaal-api.vercel.app · Repo: github.com/SaudSatopay/MUJ-HACKX (49 automated checks, full contracts & docs) · Sponsor tech in production: Sarvam AI (Saarika ASR + Bulbul TTS), MongoDB Atlas."),
+    ("t", "Live app: dhaal-delta.vercel.app · API: dhaal-api.vercel.app · Repo: github.com/SaudSatopay/Dhaal (262 automated checks, full contracts & docs) · Sponsor tech in production: Sarvam AI (Saarika ASR + Bulbul TTS), MongoDB Atlas."),
 ])
 
 out = "pitch/Dhaal-HackX-submission.pptx"
