@@ -12,11 +12,13 @@ import type { ScamCategory, Trends } from "@/lib/types";
 import { CATEGORY_UI, S_HOME } from "@/lib/labels";
 import { pick, useLang, type Lang, type LangText } from "@/lib/lang";
 import LangToggle from "@/components/LangToggle";
-import { IArrowR, IGlobe, IShield, ISiren, IUsers } from "@/components/icons";
+import { IArrowR, IGlobe, IShield, IShieldCheck, ISiren, IUsers } from "@/components/icons";
+import { S_LEARN } from "@/lib/labels";
 
 const SURFACES: { href: string; Icon: typeof IUsers; label: LangText; sub: LangText }[] = [
   { href: "/guardian", Icon: IUsers, label: S_HOME.sGuardian, sub: S_HOME.sGuardianSub },
   { href: "/intel", Icon: IGlobe, label: S_HOME.sIntel, sub: S_HOME.sIntelSub },
+  { href: "/learn", Icon: IShieldCheck, label: S_LEARN.title, sub: S_LEARN.intro },
   { href: "/recover", Icon: ISiren, label: S_HOME.sRecover, sub: S_HOME.sRecoverSub },
 ];
 

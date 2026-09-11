@@ -25,3 +25,16 @@ export const EXAMPLES: { label: LangText; text: string }[] = [
     text: "+919876500001",
   },
 ];
+
+// /learn simulator pool — REAL corpus only: demo fixtures (backend/fixtures.py)
+// plus the OTP-delivery legit shape the engine explicitly handles (H11 sweep).
+// The engine's verdict is the ground truth for scoring — nothing invented.
+export const LEARN_POOL: string[] = [
+  EXAMPLES[0].text, // KYC scam SMS
+  EXAMPLES[1].text, // genuine credit SMS
+  EXAMPLES[2].text, // ₹15,000 collect URI
+  // digital-arrest call script (backend/fixtures.py beat 4, verbatim)
+  "मैं मुंबई साइबर क्राइम ब्रांच से इंस्पेक्टर बोल रहा हूँ। आपके आधार से एक parcel पकड़ा गया है। गिरफ़्तारी से बचना है तो अभी वेरिफिकेशन फीस भेजिए, किसी को बताइए मत।",
+  // legit OTP delivery — the engine suppresses credential_request on this shape
+  "Dear Customer, 482913 is your OTP for txn of Rs.1,499.00 at Amazon. DO NOT share this OTP with anyone. -SBI",
+];

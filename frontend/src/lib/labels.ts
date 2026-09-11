@@ -284,6 +284,34 @@ export const S_GUARDIAN = {
   unpair: { hi: "ढाल हटाएँ · UNPAIR", en: "UNPAIR" },
 } satisfies Record<string, LangText>;
 
+/* ---------------- /learn simulator ---------------- */
+export const S_LEARN = {
+  title: { hi: "ठग को पहचानो", en: "Spot the scam" },
+  intro: {
+    hi: "5 असली message — बताइए कौन ठग है। ढाल का engine जवाब जाँचेगा।",
+    en: "5 real messages — call the scam. Dhaal’s engine checks your answer.",
+  },
+  start: { hi: "शुरू करो", en: "Start" },
+  round: { hi: "message {i}/5", en: "message {i}/5" },
+  scamBtn: { hi: "ठग है", en: "SCAM" },
+  genuineBtn: { hi: "ठीक है", en: "GENUINE" },
+  checking: { hi: "engine जाँच रहा है…", en: "engine checking…" },
+  correct: { hi: "सही पकड़ा!", en: "Caught it!" },
+  wrong: { hi: "धोखा हो गया", en: "It fooled you" },
+  engineSaid: { hi: "ढाल का फ़ैसला", en: "Dhaal’s verdict" },
+  next: { hi: "अगला →", en: "Next →" },
+  seeScore: { hi: "नतीजा देखो →", en: "See score →" },
+  scoreTitle: { hi: "आपने {n}/5 पकड़े", en: "You caught {n}/5" },
+  scorePerfect: { hi: "आप खुद एक ढाल हैं!", en: "You are a shield yourself!" },
+  scoreGood: { hi: "अच्छी नज़र — पर ठग रोज़ नए तरीके लाते हैं।", en: "Sharp eyes — but scammers bring new tricks daily." },
+  scoreLow: {
+    hi: "यही तो ठग चाहते हैं — इसीलिए हर message ढाल से जाँचिए।",
+    en: "That’s exactly what scammers count on — check every message with Dhaal.",
+  },
+  ctaInbox: { hi: "अपना inbox जाँचो →", en: "Check your own inbox →" },
+  again: { hi: "फिर खेलो", en: "Play again" },
+} satisfies Record<string, LangText>;
+
 /* ---------------- /recover ---------------- */
 export const S_RECOVER = {
   title: { hi: "पहला घंटा", en: "I got scammed — first hour" },
