@@ -10,7 +10,7 @@ from pptx.enum.shapes import MSO_SHAPE
 from pptx.enum.text import PP_ALIGN, MSO_ANCHOR
 
 TEAM_NAME = "[Your Team Name]"   # <-- FILL from registration
-TEAM_ID = "[Registration ID]"    # <-- FILL from registration
+TEAM_ID = "TEAM130"
 
 INK = RGBColor(0x0E, 0x28, 0x41)
 ACC = RGBColor(0x15, 0x60, 0x82)
