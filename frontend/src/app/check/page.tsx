@@ -138,6 +138,9 @@ export default function CheckPage() {
   const chunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const recStartRef = useRef(0); // min-1s recording guard (Saud's field test)
+  const streamRef = useRef<MediaStream | null>(null); // track cleanup even if onstop never fires
+  const watchdogRef = useRef<ReturnType<typeof setTimeout> | null>(null); // 20s auto-stop
+  const [micRetry, setMicRetry] = useState(false); // ASR fell back — don't show fixture text
 
   useEffect(() => {
     if (result && resultRef.current) {
@@ -190,43 +193,76 @@ export default function CheckPage() {
   }
 
   // ---------------- voice flow ----------------
+  // iOS Safari records audio/mp4, Chrome records webm — pick what THIS browser
+  // supports and name the upload accordingly (a .webm name on mp4 bytes made
+  // Sarvam reject and the user saw the fixture transcript — H11 field bug).
+  const MIME_CANDIDATES = ["audio/mp4", "audio/webm;codecs=opus", "audio/webm"];
+  function extFor(mime: string): string {
+    if (mime.includes("mp4")) return "m4a";
+    if (mime.includes("ogg")) return "ogg";
+    return "webm";
+  }
+
   async function startRecording() {
+    if (recording) return; // double-tap on a slow phone must not double-start
     setMicError(false);
     setMicShort(false);
+    setMicRetry(false);
     setTranscript("");
     setResult(null);
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mr = new MediaRecorder(stream);
+      streamRef.current = stream;
+      const mime = typeof MediaRecorder !== "undefined" && MediaRecorder.isTypeSupported
+        ? MIME_CANDIDATES.find((m) => MediaRecorder.isTypeSupported(m))
+        : undefined;
+      const mr = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream);
       chunksRef.current = [];
       mr.ondataavailable = (e) => {
         if (e.data.size > 0) chunksRef.current.push(e.data);
       };
       mr.onstop = async () => {
         stream.getTracks().forEach((t) => t.stop());
+        streamRef.current = null;
         // min-1s guard: an accidental double-tap produces useless audio — discard
         // and coach, don't send it to ASR
         if (Date.now() - recStartRef.current < 1000) {
           setMicShort(true);
           return;
         }
-        const blob = new Blob(chunksRef.current, { type: mr.mimeType || "audio/webm" });
-        await transcribeAudio(blob);
+        const type = mr.mimeType || mime || "audio/webm";
+        const blob = new Blob(chunksRef.current, { type });
+        await transcribeAudio(blob, extFor(type));
       };
       recRef.current = mr;
-      mr.start();
+      mr.start(500);
       recStartRef.current = Date.now();
       setRecording(true);
       setRecSeconds(0);
       timerRef.current = setInterval(() => setRecSeconds((s) => s + 1), 1000);
+      // watchdog: never leave the button stuck "recording" (hung permission,
+      // detached handler) — auto-stop at 20s, plenty for any scam script
+      watchdogRef.current = setTimeout(() => stopRecording(), 20000);
     } catch {
       setMicError(true);
+      setRecording(false);
     }
   }
 
   function stopRecording() {
-    recRef.current?.stop();
+    if (watchdogRef.current) {
+      clearTimeout(watchdogRef.current);
+      watchdogRef.current = null;
+    }
+    const mr = recRef.current;
     recRef.current = null;
+    try {
+      if (mr && mr.state !== "inactive") mr.stop();
+    } catch {
+      /* already stopped */
+    }
+    // belt & braces: if onstop never fires, don't leak the mic
+    streamRef.current?.getTracks().forEach((t) => t.stop());
     setRecording(false);
     if (timerRef.current) {
       clearInterval(timerRef.current);
@@ -234,14 +270,21 @@ export default function CheckPage() {
     }
   }
 
-  async function transcribeAudio(blob: Blob) {
+  async function transcribeAudio(blob: Blob, ext: string = "webm") {
     setTranscribing(true);
     setError("");
     try {
       const fd = new FormData();
-      fd.append("audio", blob, "clip.webm");
+      fd.append("audio", blob, `clip.${ext}`);
       fd.append("lang_hint", apiLang(lang));
       const res = await apiForm<TranscribeResult>("/api/transcribe", fd);
+      if (res.mocked) {
+        // ASR fell back to the demo fixture — showing someone else's words as
+        // "your voice" is worse than asking again (H11 field bug).
+        setTranscript("");
+        setMicRetry(true);
+        return;
+      }
       setTranscript(res.transcript);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -448,6 +491,13 @@ export default function CheckPage() {
               {micShort && !recording && (
                 <p className="mt-2 text-sm font-bold text-saffdeep">
                   {pick(lang, S_CHECK.micShort)[0]}
+                </p>
+              )}
+              {micRetry && !recording && !transcribing && (
+                <p className="mt-2 text-sm font-bold text-saffdeep">
+                  {lang === "hi"
+                    ? "आवाज़ साफ़ समझ नहीं आई — फिर से बोलें, या नीचे टाइप करें।"
+                    : "Couldn't hear that clearly — speak again, or type below."}
                 </p>
               )}
               {micError && (

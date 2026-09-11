@@ -1,7 +1,7 @@
 import re
 from urllib.parse import parse_qs, urlparse
 
-from data.brands import SUSPICIOUS_VPA_WORDS
+from data.brands import BRAND_OWN_SUFFIXES, SUSPICIOUS_VPA_WORDS
 from engine.common import brand_token_match, extract_vpas, host_tokens, make_signal
 
 UPI_URI_RE = re.compile(r"upi://[^\s\"'<>]+", re.I)
@@ -59,6 +59,28 @@ def detect(text: str, input_type: str, signals: list) -> dict:
                 f"Payee name/ID imitates {str(brand).upper()} but is not a verified merchant handle.",
                 f"Payee का नाम/ID {str(brand).upper()} जैसा है पर verified merchant नहीं है।",
             ))
+
+    # Brand token in ANY VPA's local part (free text included — H11 field miss:
+    # support.paytm01@okhdfcbank pasted bare scored only +15). A brand on a
+    # foreign PSP suffix is impersonation; the brand's own suffixes are exempt.
+    for vpa in sorted(info["vpas"]):
+        # skip URL-userinfo lookalikes (…//sbi.co.in@evil.xyz) — that text is a
+        # URL trick, not a VPA; engine/urls.py owns it (userinfo_url_trick).
+        if re.search(r"/" + re.escape(vpa), text):
+            continue
+        local, _, suffix = vpa.partition("@")
+        brand = brand_token_match(host_tokens(local))
+        if brand:
+            own = BRAND_OWN_SUFFIXES.get(str(brand), ())
+            if ("@" + suffix) not in own:
+                signals.append(make_signal(
+                    "payee_impersonation", "deterministic", 30,
+                    f"UPI ID poses as {str(brand).upper()}",
+                    f"UPI ID खुद को {str(brand).upper()} बता रही है",
+                    f"'{vpa}' carries the {str(brand).upper()} name on a handle {str(brand).upper()} does not issue.",
+                    f"'{vpa}' में {str(brand).upper()} का नाम है पर handle {str(brand).upper()} का नहीं है।",
+                ))
+                break
 
     # Bait words in ANY VPA in the input — upi:// payee or free text alike
     # (H9 sweep: quickloan.help@okaxis pasted in an SMS body must fire too).

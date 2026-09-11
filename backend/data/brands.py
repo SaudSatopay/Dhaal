@@ -73,6 +73,16 @@ SUSPICIOUS_VPA_WORDS = (
     "bonus", "prize", "lucky", "winner",
 )
 
+# A brand's OWN handle families — a brand token in the local part is plausible
+# only on the brand's own suffixes (paytm-order1@paytm = maybe legit merchant;
+# support.paytm01@okhdfcbank = impersonation). Consumed by engine/upi.py (H11).
+BRAND_OWN_SUFFIXES = {
+    "paytm": ("@paytm", "@ptyes", "@ptsbi", "@pthdfc", "@ptaxis"),
+    "amazonpay": ("@apl", "@yapl", "@amazonpay"),
+    "amazon": ("@apl", "@yapl", "@amazonpay"),
+    "phonepe": ("@ybl", "@ibl", "@axl"),
+}
+
 # Legit UPI handle suffixes issued by real PSPs — ADDITIVE, not yet consumed
 # by the engine. A suffix outside this set is a weak signal, never proof.
 LEGIT_UPI_SUFFIXES = {
