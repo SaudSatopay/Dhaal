@@ -129,6 +129,7 @@ export type TranscribeResult = {
   transcript: string;
   lang: string;
   mocked: boolean;
+  engine?: "saarika" | "whisper"; // which server ASR produced it (H17 chain)
 };
 
 export type IndicatorType = "phone" | "upi" | "domain" | "script";

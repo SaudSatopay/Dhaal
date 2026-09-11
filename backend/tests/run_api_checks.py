@@ -165,14 +165,28 @@ ok("transcribe sanitizes parameterized content type before ASR",
    and _seen_ct.get("ct") == "audio/mp4")
 main.sarvam.speech_to_text = _stub_real
 
-# H17 contract change: real audio + no ASR must be an HONEST 503 — the
-# fixture-substitution this test used to assert was the fabrication pattern
-# retired alongside the IVR fallback (fixture remains only under MOCK_MODE).
+# H17 engine chain: Saarika down -> Groq Whisper carries the clip; the
+# response says which engine spoke.
+_groq_real = main.asr_groq.speech_to_text
+main.asr_groq.speech_to_text = lambda *a, **k: {"transcript": "जाँच की आवाज़",
+                                                "language_code": "hi-IN"}
+rg = c.post("/api/transcribe",
+            files={"audio": ("clip.webm", b"\x1aE\xdf\xa3fake-webm-bytes", "audio/webm")},
+            data={"lang_hint": "hi-IN"})
+ok("transcribe chain: saarika dead -> whisper answers, engine reported",
+   rg.status_code == 200 and rg.json()["engine"] == "whisper"
+   and rg.json()["transcript"] == "जाँच की आवाज़" and rg.json()["mocked"] is False)
+main.asr_groq.speech_to_text = lambda *a, **k: None
+
+# H17 contract change: real audio + BOTH engines out must be an HONEST 503 —
+# the fixture-substitution this test used to assert was the fabrication
+# pattern retired alongside the IVR fallback (fixture only under MOCK_MODE).
 r2 = c.post("/api/transcribe",
             files={"audio": ("clip.webm", b"\x1aE\xdf\xa3fake-webm-bytes", "audio/webm")},
             data={"lang_hint": "hi-IN"})
-ok("transcribe multipart: dead ASR -> 503 no_transcript (no fixture)",
+ok("transcribe multipart: both engines dead -> 503 no_transcript (no fixture)",
    r2.status_code == 503 and r2.json().get("status") == "no_transcript")
+main.asr_groq.speech_to_text = _groq_real
 
 # speak:true offline -> null audio, never an error
 spk = c.post("/api/check", json={"type": "text", "payload": FX.KYC_SCAM_TEXT,

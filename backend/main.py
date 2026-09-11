@@ -28,6 +28,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from starlette.concurrency import run_in_threadpool
 
+import asr_groq
 import exotel
 import fixtures as FX
 import llm
@@ -662,13 +663,24 @@ async def transcribe(request: Request):
         # Strip parameters; never forward a parameterized content type.
         raw_ct = audio.content_type or "audio/webm"
         clean_ct = raw_ct.split(";")[0].strip() or "audio/webm"
+        fname = audio.filename or "audio.webm"
         out = await run_in_threadpool(
-            sarvam.speech_to_text, blob,
-            audio.filename or "audio.webm", clean_ct,
+            sarvam.speech_to_text, blob, fname, clean_ct,
         )
         if out:
             return {"transcript": out["transcript"],
-                    "lang": out["language_code"] or lang_hint, "mocked": False}
+                    "lang": out["language_code"] or lang_hint, "mocked": False,
+                    "engine": "saarika"}
+        # H17 second server engine: Groq Whisper picks up whatever Saarika
+        # dropped (outage, unsupported clip, empty read) — two independent
+        # vendors before we ever bother the user again.
+        out = await run_in_threadpool(
+            asr_groq.speech_to_text, blob, fname, clean_ct, lang_hint,
+        )
+        if out:
+            return {"transcript": out["transcript"],
+                    "lang": out["language_code"] or lang_hint, "mocked": False,
+                    "engine": "whisper"}
         # H17 (same rule that retired the IVR fallback): the user SPOKE real
         # words — a failed transcription must be an honest error, never a
         # fixture passed off as what they said. The client offers typed input.

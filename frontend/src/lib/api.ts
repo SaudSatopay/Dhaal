@@ -81,7 +81,21 @@ export async function api<T = unknown>(
 // Multipart variant (e.g. /api/transcribe audio upload) — the browser must set the
 // Content-Type boundary itself, so no JSON header here.
 export async function apiForm<T = unknown>(path: string, form: FormData): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, { method: "POST", body: form });
+  // H17 field bug: a hung upload on venue networks left the caller's busy
+  // state stuck forever (the mic button read as "cannot be paused"). Abort
+  // hard at 30s — callers treat it like any transient failure.
+  const ctl = new AbortController();
+  const timer = setTimeout(() => ctl.abort(), 30000);
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE}${path}`, { method: "POST", body: form, signal: ctl.signal });
+  } catch (e) {
+    throw new ApiError(0, e instanceof Error && e.name === "AbortError"
+      ? "API timeout: upload took too long"
+      : `API network error: ${e instanceof Error ? e.message : String(e)}`);
+  } finally {
+    clearTimeout(timer);
+  }
   if (!res.ok) {
     const body = await res.text().catch(() => "");
     throw new ApiError(res.status, `API ${res.status}: ${body || res.statusText}`);
