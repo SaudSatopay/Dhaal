@@ -2,6 +2,42 @@
 
 Demo driver keeps this open. Every beat has a paste-ready string; never improvise inputs on stage. Rehearse until boring (3× minimum at H12+).
 
+---
+
+## JUDGE FIVE-BEAT (H17) — the 3-minute skeptic's tour
+
+For a judge who says "show me it's real". Five inputs, in this order, zero setup:
+
+**J1 · An UNFAMILIAR scam (no keyword the demo ever used):**
+```
+Your late uncle left you 8 lakh rupees. Remit a clearance deposit of 2500 rupees to release the inheritance.
+```
+Expected: **सावधान/suspicious** — advance-fee relation (windfall promised + pay-first), upfront-fee signal. Say: *"यह exact wording हमारे किसी test में नहीं थी — engine रिश्ते पकड़ता है, शब्द नहीं।"* (True: this family was an external reviewer's reproduced miss, fixed at the relation level — the DO-THIS-NOW block leads the card.)
+
+**J2 · A legitimate message (we don't cry wolf):**
+```
+Dear Customer, Rs.2,500.00 credited to A/c XX4321 on 11-09-26 by UPI ref 625489. Avl Bal Rs.18,240.00 -SBI
+```
+Expected: **कोई ज्ञात खतरा नहीं**, zero signals — and the card STILL says "verify name & amount yourself", never "safe".
+
+**J3 · An ambiguous input (it asks, doesn't guess):**
+```
+9822110733
+```
+Expected: **needs-context question + chips** — no verdict, no green light. Tap "पैसे माँगे गए" → the verdict updates with "आपके जवाब से जाँच बदली" and the answer appears as "आपका जवाब · YOUR ANSWER" — user context never edits the original message.
+
+**J4 · Payment-intent interpretation (the QR that does the opposite):**
+Paste (or scan `demo/qr_collect_15000.png`) and tap **"मुझे पैसे आने हैं · RECEIVE"**:
+```
+upi://collect?pa=refund.helpdesk@okaxis&pn=SBI%20Refunds&am=15000&cu=INR
+```
+Expected: danger, intent-mismatch lead + **PAYMENT REALITY CHECK** block: expected IN vs opens a ₹15,000 collect OUT, payee shown, "ownership NOT verified here" honesty line.
+
+**J5 · One complete supporting journey (community flywheel):**
+Phone A: report the number from J3 ("Scam रिपोर्ट करें") → Laptop `/intel`: moderator desk (key required — auth is not an outage), enter key, VERIFY → Phone A: re-check the same number → **danger with "reported by N users" community signal**. Say: *"एक report, सबकी ढाल — human-verified, ledger-backed, exactly-once."*
+
+If asked "what's your accuracy": open [docs/EVAL.md](../docs/EVAL.md) — frozen blind batteries with published misses, scores are rule-weights not probabilities. Never quote a number without the caveats printed there.
+
 **Devices:** Phone A (patient/user, mobile view) · Laptop (projector: doctor of the demo — `/intel` + guardian inbox) · Phone B or second browser window (flywheel beat 6). All on hotspot, NOT venue Wi-Fi. Backup video on Phone A gallery AND laptop desktop.
 
 **Live URLs:** app `https://dhaal-delta.vercel.app` · API `https://dhaal-api.vercel.app`
