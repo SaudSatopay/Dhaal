@@ -655,9 +655,16 @@ async def transcribe(request: Request):
     lang_hint = str(form.get("lang_hint") or "hi-IN")
     if audio is not None and not isinstance(audio, str) and not MOCK_MODE:
         blob = await audio.read()
+        # H17 field bug (the "speak is broken everywhere" report): browsers set
+        # the multipart part type from Blob.type VERBATIM — Chromium records
+        # "audio/mp4;codecs=opus" — and Saarika 4xxes on any ";codecs=..."
+        # parameter while accepting the SAME bytes under the bare base type.
+        # Strip parameters; never forward a parameterized content type.
+        raw_ct = audio.content_type or "audio/webm"
+        clean_ct = raw_ct.split(";")[0].strip() or "audio/webm"
         out = await run_in_threadpool(
             sarvam.speech_to_text, blob,
-            audio.filename or "audio.webm", audio.content_type or "audio/webm",
+            audio.filename or "audio.webm", clean_ct,
         )
         if out:
             return {"transcript": out["transcript"],

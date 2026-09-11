@@ -49,9 +49,12 @@ def _post(path: str, **kw) -> httpx.Response | None:
 def speech_to_text(blob: bytes, filename: str = "audio.webm",
                    content_type: str = "audio/webm") -> dict | None:
     """-> {'transcript', 'language_code'} or None. language 'unknown' lets
-    Saarika auto-detect (Hindi/English code-mixed speech is the demo norm)."""
+    Saarika auto-detect (Hindi/English code-mixed speech is the demo norm).
+    content_type is sanitized to its base type: Saarika rejects parameterized
+    types ("audio/mp4;codecs=opus") while accepting the same bytes bare."""
     if not available() or not blob:
         return None
+    content_type = (content_type or "audio/webm").split(";")[0].strip() or "audio/webm"
     r = _post("/speech-to-text",
               data={"model": "saarika:v2.5", "language_code": "unknown"},
               files={"file": (filename, blob, content_type)})

@@ -325,7 +325,10 @@ export default function CheckPage() {
           setMicShort(true);
           return;
         }
-        const type = mr.mimeType || mime || "audio/webm";
+        // strip any ";codecs=..." parameter — upstream ASR rejects
+        // parameterized content types while accepting the same bytes bare
+        // (Chromium records "audio/mp4;codecs=opus" — the H17 field bug)
+        const type = (mr.mimeType || mime || "audio/webm").split(";")[0];
         const blob = new Blob(chunksRef.current, { type });
         await transcribeAudio(blob, extFor(type));
       };

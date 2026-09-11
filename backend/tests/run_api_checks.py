@@ -149,6 +149,22 @@ ok("recovery date never assumed", "____" in kit_otp["call_script_1930"])
 t = c.post("/api/transcribe", json={"typed_text": "hello", "lang_hint": "hi-IN"}).json()
 ok("transcribe typed fallback", t["transcript"] == "hello")
 
+# H17 field bug: browsers upload Blob.type VERBATIM — "audio/mp4;codecs=opus"
+# on Chromium — and Saarika 4xxes on parameterized types while accepting the
+# same bytes bare. The endpoint must sanitize before forwarding.
+_seen_ct = {}
+_stub_real = main.sarvam.speech_to_text
+def _stub_ct(blob, filename="x", content_type="audio/webm"):
+    _seen_ct["ct"] = content_type
+    return {"transcript": "बोलने की जाँच", "language_code": "hi-IN"}
+main.sarvam.speech_to_text = _stub_ct
+rct = c.post("/api/transcribe",
+             files={"audio": ("clip.m4a", b"\x00\x00\x00 ftypisom-opusdata", "audio/mp4;codecs=opus")})
+ok("transcribe sanitizes parameterized content type before ASR",
+   rct.status_code == 200 and rct.json()["transcript"] == "बोलने की जाँच"
+   and _seen_ct.get("ct") == "audio/mp4")
+main.sarvam.speech_to_text = _stub_real
+
 # H17 contract change: real audio + no ASR must be an HONEST 503 — the
 # fixture-substitution this test used to assert was the fabrication pattern
 # retired alongside the IVR fallback (fixture remains only under MOCK_MODE).
