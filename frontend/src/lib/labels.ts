@@ -240,6 +240,11 @@ export const S_XRAY = {
     en: "You're asking about entering a code in a flow YOU opened — nobody is demanding it, so it isn't flagged.",
   },
   factualTag: { hi: "जानकारी", en: "info" },
+  kPattern: { hi: "जाना-पहचाना script", en: "Known scam script" },
+  wPattern: {
+    hi: "यही शब्द भारत भर में चल रहे ठगी-script से मिले — पूरे India का अनुभव आपकी ढाल है।",
+    en: "These exact words match scam scripts running across India — the country's experience is your shield.",
+  },
 } satisfies Record<string, LangText>;
 
 /* ---------------- payment reality check (H16 §4C) ---------------- */
@@ -260,11 +265,6 @@ export const S_REALITY = {
   unverified: {
     hi: "यहाँ verify नहीं होता: payee का असली registered नाम सिर्फ़ आपके UPI app में authorize से पहले दिखेगा। Code पढ़ने से पैसा नहीं कटता — authorize करने से कटता है।",
     en: "NOT verified here: the payee's real registered name shows only in your UPI app before you authorize. Parsing a code moves no money — authorizing does.",
-  },
-  kPattern: { hi: "जाना-पहचाना script", en: "Known scam script" },
-  wPattern: {
-    hi: "यही शब्द भारत भर में चल रहे ठगी-script से मिले — पूरे India का अनुभव आपकी ढाल है।",
-    en: "These exact words match scam scripts running across India — the country's experience is your shield.",
   },
 } satisfies Record<string, LangText>;
 
