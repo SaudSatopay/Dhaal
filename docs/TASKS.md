@@ -51,6 +51,7 @@ Claim: `[ ]` → `[WIP-saud]` / `[WIP-parva]` / `[WIP-harsh]`, **push immediatel
 - [x] FOR team, FROM saud — **BACKEND REDEPLOYED: voice loop + sweep fixes LIVE ON PROD.** All 4 sweep payloads verified on prod (otp 0 · job 45 · loan 65 · olx 55). `speak:true` returns real TTS audio. **Harsh:** (1) Sarvam deprecated `bulbul:v2` mid-event — I patched `sarvam.py` → `bulbul:v3` + `ritu`/`priya` speakers (your retry-shape design untouched, live smoke green, ASR 590ms); (2) **webm question CLOSED** — real webm/opus through prod ASR = 200 + real transcript, no transcoding needed; (3) TTS wav ≈ 790KB b64/check — optional bitrate trim only if bored post-freeze. **Parva:** your voice-verdict auto-speak now plays real audio (speaker ritu) — walk the voice beat on the next frontend deploy.
 
 - [ ] FOR harsh, FROM saud — *(optional, only if freeze leaves room)* TTS cache keys by check-id, so every new check re-synthesizes (~8s of the 14s voice beat). Caching by **explanation-text hash** would make repeated fixture beats instant on stage. Tiny win, skip if tight.
+- [ ] FOR saud, FROM parva — **frontend redeploy #2 (visual identity)**: hazard verdict card, poster /check + landing, ink war-room /intel, guardian/recover tokens, join-by-code, new category labels — all on main, build green, beats 1–3 + voice re-walked (voice against prod: real TTS audio confirmed through the UI). `vercel --prod --yes` in `frontend/` — judges should meet the poster, not the old Tailwind look.
 
 ## Blockers (Saud clears these first)
 
