@@ -40,7 +40,7 @@ export default function TopBar({ title_hi, title_en }: { title_hi: string; title
       <div className="mx-auto flex max-w-xl items-center gap-3 px-4 py-2.5">
         <Link href="/" aria-label="Dhaal home" className="flex items-center gap-1.5 hover:opacity-80">
           <span aria-hidden="true" className="text-lg leading-none">←</span>
-          <DhaalMark className="h-7 w-auto" />
+          <DhaalMark className="seal-live h-7 w-auto" />
           <span className="font-display text-2xl font-extrabold leading-none">ढाल</span>
         </Link>
         <div className="min-w-0 flex-1 border-l-2 border-ink pl-3">

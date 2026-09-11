@@ -12,6 +12,7 @@ import type { ScamCategory, Trends } from "@/lib/types";
 import { CATEGORY_UI, S_HOME, S_WA } from "@/lib/labels";
 import { pick, useLang, type Lang, type LangText } from "@/lib/lang";
 import LangToggle from "@/components/LangToggle";
+import PaperDrift from "@/components/PaperDrift";
 import { DhaalMark, IArrowR, IGlobe, IShieldCheck, ISiren, IUsers } from "@/components/icons";
 import { S_LEARN } from "@/lib/labels";
 
@@ -232,8 +233,9 @@ export default function Home() {
       {/* poster edge tape */}
       <div className="hazard-saffron h-2.5 border-b-2 border-ink" aria-hidden="true" />
 
-      <main className="mx-auto flex w-full max-w-xl flex-1 flex-col px-5 pb-4">
-        <div className="flex-1 pt-5">
+      <main className="relative mx-auto flex w-full max-w-xl flex-1 flex-col px-5 pb-4">
+        <PaperDrift variant="hero" />
+        <div className="relative z-10 flex-1 pt-5">
           {/* ===================== THE MASTHEAD ===================== */}
           <div className="chit-in d1 relative">
             <div className="flex items-start justify-between">
@@ -243,7 +245,9 @@ export default function Home() {
 
             {/* seal + giant wordmark, optically locked at the type's x-height */}
             <div className="mt-1 flex items-center gap-4">
-              <DhaalMark className="seal-pop d2 h-[4.6rem] w-auto shrink-0 sm:h-[5.6rem]" />
+              <span className="seal-pop d2 shrink-0">
+                <DhaalMark className="seal-live h-[4.6rem] w-auto sm:h-[5.6rem]" />
+              </span>
               <h1 className="type-wordmark font-display font-extrabold tracking-tight">
                 ढाल
               </h1>
@@ -253,7 +257,7 @@ export default function Home() {
             {/* the promise — poster type, the check boxed like a stamped field */}
             <p className="type-hero mt-3 font-display font-bold">
               {pick(lang, S_HOME.promise1)[0]}{" "}
-              <span className="inline-block -rotate-1 border-[3px] border-ink bg-saffron px-2 leading-tight shadow-poster-sm">
+              <span className="stamp-live inline-block border-[3px] border-ink bg-saffron px-2 leading-tight shadow-poster-sm">
                 {pick(lang, S_HOME.promise2)[0]}
               </span>
             </p>
@@ -265,7 +269,7 @@ export default function Home() {
           {/* ===================== THE ACTION ===================== */}
           <Link
             href="/check"
-            className="chit-in d3 sheet mt-5 block border-[3px] border-ink bg-saffron p-4 shadow-poster"
+            className="chit-in d3 sheet cta-sheen mt-5 block border-[3px] border-ink bg-saffron p-4 shadow-poster"
           >
             <span className="flex items-center justify-between gap-3">
               <span className="font-display text-3xl font-extrabold leading-none sm:text-4xl">

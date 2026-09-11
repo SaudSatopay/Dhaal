@@ -17,6 +17,7 @@ import TopBar from "@/components/TopBar";
 import VerdictCard from "@/components/VerdictCard";
 import ReportButton from "@/components/ReportButton";
 import WardGate from "@/components/WardGate";
+import PaperDrift from "@/components/PaperDrift";
 import { getWardPair, type WardPair } from "@/lib/guardian";
 import { IArrowR, IMic, IPaste, IPhone, IQr, IShield, IStop } from "@/components/icons";
 
@@ -419,7 +420,10 @@ export default function CheckPage() {
     <div className="min-h-screen bg-paper">
       <TopBar title_hi={S_CHECK.title.hi} title_en={S_CHECK.title.en} />
 
-      <main className="mx-auto max-w-xl p-4 pb-16">
+      <main className="relative mx-auto max-w-xl p-4 pb-16">
+        <PaperDrift variant="quiet" />
+        {/* content above the drift field */}
+        <div className="relative z-10">
         {wardPair && (
           <Link
             href="/guardian"
@@ -862,6 +866,7 @@ export default function CheckPage() {
               )}
             </>
           )}
+        </div>
         </div>
       </main>
     </div>
