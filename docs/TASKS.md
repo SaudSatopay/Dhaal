@@ -30,7 +30,7 @@ Claim: `[ ]` → `[WIP-saud]` / `[WIP-parva]` / `[WIP-harsh]`, **push immediatel
 
 ### Glue — Saud (root, `scripts/`, deploys, fixtures)
 - [x] Kickoff: PS locked · docs rewritten · scaffold + stub API serving all contracts
-- [ ] **P0 H1–H3** Deploy: Vercel (frontend) + Railway (backend) · env wiring · QR to live URL.
+- [x] **P0 H1–H3** Deploy DONE: frontend **https://dhaal-delta.vercel.app** · backend **https://dhaal-api.vercel.app** (Railway trial expired → backend runs as a Vercel Python service; `backend/vercel.json`). `NEXT_PUBLIC_API_URL` set in Vercel prod env. Deployment protection disabled on both. Redeploy: `vercel --prod --yes` inside `frontend/` or `backend/`. QR card for the live URL still to make (H12–H15 packaging).
 - [ ] **P0 H3–H5** Fixtures + seeds final: scam SMS set, collect-QR + legit-QR images, digital-arrest script, blocklisted demo number with 43 reports, ~200 seeded intel reports (`scripts/seed.py`) · brand-domain seed list for Harsh.
 - [ ] **Hourly** Golden-path QA walk; breakages → Blockers; unblocking Parva/Harsh beats own tasks.
 - [ ] **P1 H8** Judge-mode dry run on venue network; decide live-vs-mock default per external call; rehearse "judge's own inbox" beat + fixture fallback.
@@ -39,7 +39,7 @@ Claim: `[ ]` → `[WIP-saud]` / `[WIP-parva]` / `[WIP-harsh]`, **push immediatel
 
 ## Requests (cross-lane asks — add, push, ping in person)
 
-- *(none yet)*
+- [ ] FOR harsh, FROM saud — **bump Mongo/Atlas (H6–H8) in priority**: backend is serverless now, so the in-memory store resets on cold starts/extra instances — reports, guardian links and the blocklist flywheel are only durable once `MONGODB_URI` is wired. Stub fallback stays for local dev.
 
 ## Blockers (Saud clears these first)
 
