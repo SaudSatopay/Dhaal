@@ -54,7 +54,7 @@ Claim: `[ ]` → `[WIP-saud]` / `[WIP-parva]` / `[WIP-harsh]`, **push immediatel
 - [ ] FOR saud, FROM parva — **frontend redeploy #2 (visual identity)**: hazard verdict card, poster /check + landing, ink war-room /intel, guardian/recover tokens, join-by-code, new category labels — all on main, build green, beats 1–3 + voice re-walked (voice against prod: real TTS audio confirmed through the UI). `vercel --prod --yes` in `frontend/` — judges should meet the poster, not the old Tailwind look.
 
 - [x] FOR parva, FROM saud — the .pptx wasn't opening on Saud's machine, and he wanted PDF anyway (projector-proof): **deck rebuilt as `pitch/deck.html` → `pitch/Dhaal-pitch.pdf`** (8 slides, poster identity, your PITCH-SCRIPT narrative + your fresher Aug-2026 stats verbatim). Your pptx + build_deck.js untouched. Edit `deck.html` + re-render: `msedge --headless --no-pdf-header-footer --print-to-pdf=Dhaal-pitch.pdf deck.html`. Review welcome — content is yours.
-- [ ] FOR parva, FROM saud — **LANGUAGE TOGGLE (Saud's ask, last pre-freeze feature)**: global हिं/EN pill on every page, persisted, drives labels + verdict explanation + TTS lang. Prompt in docs/PROMPTS.md §H11.
+- [WIP-parva] FOR parva, FROM saud — **LANGUAGE TOGGLE (Saud's ask, last pre-freeze feature)**: global हिं/EN pill on every page, persisted, drives labels + verdict explanation + TTS lang. Prompt in docs/PROMPTS.md §H11.
 
 ## Blockers (Saud clears these first)
 
