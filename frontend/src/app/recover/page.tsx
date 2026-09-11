@@ -7,6 +7,8 @@
 
 import { useState } from "react";
 import { api } from "@/lib/api";
+import { S_RECOVER } from "@/lib/labels";
+import { apiLang, pick, useLang, type LangText } from "@/lib/lang";
 import TopBar from "@/components/TopBar";
 import { ICheck, IPhone } from "@/components/icons";
 
@@ -18,10 +20,10 @@ type Kit = {
   mocked: boolean;
 };
 
-const WHAT_OPTIONS = [
-  { id: "paid", hi: "पैसे चले गए", en: "I paid / money left my account" },
-  { id: "shared_otp", hi: "OTP / PIN बता दिया", en: "I shared an OTP or PIN" },
-  { id: "clicked_link", hi: "Link पर click कर दिया", en: "I clicked a link / installed an app" },
+const WHAT_OPTIONS: { id: string; label: LangText }[] = [
+  { id: "paid", label: S_RECOVER.optPaid },
+  { id: "shared_otp", label: S_RECOVER.optOtp },
+  { id: "clicked_link", label: S_RECOVER.optLink },
 ];
 
 const CHANNELS = [
@@ -31,13 +33,15 @@ const CHANNELS = [
   { id: "wallet", label: "Wallet" },
 ];
 
-function CopyBlock({ title_hi, title_en, text }: { title_hi: string; title_en: string; text: string }) {
+function CopyBlock({ title, text }: { title: LangText; text: string }) {
+  const lang = useLang();
   const [copied, setCopied] = useState(false);
+  const [tp, ts] = pick(lang, title);
   return (
     <section className="border-2 border-ink bg-paper p-4">
       <div className="flex items-center justify-between gap-2">
         <h3 className="font-bold">
-          {title_hi} <span className="plate ml-1 font-normal text-inksoft">{title_en}</span>
+          {tp} <span className="plate ml-1 font-normal text-inksoft">{ts}</span>
         </h3>
         <button
           onClick={() => {
@@ -62,6 +66,7 @@ function CopyBlock({ title_hi, title_en, text }: { title_hi: string; title_en: s
 }
 
 export default function RecoverPage() {
+  const lang = useLang();
   const [what, setWhat] = useState("paid");
   const [amount, setAmount] = useState("");
   const [channel, setChannel] = useState("upi");
@@ -82,7 +87,7 @@ export default function RecoverPage() {
           amount: Number(amount) || 0,
           channel,
           bank: bank.trim(),
-          lang: "hi-IN",
+          lang: apiLang(lang),
         }),
       });
       setKit(res);
@@ -96,13 +101,12 @@ export default function RecoverPage() {
 
   return (
     <div className="min-h-screen bg-paper">
-      <TopBar title_hi="पहला घंटा" title_en="I GOT SCAMMED — FIRST HOUR" />
+      <TopBar title_hi={S_RECOVER.title.hi} title_en={S_RECOVER.title.en} />
 
       <main className="mx-auto max-w-xl space-y-4 p-4 pb-16">
         <p className="border-2 border-ink bg-paper2 p-4 text-sm leading-relaxed">
-          <span className="font-bold">घबराइए मत — साँस लीजिए।</span> पहला घंटा सबसे कीमती
-          है: जल्दी complaint होने पर पैसा freeze होने की उम्मीद कई गुना बढ़ जाती है। ·
-          Breathe. Acting within the first hour multiplies the chance of freezing the money.
+          <span className="font-bold">{pick(lang, S_RECOVER.introBold)[0]}</span>{" "}
+          {pick(lang, S_RECOVER.intro)[0]}
         </p>
 
         {/* the ONE action — emergency red, earned */}
@@ -114,7 +118,7 @@ export default function RecoverPage() {
             <IPhone className="h-10 w-10 shrink-0" />
             <span>
               <span className="block font-display text-3xl font-extrabold leading-none">
-                1930 पर अभी call करें
+                {pick(lang, S_RECOVER.call1930)[0]}
               </span>
               <span className="plate mt-1.5 block opacity-85">
                 NATIONAL CYBER CRIME HELPLINE · सरकारी · मुफ़्त · 24×7
@@ -126,9 +130,9 @@ export default function RecoverPage() {
         {/* details form */}
         <section className="border-[3px] border-ink bg-paper p-4 shadow-poster-sm">
           <h2 className="font-bold">
-            2 सवाल — आपका kit तैयार होगा
+            {pick(lang, S_RECOVER.qTitle)[0]}
             <span className="plate mt-0.5 block font-normal text-inksoft">
-              GET YOUR READY-MADE KIT
+              {pick(lang, S_RECOVER.qTitle)[1]}
             </span>
           </h2>
 
@@ -148,8 +152,8 @@ export default function RecoverPage() {
                   className="accent-ink"
                 />
                 <span>
-                  <span className="block font-semibold">{o.hi}</span>
-                  <span className="block text-xs text-inksoft">{o.en}</span>
+                  <span className="block font-semibold">{pick(lang, o.label)[0]}</span>
+                  <span className="block text-xs text-inksoft">{pick(lang, o.label)[1]}</span>
                 </span>
               </label>
             ))}
@@ -157,7 +161,7 @@ export default function RecoverPage() {
 
           <div className="mt-3 grid grid-cols-3 gap-2">
             <label className="plate col-span-1 block text-inksoft">
-              कितने ₹
+              {pick(lang, S_RECOVER.amount)[0]}
               <input
                 inputMode="numeric"
                 value={amount}
@@ -167,7 +171,7 @@ export default function RecoverPage() {
               />
             </label>
             <label className="plate col-span-1 block text-inksoft">
-              कैसे गए
+              {pick(lang, S_RECOVER.how)[0]}
               <select
                 value={channel}
                 onChange={(e) => setChannel(e.target.value)}
@@ -181,7 +185,7 @@ export default function RecoverPage() {
               </select>
             </label>
             <label className="plate col-span-1 block text-inksoft">
-              बैंक
+              {pick(lang, S_RECOVER.bank)[0]}
               <input
                 value={bank}
                 onChange={(e) => setBank(e.target.value)}
@@ -197,31 +201,22 @@ export default function RecoverPage() {
             disabled={busy}
             className="mt-4 w-full border-[3px] border-ink bg-saffron px-6 py-3 font-display text-lg font-bold shadow-poster-sm transition-transform active:translate-x-[2px] active:translate-y-[2px] active:shadow-none disabled:opacity-40"
           >
-            {busy ? "बन रहा है…" : "मेरा kit बनाओ · Build my kit"}
+            {busy ? pick(lang, S_RECOVER.building)[0] : pick(lang, S_RECOVER.buildBtn)[0]}
           </button>
         </section>
 
         {kit && (
           <div className="space-y-4">
-            <CopyBlock
-              title_hi="1930 पर क्या बोलें"
-              title_en="WHAT TO SAY ON 1930"
-              text={kit.call_script_1930}
-            />
-            <CopyBlock
-              title_hi="Cybercrime.gov.in complaint"
-              title_en="ONLINE COMPLAINT DRAFT"
-              text={kit.complaint_draft}
-            />
-            <CopyBlock
-              title_hi="बैंक के लिए चिट्ठी"
-              title_en="LETTER TO YOUR BANK"
-              text={kit.bank_letter}
-            />
+            <CopyBlock title={S_RECOVER.say1930} text={kit.call_script_1930} />
+            <CopyBlock title={S_RECOVER.complaint} text={kit.complaint_draft} />
+            <CopyBlock title={S_RECOVER.bankLetter} text={kit.bank_letter} />
 
             <section className="border-2 border-ink bg-paper p-4">
               <h3 className="font-bold">
-                Checklist <span className="plate ml-1 font-normal text-inksoft">एक-एक करके</span>
+                Checklist{" "}
+                <span className="plate ml-1 font-normal text-inksoft">
+                  {pick(lang, S_RECOVER.checklistSub)[0]}
+                </span>
               </h3>
               <ul className="mt-2 divide-y divide-line">
                 {kit.checklist.map((item, i) => (
@@ -246,7 +241,7 @@ export default function RecoverPage() {
               </ul>
               {Object.values(ticked).filter(Boolean).length === kit.checklist.length && (
                 <p className="plate mt-2 flex items-center gap-1.5 text-cleardeep">
-                  <ICheck className="h-3.5 w-3.5" /> सब हो गया — शाबाश
+                  <ICheck className="h-3.5 w-3.5" /> {pick(lang, S_RECOVER.allDone)[0]}
                 </p>
               )}
             </section>

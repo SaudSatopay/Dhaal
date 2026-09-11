@@ -7,6 +7,8 @@
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import type { GuardianRequest } from "@/lib/types";
+import { S_WARD } from "@/lib/labels";
+import { fmt, pick, useLang } from "@/lib/lang";
 import { ICheck, IHeart, IShield } from "@/components/icons";
 
 export default function WardGate({
@@ -16,6 +18,7 @@ export default function WardGate({
   requestId: string;
   guardianName: string;
 }) {
+  const lang = useLang();
   const [req, setReq] = useState<GuardianRequest | null>(null);
 
   useEffect(() => {
@@ -48,17 +51,19 @@ export default function WardGate({
   }, [requestId]);
 
   const status = req?.status ?? "pending";
+  const vars = { name: guardianName };
 
   if (status === "pending") {
+    const [pT] = pick(lang, S_WARD.pendingTitle);
+    const [pS, pS2] = pick(lang, S_WARD.pendingSub);
     return (
       <div className="border-2 border-ink bg-paper2 p-4">
         <div className="flex items-center gap-3">
           <IShield className="blink h-8 w-8 shrink-0 text-saffdeep" />
           <div>
-            <p className="font-bold">{guardianName} को बताया गया है — जवाब का इंतज़ार…</p>
+            <p className="font-bold">{fmt(pT, vars)}</p>
             <p className="mt-0.5 text-sm text-inksoft">
-              बड़े खतरे पर परिवार की एक नज़र। कुछ भी भेजने से पहले रुके रहिए। · Your guardian
-              has been notified, waiting for their reply.
+              {pS} <span className="text-inksoft/70">· {pS2}</span>
             </p>
           </div>
         </div>
@@ -67,36 +72,31 @@ export default function WardGate({
   }
 
   if (status === "blocked") {
+    const [bT] = pick(lang, S_WARD.blockedTitle);
+    const [bS] = pick(lang, S_WARD.blockedSub);
     return (
       <div className="border-[3px] border-ink bg-paper p-5 text-center shadow-poster-sm">
         <IHeart className="mx-auto h-9 w-9 text-saffdeep" />
-        <p className="mt-2 font-display text-2xl font-bold leading-tight">
-          {guardianName} ने कहा — यह पैसा मत भेजिए
-        </p>
+        <p className="mt-2 font-display text-2xl font-bold leading-tight">{fmt(bT, vars)}</p>
         {req?.guardian_note && (
           <p className="mt-3 border border-line bg-paper2 p-3 text-base">
             “{req.guardian_note}”
           </p>
         )}
-        <p className="mt-3 text-sm text-inksoft">
-          कोई पैसा नहीं गया। आपके अपनों की नज़र आप पर है — यही आपकी ढाल है। · Nothing was
-          sent. Your family has your back.
-        </p>
+        <p className="mt-3 text-sm text-inksoft">{bS}</p>
       </div>
     );
   }
 
+  const [aT] = pick(lang, S_WARD.allowedTitle);
+  const [aS] = pick(lang, S_WARD.allowedSub);
   return (
     <div className="border-2 border-clear bg-paper p-4">
       <p className="flex items-center gap-2 font-bold text-cleardeep">
-        <ICheck className="h-4 w-4" /> {guardianName} ने कहा — ठीक है
+        <ICheck className="h-4 w-4" /> {fmt(aT, vars)}
       </p>
-      {req?.guardian_note && (
-        <p className="mt-1 text-sm">“{req.guardian_note}”</p>
-      )}
-      <p className="mt-1 text-sm text-inksoft">
-        फिर भी रक़म और नाम एक बार खुद जाँच लीजिए। · Still double-check the amount and payee.
-      </p>
+      {req?.guardian_note && <p className="mt-1 text-sm">“{req.guardian_note}”</p>}
+      <p className="mt-1 text-sm text-inksoft">{aS}</p>
     </div>
   );
 }

@@ -2,13 +2,16 @@
 
 // Golden-path beat 1–4 surface (docs/PLAN.md): paste / QR / voice → POST /api/check
 // → VerdictCard. QR decoding is CLIENT-side (jsQR) — backend only ever sees qr_text.
-// Visual identity: suraksha poster — paper ground, ink borders, saffron action.
+// Visual identity: suraksha poster. Bilingual: selected language leads; the API
+// `lang` field follows the toggle and drives explanation + TTS language.
 
 import { useEffect, useRef, useState } from "react";
 import jsQR from "jsqr";
 import { api, apiForm } from "@/lib/api";
 import type { Check, InputType, TranscribeResult } from "@/lib/types";
 import { EXAMPLES } from "@/lib/fixtures";
+import { S_CHECK, S_COMMON } from "@/lib/labels";
+import { apiLang, fmt, pick, useLang, type Lang, type LangText } from "@/lib/lang";
 import TopBar from "@/components/TopBar";
 import VerdictCard from "@/components/VerdictCard";
 import ReportButton from "@/components/ReportButton";
@@ -18,10 +21,10 @@ import { IMic, IPaste, IQr, IShield, IStop } from "@/components/icons";
 
 type Tab = "paste" | "qr" | "voice";
 
-const TABS: { id: Tab; hi: string; en: string; Icon: typeof IPaste }[] = [
-  { id: "paste", hi: "पेस्ट करें", en: "PASTE", Icon: IPaste },
-  { id: "qr", hi: "QR फोटो", en: "QR IMAGE", Icon: IQr },
-  { id: "voice", hi: "बोलिए", en: "VOICE", Icon: IMic },
+const TABS: { id: Tab; label: LangText; Icon: typeof IPaste }[] = [
+  { id: "paste", label: S_CHECK.tabPaste, Icon: IPaste },
+  { id: "qr", label: S_CHECK.tabQr, Icon: IQr },
+  { id: "voice", label: S_CHECK.tabVoice, Icon: IMic },
 ];
 
 // Cosmetic hint — the engine runs every detector regardless, but an honest type
@@ -74,7 +77,8 @@ async function decodeQrImage(file: File): Promise<string | null> {
   }
 }
 
-function ScanShield() {
+function ScanShield({ lang }: { lang: Lang }) {
+  const [p, s] = pick(lang, S_CHECK.scanTitle);
   return (
     <div className="flex flex-col items-center border-[3px] border-ink bg-paper p-6 shadow-poster-sm">
       <div className="h-16 w-14 text-ink">
@@ -91,13 +95,14 @@ function ScanShield() {
           </g>
         </svg>
       </div>
-      <p className="mt-3 font-display text-xl font-bold">जाँच हो रही है…</p>
-      <p className="plate mt-1 text-inksoft">DHAAL IS CHECKING</p>
+      <p className="mt-3 font-display text-xl font-bold">{p}</p>
+      <p className="plate mt-1 text-inksoft">{s}</p>
     </div>
   );
 }
 
 export default function CheckPage() {
+  const lang = useLang();
   const [tab, setTab] = useState<Tab>("paste");
 
   // shared check state
@@ -119,14 +124,14 @@ export default function CheckPage() {
   // qr tab
   const [qrPreview, setQrPreview] = useState<string | null>(null);
   const [qrDecoded, setQrDecoded] = useState<string | null>(null);
-  const [qrError, setQrError] = useState("");
+  const [qrError, setQrError] = useState(false);
 
   // voice tab
   const [recording, setRecording] = useState(false);
   const [recSeconds, setRecSeconds] = useState(0);
   const [transcribing, setTranscribing] = useState(false);
   const [transcript, setTranscript] = useState("");
-  const [micError, setMicError] = useState("");
+  const [micError, setMicError] = useState(false);
   const recRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -148,7 +153,7 @@ export default function CheckPage() {
         body: JSON.stringify({
           type,
           payload: text,
-          lang: "hi-IN",
+          lang: apiLang(lang),
           speak,
           ward_link_id: wardPair?.link_id ?? null,
         }),
@@ -165,7 +170,7 @@ export default function CheckPage() {
   // ---------------- QR flow ----------------
   async function onQrFile(file: File | undefined | null) {
     if (!file) return;
-    setQrError("");
+    setQrError(false);
     setQrDecoded(null);
     setResult(null);
     setQrPreview((old) => {
@@ -174,7 +179,7 @@ export default function CheckPage() {
     });
     const text = await decodeQrImage(file).catch(() => null);
     if (!text) {
-      setQrError("QR पढ़ नहीं पाए — साफ़, सीधा screenshot आज़माएँ · could not read the QR");
+      setQrError(true);
       return;
     }
     setQrDecoded(text);
@@ -183,7 +188,7 @@ export default function CheckPage() {
 
   // ---------------- voice flow ----------------
   async function startRecording() {
-    setMicError("");
+    setMicError(false);
     setTranscript("");
     setResult(null);
     try {
@@ -204,9 +209,7 @@ export default function CheckPage() {
       setRecSeconds(0);
       timerRef.current = setInterval(() => setRecSeconds((s) => s + 1), 1000);
     } catch {
-      setMicError(
-        "माइक नहीं मिला या permission नहीं मिली — नीचे टाइप करके जाँचें · mic unavailable, use the typed box below"
-      );
+      setMicError(true);
     }
   }
 
@@ -226,7 +229,7 @@ export default function CheckPage() {
     try {
       const fd = new FormData();
       fd.append("audio", blob, "clip.webm");
-      fd.append("lang_hint", "hi-IN");
+      fd.append("lang_hint", apiLang(lang));
       const res = await apiForm<TranscribeResult>("/api/transcribe", fd);
       setTranscript(res.transcript);
     } catch (e) {
@@ -243,7 +246,7 @@ export default function CheckPage() {
     try {
       const res = await api<TranscribeResult>("/api/transcribe", {
         method: "POST",
-        body: JSON.stringify({ typed_text: text, lang_hint: "hi-IN" }),
+        body: JSON.stringify({ typed_text: text, lang_hint: apiLang(lang) }),
       });
       setTranscript(res.transcript);
       await runCheck("voice_transcript", res.transcript, true);
@@ -258,44 +261,47 @@ export default function CheckPage() {
 
   return (
     <div className="min-h-screen bg-paper">
-      <TopBar title_hi="जाँच करो" title_en="CHECK BEFORE YOU PAY" />
+      <TopBar title_hi={S_CHECK.title.hi} title_en={S_CHECK.title.en} />
 
       <main className="mx-auto max-w-xl p-4 pb-16">
         {wardPair && (
           <p className="mb-3 flex items-center justify-center gap-2 border-2 border-ink bg-paper2 px-3 py-2 text-center text-sm font-semibold">
             <IShield className="h-4 w-4 shrink-0 text-saffdeep" />
-            {wardPair.guardian_name} आपकी ढाल हैं — बड़े खतरे पर उनसे पूछा जाएगा
+            {fmt(pick(lang, S_CHECK.wardBanner)[0], { name: wardPair.guardian_name })}
           </p>
         )}
 
         {/* Tabs — joined signage segments */}
         <div role="tablist" aria-label="input method" className="flex border-[3px] border-ink bg-paper">
-          {TABS.map((t, i) => (
-            <button
-              key={t.id}
-              role="tab"
-              aria-selected={tab === t.id}
-              onClick={() => setTab(t.id)}
-              className={`flex-1 px-2 py-2.5 transition-colors ${
-                i < TABS.length - 1 ? "border-r-2 border-ink" : ""
-              } ${tab === t.id ? "bg-ink text-paper" : "hover:bg-paper2"}`}
-            >
-              <t.Icon className="mx-auto h-5 w-5" />
-              <span className="mt-1 block text-sm font-bold leading-tight">{t.hi}</span>
-              <span className={`plate block ${tab === t.id ? "text-paper/70" : "text-inksoft"}`}>
-                {t.en}
-              </span>
-            </button>
-          ))}
+          {TABS.map((t, i) => {
+            const [tp, ts] = pick(lang, t.label);
+            return (
+              <button
+                key={t.id}
+                role="tab"
+                aria-selected={tab === t.id}
+                onClick={() => setTab(t.id)}
+                className={`flex-1 px-2 py-2.5 transition-colors ${
+                  i < TABS.length - 1 ? "border-r-2 border-ink" : ""
+                } ${tab === t.id ? "bg-ink text-paper" : "hover:bg-paper2"}`}
+              >
+                <t.Icon className="mx-auto h-5 w-5" />
+                <span className="mt-1 block text-sm font-bold leading-tight">{tp}</span>
+                <span className={`plate block ${tab === t.id ? "text-paper/70" : "text-inksoft"}`}>
+                  {ts}
+                </span>
+              </button>
+            );
+          })}
         </div>
 
         {/* ---------------- Paste tab ---------------- */}
         {tab === "paste" && (
           <section className="mt-4 border-[3px] border-ink bg-paper p-4 shadow-poster-sm">
             <label htmlFor="paste-box" className="block font-bold">
-              संदेश, link, UPI ID या नंबर यहाँ डालें
+              {pick(lang, S_CHECK.pasteLabel)[0]}
               <span className="plate mt-0.5 block font-normal text-inksoft">
-                PASTE THE MESSAGE, LINK, UPI ID OR NUMBER
+                {pick(lang, S_CHECK.pasteLabel)[1]}
               </span>
             </label>
             <textarea
@@ -303,36 +309,42 @@ export default function CheckPage() {
               rows={5}
               value={payload}
               onChange={(e) => setPayload(e.target.value)}
-              placeholder="जैसे: आपका खाता बंद हो जाएगा, KYC करें…"
+              placeholder={pick(lang, S_CHECK.pastePh)[0]}
               className="mt-2 w-full border-2 border-ink bg-paper p-3 text-base outline-none placeholder:text-inksoft/60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-saffron"
             />
             <div className="mt-2.5 flex items-end justify-between gap-3">
               <span className="plate text-inksoft">
-                {payload.trim() ? `समझा गया · ${TYPE_HINT[detected]}` : ""}
+                {payload.trim()
+                  ? `${pick(lang, S_CHECK.detected)[0]} · ${TYPE_HINT[detected]}`
+                  : ""}
               </span>
               <button
                 onClick={() => runCheck(detected, payload)}
                 disabled={busy || !payload.trim()}
                 className="shrink-0 border-[3px] border-ink bg-saffron px-6 py-2.5 font-display text-lg font-bold shadow-poster-sm transition-transform active:translate-x-[2px] active:translate-y-[2px] active:shadow-none disabled:opacity-40"
               >
-                {busy ? "जाँच जारी…" : "जाँच करो"}
+                {busy ? pick(lang, S_COMMON.checking)[0] : pick(lang, S_COMMON.check)[0]}
               </button>
             </div>
 
             <div className="mt-4 border-t-2 border-line pt-3">
-              <div className="plate text-inksoft">आज़मा कर देखिए · TRY AN EXAMPLE</div>
+              <div className="plate text-inksoft">
+                {pick(lang, S_CHECK.tryExample)[0]} · {pick(lang, S_CHECK.tryExample)[1]}
+              </div>
               <div className="mt-2 flex flex-wrap gap-2">
                 {EXAMPLES.map((ex, i) => (
                   <button
-                    key={ex.label_en}
+                    key={ex.label.en}
                     onClick={() => {
                       setPayload(ex.text);
                       setResult(null);
                     }}
                     className="border-2 border-ink bg-paper px-2.5 py-1 text-xs font-semibold hover:bg-paper2"
                   >
-                    <span className="mr-1.5 font-mono text-saffdeep">{String(i + 1).padStart(2, "0")}</span>
-                    {ex.label_hi}
+                    <span className="mr-1.5 font-mono text-saffdeep">
+                      {String(i + 1).padStart(2, "0")}
+                    </span>
+                    {pick(lang, ex.label)[0]}
                   </button>
                 ))}
               </div>
@@ -344,9 +356,9 @@ export default function CheckPage() {
         {tab === "qr" && (
           <section className="mt-4 border-[3px] border-ink bg-paper p-4 shadow-poster-sm">
             <label htmlFor="qr-file" className="block cursor-pointer">
-              <span className="font-bold">QR का photo या screenshot चुनें</span>
+              <span className="font-bold">{pick(lang, S_CHECK.qrLabel)[0]}</span>
               <span className="plate mt-0.5 block text-inksoft">
-                DECODED ON YOUR PHONE — THE IMAGE NEVER LEAVES IT
+                {pick(lang, S_CHECK.qrSub)[0]}
               </span>
               <div className="mt-3 flex min-h-36 items-center justify-center border-2 border-dashed border-ink bg-paper2 p-4 text-center">
                 {qrPreview ? (
@@ -366,11 +378,15 @@ export default function CheckPage() {
             />
             {qrDecoded && (
               <p className="mt-3 break-all border border-line bg-paper2 p-2 font-mono text-xs">
-                <span className="plate mr-1 text-inksoft">DECODED →</span>
+                <span className="plate mr-1 text-inksoft">{pick(lang, S_CHECK.qrDecoded)[0]} →</span>
                 {qrDecoded}
               </p>
             )}
-            {qrError && <p className="mt-3 text-sm font-bold text-saffdeep">{qrError}</p>}
+            {qrError && (
+              <p className="mt-3 text-sm font-bold text-saffdeep">
+                {pick(lang, S_CHECK.qrError)[0]}
+              </p>
+            )}
           </section>
         )}
 
@@ -379,9 +395,9 @@ export default function CheckPage() {
           <section className="mt-4 border-[3px] border-ink bg-paper p-4 shadow-poster-sm">
             <div className="text-center">
               <p className="font-bold">
-                जो call आया था, वही बोल कर सुनाइए
+                {pick(lang, S_CHECK.voiceLabel)[0]}
                 <span className="plate mt-0.5 block font-normal text-inksoft">
-                  REPEAT WHAT THE CALLER SAID — DHAAL WILL LISTEN
+                  {pick(lang, S_CHECK.voiceLabel)[1]}
                 </span>
               </p>
               <span className="relative mt-4 inline-block">
@@ -402,21 +418,27 @@ export default function CheckPage() {
               <div className="mt-2.5 h-5 text-sm text-inksoft">
                 {recording ? (
                   <>
-                    सुन रहे हैं… <span className="font-mono font-semibold text-ink">{recSeconds}s</span> — रोकने पर जाँच होगी
+                    {pick(lang, S_CHECK.recListening)[0]}{" "}
+                    <span className="font-mono font-semibold text-ink">{recSeconds}s</span> —{" "}
+                    {pick(lang, S_CHECK.recStopHint)[0]}
                   </>
                 ) : transcribing ? (
-                  "समझ रहे हैं… · transcribing"
+                  pick(lang, S_CHECK.transcribing)[0]
                 ) : (
-                  "दबाइए और बोलिए · tap and speak"
+                  `${pick(lang, S_CHECK.tapSpeak)[0]} · ${pick(lang, S_CHECK.tapSpeak)[1]}`
                 )}
               </div>
-              {micError && <p className="mt-2 text-sm font-bold text-saffdeep">{micError}</p>}
+              {micError && (
+                <p className="mt-2 text-sm font-bold text-saffdeep">
+                  {pick(lang, S_CHECK.micError)[0]}
+                </p>
+              )}
             </div>
 
             {transcript && (
               <div className="mt-4">
                 <label htmlFor="transcript-box" className="plate text-inksoft">
-                  यह सुना गया — गलत हो तो सुधारें · HEARD THIS, EDIT IF WRONG
+                  {pick(lang, S_CHECK.heard)[0]}
                 </label>
                 <textarea
                   id="transcript-box"
@@ -430,16 +452,17 @@ export default function CheckPage() {
                   disabled={busy || !transcript.trim()}
                   className="mt-2 w-full border-[3px] border-ink bg-saffron px-6 py-2.5 font-display text-lg font-bold shadow-poster-sm transition-transform active:translate-x-[2px] active:translate-y-[2px] active:shadow-none disabled:opacity-40"
                 >
-                  {busy ? "जाँच जारी…" : "इसकी जाँच करो"}
+                  {busy ? pick(lang, S_COMMON.checking)[0] : pick(lang, S_CHECK.checkThis)[0]}
                 </button>
               </div>
             )}
 
             <div className="mt-5 border-t-2 border-line pt-4">
               <label htmlFor="typed-voice" className="plate text-inksoft">
-                या टाइप करें (MIC न चले तो) · OR TYPE IT INSTEAD
+                {pick(lang, S_CHECK.typedLabel)[0]}
               </label>
               <TypedVoiceBox
+                lang={lang}
                 disabled={busy || transcribing || recording}
                 onSubmit={checkTypedAsVoice}
               />
@@ -449,16 +472,16 @@ export default function CheckPage() {
 
         {/* ---------------- Shared result area ---------------- */}
         <div ref={resultRef} className="mt-5 scroll-mt-20">
-          {busy && <ScanShield />}
+          {busy && <ScanShield lang={lang} />}
           {error && (
             <div className="border-[3px] border-ink bg-paper">
               <div className="hazard-saffron h-3 border-b-2 border-ink" aria-hidden="true" />
               <div className="p-4">
-                <p className="font-bold">जाँच नहीं हो पाई · CHECK FAILED</p>
-                <p className="mt-1 break-all font-mono text-xs text-inksoft">{error}</p>
-                <p className="mt-2 text-sm text-inksoft">
-                  Internet जाँच कर दोबारा कोशिश करें · check connection and retry
+                <p className="font-bold">
+                  {pick(lang, S_CHECK.errTitle)[0]} · {pick(lang, S_CHECK.errTitle)[1]}
                 </p>
+                <p className="mt-1 break-all font-mono text-xs text-inksoft">{error}</p>
+                <p className="mt-2 text-sm text-inksoft">{pick(lang, S_CHECK.errHint)[0]}</p>
               </div>
             </div>
           )}
@@ -491,9 +514,11 @@ export default function CheckPage() {
 }
 
 function TypedVoiceBox({
+  lang,
   disabled,
   onSubmit,
 }: {
+  lang: Lang;
   disabled: boolean;
   onSubmit: (text: string) => void;
 }) {
@@ -507,7 +532,7 @@ function TypedVoiceBox({
         onKeyDown={(e) => {
           if (e.key === "Enter" && text.trim() && !disabled) onSubmit(text);
         }}
-        placeholder="call में जो कहा गया…"
+        placeholder={pick(lang, S_CHECK.typedPh)[0]}
         className="w-full border-2 border-ink bg-paper p-3 text-base placeholder:text-inksoft/60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-saffron"
       />
       <button
@@ -515,7 +540,7 @@ function TypedVoiceBox({
         disabled={disabled || !text.trim()}
         className="shrink-0 border-[3px] border-ink bg-paper px-4 font-display font-bold hover:bg-paper2 disabled:opacity-40"
       >
-        जाँचें
+        {pick(lang, S_CHECK.typedBtn)[0]}
       </button>
     </div>
   );

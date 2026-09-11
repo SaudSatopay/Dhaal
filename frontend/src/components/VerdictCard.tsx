@@ -1,13 +1,14 @@
 "use client";
 
 // The product's money shot, as a suraksha poster: DANGER/SUSPICIOUS render as a
-// hazard notice (stripe band, enormous खतरा, rubber-stamp community seal, stamp-slam
-// reveal); NO_KNOWN_RISK is a quiet clearance chit. Danger screams, safety whispers.
-// Visual layer only — data flow and audio behavior unchanged.
+// hazard notice (stripe band, enormous headline, rubber-stamp community seal,
+// stamp-slam reveal); NO_KNOWN_RISK is a quiet clearance chit. Danger screams,
+// safety whispers. Bilingual: the selected language leads everywhere.
 
 import { useEffect, useRef, useState } from "react";
 import type { Check, Signal } from "@/lib/types";
-import { CATEGORY_UI, SOURCE_UI, VERDICT_UI } from "@/lib/labels";
+import { CATEGORY_UI, S_COMMON, S_VERDICT, SOURCE_UI, VERDICT_UI } from "@/lib/labels";
+import { pick, useLang, type Lang } from "@/lib/lang";
 import { ISpeaker, IStop } from "@/components/icons";
 
 const TONE = {
@@ -15,13 +16,11 @@ const TONE = {
     stripe: "hazard-danger",
     headline: "text-danger",
     sub: "text-dangerdeep",
-    border: "border-ink",
   },
   caution: {
     stripe: "hazard-caution",
     headline: "text-caution",
     sub: "text-cautiondeep",
-    border: "border-ink",
   },
 } as const;
 
@@ -34,24 +33,27 @@ function WeightTrack({ weight }: { weight: number }) {
   );
 }
 
-function SignalRow({ s }: { s: Signal }) {
+function SignalRow({ s, lang }: { s: Signal; lang: Lang }) {
   const src = SOURCE_UI[s.source];
+  const [srcP, srcS] = pick(lang, src);
+  const title = lang === "en" ? [s.title_en, s.title_hi] : [s.title_hi, s.title_en];
+  const detail = lang === "en" ? [s.detail_en, s.detail_hi] : [s.detail_hi, s.detail_en];
   return (
     <li className="py-3">
       <div className="flex items-start justify-between gap-3">
-        <span className="font-semibold leading-snug">{s.title_hi}</span>
+        <span className="font-semibold leading-snug">{title[0]}</span>
         <span className="shrink-0 border-2 border-ink px-1.5 font-mono text-sm font-semibold tabular-nums">
           +{s.weight}
         </span>
       </div>
-      <div className="plate mt-0.5 text-inksoft">{s.title_en}</div>
+      <div className="plate mt-0.5 text-inksoft">{title[1]}</div>
       <div className="mt-2">
         <WeightTrack weight={s.weight} />
       </div>
-      <p className="mt-2 text-sm leading-snug">{s.detail_hi}</p>
-      <p className="mt-0.5 text-xs leading-snug text-inksoft">{s.detail_en}</p>
+      <p className="mt-2 text-sm leading-snug">{detail[0]}</p>
+      <p className="mt-0.5 text-xs leading-snug text-inksoft">{detail[1]}</p>
       <span className={`plate mt-2 inline-block border px-1.5 py-0.5 ${src.cls}`}>
-        {src.hi} · {src.en}
+        {srcP} · {srcS}
       </span>
     </li>
   );
@@ -66,8 +68,15 @@ export default function VerdictCard({
   actions?: React.ReactNode; // e.g. the Report button (wired in the intel task)
   autoSpeak?: boolean; // voice-path beat 4: Dhaal speaks the warning back unprompted
 }) {
+  const lang = useLang();
   const v = VERDICT_UI[check.verdict];
+  const [vLabel, vLabelSub] = pick(lang, v.label);
+  const [vHint] = pick(lang, v.hint);
   const cat = check.scam_category ? CATEGORY_UI[check.scam_category] : null;
+  const explanation =
+    lang === "en"
+      ? [check.explanation_en, check.explanation_hi]
+      : [check.explanation_hi, check.explanation_en];
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [speaking, setSpeaking] = useState(false);
 
@@ -110,7 +119,9 @@ export default function VerdictCard({
       className="mt-3 inline-flex items-center gap-2 border-2 border-ink bg-paper px-4 py-1.5 text-sm font-semibold hover:bg-paper2"
     >
       {speaking ? <IStop className="h-4 w-4" /> : <ISpeaker className="h-4 w-4" />}
-      {speaking ? "रोकें" : "सुनिए · LISTEN"}
+      {speaking
+        ? pick(lang, S_COMMON.stopAudio)[0]
+        : `${pick(lang, S_COMMON.listen)[0]} · ${pick(lang, S_COMMON.listen)[1]}`}
     </button>
   ) : null;
 
@@ -127,11 +138,11 @@ export default function VerdictCard({
             <path d="m7.5 12.5 3 3 6-7" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="square" />
           </svg>
           <div className="min-w-0">
-            <h2 className="font-display text-2xl font-bold leading-tight text-clear">{v.hi}</h2>
-            <p className="plate mt-0.5 text-cleardeep">{v.en}</p>
-            <p className="mt-2 leading-relaxed">{check.explanation_hi}</p>
-            <p className="mt-1 text-sm leading-relaxed text-inksoft">{check.explanation_en}</p>
-            <p className="mt-2 text-sm italic text-inksoft">{v.hint_hi}</p>
+            <h2 className="font-display text-2xl font-bold leading-tight text-clear">{vLabel}</h2>
+            <p className="plate mt-0.5 text-cleardeep">{vLabelSub}</p>
+            <p className="mt-2 leading-relaxed">{explanation[0]}</p>
+            <p className="mt-1 text-sm leading-relaxed text-inksoft">{explanation[1]}</p>
+            <p className="mt-2 text-sm italic text-inksoft">{vHint}</p>
             {listenButton}
           </div>
         </div>
@@ -139,7 +150,7 @@ export default function VerdictCard({
           <div className="border-t border-line px-4 pb-3">
             <ul className="divide-y divide-line">
               {check.signals.map((s) => (
-                <SignalRow key={s.id} s={s} />
+                <SignalRow key={s.id} s={s} lang={lang} />
               ))}
             </ul>
           </div>
@@ -153,6 +164,8 @@ export default function VerdictCard({
   const t = TONE[v.tone as "danger" | "caution"];
   const community = check.signals.find((s) => s.source === "community");
   const sealCount = community?.title_en.match(/\d+/)?.[0] ?? null;
+  const [why, whySub] = pick(lang, S_VERDICT.why);
+  const [sealWord] = pick(lang, S_VERDICT.sealReports);
 
   return (
     <section aria-live="polite" className="stamp-in border-[3px] border-ink bg-paper shadow-poster">
@@ -162,14 +175,14 @@ export default function VerdictCard({
       {/* headline block */}
       <div className="relative border-b-[3px] border-ink p-4 pb-3.5">
         <p className="plate text-inksoft">ढाल सुरक्षा जाँच · DHAAL NOTICE</p>
-        <h2 className={`type-verdict mt-1 font-display font-extrabold ${t.headline}`}>{v.hi}</h2>
-        <p className={`plate mt-1 ${t.sub}`}>{v.en}</p>
-        <p className="mt-2.5 max-w-[26rem] font-semibold leading-snug">{v.hint_hi}</p>
+        <h2 className={`type-verdict mt-1 font-display font-extrabold ${t.headline}`}>{vLabel}</h2>
+        <p className={`plate mt-1 ${t.sub}`}>{vLabelSub}</p>
+        <p className="mt-2.5 max-w-[26rem] font-semibold leading-snug">{vHint}</p>
 
         <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
           {cat && (
             <span className="border-2 border-ink bg-paper2 px-2 py-0.5 text-sm font-semibold">
-              {cat.hi} · {cat.en}
+              {pick(lang, cat)[0]} · {pick(lang, cat)[1]}
             </span>
           )}
           <span className="font-mono text-sm tabular-nums text-inksoft">
@@ -194,29 +207,33 @@ export default function VerdictCard({
             <span className="font-mono text-3xl font-semibold leading-none tabular-nums">
               {sealCount ?? "—"}
             </span>
-            <span className="mt-0.5 text-xs font-bold leading-none">रिपोर्ट</span>
+            <span className={`mt-0.5 font-bold leading-none ${lang === "en" ? "text-[10px]" : "text-xs"}`}>
+              {sealWord}
+            </span>
           </div>
         )}
       </div>
 
       {/* plain-language explanation */}
       <div className="border-b-2 border-line p-4">
-        <p className="text-lg leading-relaxed">{check.explanation_hi}</p>
-        <p className="mt-1.5 text-sm leading-relaxed text-inksoft">{check.explanation_en}</p>
+        <p className="text-lg leading-relaxed">{explanation[0]}</p>
+        <p className="mt-1.5 text-sm leading-relaxed text-inksoft">{explanation[1]}</p>
         {listenButton}
       </div>
 
       {/* signal-by-signal reasons */}
       <div className="p-4 pt-3">
-        <h3 className="plate text-inksoft">ऐसा क्यों · WHY THIS VERDICT</h3>
+        <h3 className="plate text-inksoft">
+          {why} · {whySub}
+        </h3>
         {check.signals.length === 0 ? (
           <p className="mt-2 text-sm text-inksoft">
-            कोई खतरे का संकेत नहीं मिला · no risk signals detected
+            {pick(lang, S_VERDICT.noSignals)[0]}
           </p>
         ) : (
           <ul className="mt-1 divide-y-2 divide-line">
             {check.signals.map((s) => (
-              <SignalRow key={s.id} s={s} />
+              <SignalRow key={s.id} s={s} lang={lang} />
             ))}
           </ul>
         )}

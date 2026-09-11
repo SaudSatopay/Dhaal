@@ -8,8 +8,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api";
-import { CATEGORY_UI } from "@/lib/labels";
+import { CATEGORY_UI, S_INTEL } from "@/lib/labels";
+import { pick, useLang } from "@/lib/lang";
 import type { Report, ScamCategory, Trends } from "@/lib/types";
+import LangToggle from "@/components/LangToggle";
 import { ICheck, ICross, TypeMark } from "@/components/icons";
 
 function catLabel(c: string): { hi: string; en: string } {
@@ -18,7 +20,7 @@ function catLabel(c: string): { hi: string; en: string } {
 
 function timeAgo(iso: string): string {
   const s = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000);
-  if (s < 60) return "अभी · now";
+  if (s < 60) return "now";
   if (s < 3600) return `${Math.floor(s / 60)} min`;
   if (s < 86400) return `${Math.floor(s / 3600)} hr`;
   return `${Math.floor(s / 86400)} d`;
@@ -91,16 +93,17 @@ function DayLine({ days }: { days: { day: string; count: number }[] }) {
 }
 
 function CategoryBars({ cats }: { cats: { category: ScamCategory; count: number }[] }) {
+  const lang = useLang();
   const max = Math.max(...cats.map((c) => c.count)) || 1;
   return (
     <ul className="space-y-2.5">
       {cats.map((c) => {
-        const l = catLabel(c.category);
+        const [p, s] = pick(lang, catLabel(c.category));
         return (
           <li key={c.category} className="grid grid-cols-[9rem_1fr_2.5rem] items-center gap-2">
             <div className="min-w-0">
-              <div className="truncate text-sm font-semibold leading-tight">{l.hi}</div>
-              <div className="plate truncate text-fog">{l.en}</div>
+              <div className="truncate text-sm font-semibold leading-tight">{p}</div>
+              <div className="plate truncate text-fog">{s}</div>
             </div>
             <div className="h-2.5 border border-inkline bg-inkpanel">
               <div
@@ -119,11 +122,12 @@ function CategoryBars({ cats }: { cats: { category: ScamCategory; count: number 
 }
 
 function TrendsBoard({ trends }: { trends: Trends }) {
+  const lang = useLang();
   return (
     <div className="space-y-4">
       {/* hero stat */}
       <div className="border-2 border-inkline bg-inkpanel p-4">
-        <div className="plate text-saffron">इस हफ्ते RAJASTHAN में · THIS WEEK</div>
+        <div className="plate text-saffron">{pick(lang, S_INTEL.week)[0]}</div>
         <div className="mt-1 flex items-baseline gap-3">
           <span className="font-mono text-6xl font-semibold tabular-nums leading-none">
             {trends.total_reports}
@@ -144,7 +148,8 @@ function TrendsBoard({ trends }: { trends: Trends }) {
       {/* 7-day line */}
       <div className="border-2 border-inkline bg-inkpanel p-4">
         <h3 className="text-sm font-bold">
-          रोज़ की रिपोर्टें <span className="plate ml-1 font-normal text-fog">PER DAY</span>
+          {pick(lang, S_INTEL.perDay)[0]}{" "}
+          <span className="plate ml-1 font-normal text-fog">{pick(lang, S_INTEL.perDay)[1]}</span>
         </h3>
         <div className="mt-2">
           <DayLine days={trends.by_day} />
@@ -154,7 +159,8 @@ function TrendsBoard({ trends }: { trends: Trends }) {
       {/* category bars */}
       <div className="border-2 border-inkline bg-inkpanel p-4">
         <h3 className="text-sm font-bold">
-          किस तरह के धोखे <span className="plate ml-1 font-normal text-fog">BY SCAM TYPE</span>
+          {pick(lang, S_INTEL.byType)[0]}{" "}
+          <span className="plate ml-1 font-normal text-fog">{pick(lang, S_INTEL.byType)[1]}</span>
         </h3>
         <div className="mt-3">
           <CategoryBars cats={trends.by_category} />
@@ -164,7 +170,10 @@ function TrendsBoard({ trends }: { trends: Trends }) {
       {/* top indicators */}
       <div className="border-2 border-inkline bg-inkpanel p-4">
         <h3 className="text-sm font-bold">
-          सबसे ज़्यादा रिपोर्ट हुए <span className="plate ml-1 font-normal text-fog">MOST REPORTED</span>
+          {pick(lang, S_INTEL.mostReported)[0]}{" "}
+          <span className="plate ml-1 font-normal text-fog">
+            {pick(lang, S_INTEL.mostReported)[1]}
+          </span>
         </h3>
         <ul className="mt-2 divide-y divide-inkline">
           {trends.top_indicators.slice(0, 6).map((ind, i) => (
@@ -205,7 +214,8 @@ function QueueCard({
   onDecide: (id: string, action: "verify" | "reject") => void;
   busy: boolean;
 }) {
-  const l = catLabel(report.category);
+  const lang = useLang();
+  const [lp, ls] = pick(lang, catLabel(report.category));
   const pending = report.status === "pending";
   return (
     <li className={`border-2 bg-inkpanel p-3 ${pending ? "border-saffron" : "border-inkline"}`}>
@@ -220,7 +230,7 @@ function QueueCard({
       </div>
       <div className="mt-2 flex flex-wrap items-center gap-1.5">
         <span className="plate border border-inkline px-1.5 py-0.5 text-fog">
-          {l.hi} · {l.en}
+          {lp} · {ls}
         </span>
         <span className="plate border border-inkline px-1.5 py-0.5 text-fog">{report.city}</span>
         <span className="plate border border-inkline px-1.5 py-0.5 text-fog">
@@ -234,7 +244,7 @@ function QueueCard({
           disabled={busy}
           className="flex flex-1 items-center justify-center gap-2 border-2 border-saffron bg-saffron px-3 py-2 text-sm font-bold text-ink hover:bg-saffron/85 disabled:opacity-40"
         >
-          <ICheck className="h-4 w-4" /> VERIFY — ढाल में जोड़ो
+          <ICheck className="h-4 w-4" /> {pick(lang, S_INTEL.verify)[0]}
         </button>
         <button
           onClick={() => onDecide(report._id, "reject")}
@@ -251,11 +261,12 @@ function QueueCard({
 // ---------------------------------------------------------------- page
 
 export default function IntelPage() {
+  const lang = useLang();
   const [trends, setTrends] = useState<Trends | null>(null);
   const [queue, setQueue] = useState<Report[] | null>(null);
   const [apiDown, setApiDown] = useState(false);
   const [actingOn, setActingOn] = useState<string | null>(null);
-  const [flash, setFlash] = useState("");
+  const [flash, setFlash] = useState<"" | "ok" | "fail">("");
   const flashTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const loadTrends = useCallback(async () => {
@@ -298,13 +309,13 @@ export default function IntelPage() {
       });
       setQueue((q) => (q ? q.filter((r) => r._id !== id) : q));
       if (action === "verify") {
-        setFlash("VERIFIED — अब हर जाँच में यह blocklist live है");
+        setFlash("ok");
         if (flashTimer.current) clearTimeout(flashTimer.current);
         flashTimer.current = setTimeout(() => setFlash(""), 5000);
         loadTrends();
       }
     } catch {
-      setFlash("ACTION FAILED — दोबारा try करें");
+      setFlash("fail");
       if (flashTimer.current) clearTimeout(flashTimer.current);
       flashTimer.current = setTimeout(() => setFlash(""), 5000);
       loadQueue();
@@ -312,6 +323,9 @@ export default function IntelPage() {
       setActingOn(null);
     }
   }
+
+  const [titleP, titleS] = pick(lang, S_INTEL.title);
+  const [queueP, queueS] = pick(lang, S_INTEL.queue);
 
   return (
     <div className="min-h-screen bg-ink text-paper">
@@ -322,11 +336,12 @@ export default function IntelPage() {
             <span aria-hidden="true" className="text-lg leading-none">←</span>
             <span className="font-display text-2xl font-extrabold leading-none">ढाल</span>
           </Link>
-          <div className="min-w-0 border-l-2 border-inkline pl-3">
-            <div className="truncate font-bold leading-tight">धोखों का नक्शा</div>
-            <div className="plate truncate text-fog">COMMUNITY INTEL · WAR ROOM</div>
+          <div className="min-w-0 flex-1 border-l-2 border-inkline pl-3">
+            <div className="truncate font-bold leading-tight">{titleP}</div>
+            <div className="plate truncate text-fog">{titleS} · WAR ROOM</div>
           </div>
-          <span className="plate ml-auto shrink-0 border border-saffron px-2 py-0.5 text-saffron">
+          <LangToggle variant="ink" />
+          <span className="plate shrink-0 border border-saffron px-2 py-0.5 text-saffron">
             <span className="blink">●</span> LIVE
           </span>
         </div>
@@ -335,12 +350,12 @@ export default function IntelPage() {
       <main className="mx-auto max-w-5xl p-4 pb-16">
         {apiDown && (
           <div className="plate mb-4 border-2 border-saffron p-3 text-saffron">
-            API नहीं मिल रही — RETRYING…
+            {pick(lang, S_INTEL.apiDown)[0]}
           </div>
         )}
         {flash && (
           <div className="mb-4 border-2 border-saffron bg-inkpanel p-3 font-semibold text-saffron">
-            {flash}
+            {pick(lang, flash === "ok" ? S_INTEL.flashOk : S_INTEL.flashFail)[0]}
           </div>
         )}
 
@@ -349,7 +364,7 @@ export default function IntelPage() {
           <section className="lg:order-2">
             <h2 className="flex items-center justify-between font-bold">
               <span>
-                Moderation queue <span className="plate ml-1 font-normal text-fog">जाँच बाकी</span>
+                {queueP} <span className="plate ml-1 font-normal text-fog">{queueS}</span>
               </span>
               {queue && (
                 <span
@@ -365,7 +380,7 @@ export default function IntelPage() {
               <div className="mt-3 h-24 animate-pulse border-2 border-inkline bg-inkpanel" />
             ) : queue.length === 0 ? (
               <p className="mt-3 border-2 border-dashed border-inkline p-4 text-center text-sm text-fog">
-                कोई pending report नहीं — सब जाँची जा चुकीं
+                {pick(lang, S_INTEL.queueEmpty)[0]}
                 <span className="plate mt-1 block">NEW REPORTS LAND HERE WITHIN 3S</span>
               </p>
             ) : (
@@ -380,7 +395,8 @@ export default function IntelPage() {
           {/* trends war map */}
           <section className="lg:order-1">
             <h2 className="font-bold">
-              War map <span className="plate ml-1 font-normal text-fog">धोखों का नक्शा</span>
+              {pick(lang, S_INTEL.warMap)[0]}{" "}
+              <span className="plate ml-1 font-normal text-fog">{pick(lang, S_INTEL.warMap)[1]}</span>
             </h2>
             {trends ? (
               <div className="mt-3">

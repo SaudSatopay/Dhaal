@@ -3,10 +3,8 @@
 // Guardian mode (golden-path beat 5, PS bonus): family protecting family.
 // Same route, three faces:
 //   • guardian (laptop): create pair → BIG pair code + ward QR/link → live inbox (3s poll)
-//   • ward join (phone): opens ?link=… → stores pairing locally → every /check now pings guardian
+//   • ward join (phone): opens ?link=… or types the pair code → stores pairing locally
 //   • ward paired: status + unpair
-// Pairing hand-off carries link_id in the URL because the API has no resolve-by-code
-// endpoint yet (asked in docs/TASKS.md Requests); pair_code stays the human-readable label.
 // Block/Allow buttons wear verdict colors deliberately — a guardian decision IS a verdict.
 
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
@@ -23,6 +21,8 @@ import {
   type GuardianPair,
   type WardPair,
 } from "@/lib/guardian";
+import { S_GUARDIAN } from "@/lib/labels";
+import { fmt, pick, useLang } from "@/lib/lang";
 import TopBar from "@/components/TopBar";
 import { ICheck, ICross, IShield, IShieldCheck } from "@/components/icons";
 
@@ -38,7 +38,7 @@ function QrCanvas({ text }: { text: string }) {
 
 function timeAgo(iso: string): string {
   const s = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000);
-  if (s < 60) return "अभी · now";
+  if (s < 60) return "now";
   if (s < 3600) return `${Math.floor(s / 60)} min`;
   return `${Math.floor(s / 3600)} hr`;
 }
@@ -56,20 +56,21 @@ function RequestCard({
   onDecide: (id: string, decision: "allowed" | "blocked", note: string) => void;
   busy: boolean;
 }) {
+  const lang = useLang();
   const [note, setNote] = useState("");
   const pending = req.status === "pending";
   return (
     <li className={`border-ink bg-paper p-4 ${pending ? "border-[3px] shadow-poster-sm" : "border-2"}`}>
       <div className="flex items-start justify-between gap-2">
         <p className="font-bold leading-snug">
-          {wardName} ने कुछ खतरनाक जाँचा
+          {fmt(pick(lang, S_GUARDIAN.reqTitle)[0], { name: wardName })}
           <span className="plate mt-0.5 block font-normal text-inksoft">
-            CHECKED SOMETHING RISKY · {timeAgo(req.created_at)}
+            {timeAgo(req.created_at)}
           </span>
         </p>
         {pending ? (
           <span className="plate blink shrink-0 border border-saffdeep px-1.5 py-0.5 text-saffdeep">
-            नई
+            {lang === "en" ? "NEW" : "नई"}
           </span>
         ) : (
           <span
@@ -91,7 +92,7 @@ function RequestCard({
           <input
             value={note}
             onChange={(e) => setNote(e.target.value)}
-            placeholder="अपनी बात जोड़ें… जैसे: ठग है, मत भेजो (optional)"
+            placeholder={pick(lang, S_GUARDIAN.notePh)[0]}
             className="mt-3 w-full border-2 border-ink bg-paper p-2.5 text-sm placeholder:text-inksoft/60"
           />
           <div className="mt-2 flex gap-2">
@@ -100,26 +101,29 @@ function RequestCard({
               disabled={busy}
               className="flex flex-1 items-center justify-center gap-2 border-[3px] border-ink bg-danger px-4 py-2.5 font-bold text-paper shadow-poster-sm hover:bg-dangerdeep disabled:opacity-40"
             >
-              <ICross className="h-4 w-4" /> रोक दो · Block
+              <ICross className="h-4 w-4" /> {pick(lang, S_GUARDIAN.block)[0]}
             </button>
             <button
               onClick={() => onDecide(req._id, "allowed", note)}
               disabled={busy}
               className="flex flex-1 items-center justify-center gap-2 border-2 border-clear px-4 py-2.5 font-bold text-cleardeep hover:bg-cleartint disabled:opacity-40"
             >
-              <ICheck className="h-4 w-4" /> ठीक है · Allow
+              <ICheck className="h-4 w-4" /> {pick(lang, S_GUARDIAN.allow)[0]}
             </button>
           </div>
         </>
       )}
       {!pending && req.guardian_note && (
-        <p className="mt-2 text-sm text-inksoft">आपका note: “{req.guardian_note}”</p>
+        <p className="mt-2 text-sm text-inksoft">
+          {pick(lang, S_GUARDIAN.yourNote)[0]} “{req.guardian_note}”
+        </p>
       )}
     </li>
   );
 }
 
 function GuardianInbox({ pair, onUnpair }: { pair: GuardianPair; onUnpair: () => void }) {
+  const lang = useLang();
   const [requests, setRequests] = useState<GuardianRequest[] | null>(null);
   const [actingOn, setActingOn] = useState<string | null>(null);
   const [wardUrl, setWardUrl] = useState("");
@@ -172,7 +176,7 @@ function GuardianInbox({ pair, onUnpair }: { pair: GuardianPair; onUnpair: () =>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <p className="plate text-inksoft">
-              आप {pair.ward_name} की ढाल हैं · PAIR CODE
+              {fmt(pick(lang, S_GUARDIAN.youGuard)[0], { name: pair.ward_name })} · PAIR CODE
             </p>
             <p className="mt-1 font-mono text-3xl font-semibold tracking-[0.2em]">
               {pair.pair_code}
@@ -181,8 +185,7 @@ function GuardianInbox({ pair, onUnpair }: { pair: GuardianPair; onUnpair: () =>
           {wardUrl && <QrCanvas text={wardUrl} />}
         </div>
         <p className="mt-2 text-sm text-inksoft">
-          {pair.ward_name} के phone पर यह QR scan करवाएँ (या link भेजें) — बस, जुड़ गया। ·
-          Scan this QR on {pair.ward_name}&rsquo;s phone, or send the link.
+          {fmt(pick(lang, S_GUARDIAN.scanHint)[0], { name: pair.ward_name })}
         </p>
         <div className="mt-2.5 flex gap-2">
           <button
@@ -197,13 +200,13 @@ function GuardianInbox({ pair, onUnpair }: { pair: GuardianPair; onUnpair: () =>
             }}
             className="plate border-2 border-ink px-2.5 py-1 hover:bg-paper2"
           >
-            {copied ? "✓ COPIED" : "LINK COPY करें"}
+            {copied ? "✓ COPIED" : pick(lang, S_GUARDIAN.copyLink)[0]}
           </button>
           <button
             onClick={onUnpair}
             className="plate border border-line px-2.5 py-1 text-inksoft hover:bg-paper2"
           >
-            नया PAIR बनाएँ
+            {pick(lang, S_GUARDIAN.newPair)[0]}
           </button>
         </div>
       </section>
@@ -211,11 +214,14 @@ function GuardianInbox({ pair, onUnpair }: { pair: GuardianPair; onUnpair: () =>
       <section>
         <h2 className="flex items-center justify-between font-bold">
           <span>
-            Inbox <span className="plate ml-1 font-normal text-inksoft">{pair.ward_name} की जाँचें</span>
+            Inbox{" "}
+            <span className="plate ml-1 font-normal text-inksoft">
+              {fmt(pick(lang, S_GUARDIAN.inboxSub)[0], { name: pair.ward_name })}
+            </span>
           </span>
           {pending.length > 0 && (
             <span className="blink bg-saffron px-2 font-mono text-sm font-semibold tabular-nums">
-              {pending.length} नई
+              {fmt(pick(lang, S_GUARDIAN.newBadge)[0], { n: pending.length })}
             </span>
           )}
         </h2>
@@ -223,9 +229,7 @@ function GuardianInbox({ pair, onUnpair }: { pair: GuardianPair; onUnpair: () =>
           <div className="mt-3 h-24 animate-pulse border-2 border-line bg-paper2" />
         ) : requests.length === 0 ? (
           <p className="mt-3 border-2 border-dashed border-ink p-6 text-center text-sm text-inksoft">
-            अभी कोई request नहीं। {pair.ward_name} जब कुछ खतरनाक जाँचेंगे, यहाँ 3 सेकंड में
-            दिखेगा।
-            <span className="plate mt-1 block">REQUESTS APPEAR WITHIN 3 SECONDS</span>
+            {fmt(pick(lang, S_GUARDIAN.inboxEmpty)[0], { name: pair.ward_name })}
           </p>
         ) : (
           <ul className="mt-3 space-y-3">
@@ -248,6 +252,7 @@ function GuardianInbox({ pair, onUnpair }: { pair: GuardianPair; onUnpair: () =>
 // ---------------------------------------------------------------- create pair
 
 function CreatePair({ onCreated }: { onCreated: (p: GuardianPair) => void }) {
+  const lang = useLang();
   const [wardName, setWardName] = useState("");
   const [guardianName, setGuardianName] = useState("");
   const [busy, setBusy] = useState(false);
@@ -277,26 +282,25 @@ function CreatePair({ onCreated }: { onCreated: (p: GuardianPair) => void }) {
   return (
     <section className="border-[3px] border-ink bg-paper p-5 shadow-poster-sm">
       <IShield className="h-9 w-9 text-saffdeep" />
-      <h2 className="mt-2 font-display text-2xl font-bold leading-tight">अपनों की ढाल बनिए</h2>
-      <p className="mt-1 text-sm text-inksoft">
-        Pair बनाइए — जब वे कुछ खतरनाक जाँचेंगे, आपसे पूछा जाएगा। Be the shield for someone
-        you love: risky checks on their phone ask you first.
-      </p>
+      <h2 className="mt-2 font-display text-2xl font-bold leading-tight">
+        {pick(lang, S_GUARDIAN.createTitle)[0]}
+      </h2>
+      <p className="mt-1 text-sm text-inksoft">{pick(lang, S_GUARDIAN.createSub)[0]}</p>
       <label className="mt-4 block">
-        <span className="plate text-inksoft">किसकी रक्षा करनी है · WHO ARE YOU PROTECTING</span>
+        <span className="plate text-inksoft">{pick(lang, S_GUARDIAN.who)[0]}</span>
         <input
           value={wardName}
           onChange={(e) => setWardName(e.target.value)}
-          placeholder="जैसे: सुनीता देवी (दादी)"
+          placeholder={pick(lang, S_GUARDIAN.whoPh)[0]}
           className="mt-1 w-full border-2 border-ink bg-paper p-3 placeholder:text-inksoft/60"
         />
       </label>
       <label className="mt-3 block">
-        <span className="plate text-inksoft">आपका नाम · YOUR NAME</span>
+        <span className="plate text-inksoft">{pick(lang, S_GUARDIAN.yourName)[0]}</span>
         <input
           value={guardianName}
           onChange={(e) => setGuardianName(e.target.value)}
-          placeholder="जैसे: राहुल"
+          placeholder={pick(lang, S_GUARDIAN.yourNamePh)[0]}
           className="mt-1 w-full border-2 border-ink bg-paper p-3 placeholder:text-inksoft/60"
         />
       </label>
@@ -306,7 +310,7 @@ function CreatePair({ onCreated }: { onCreated: (p: GuardianPair) => void }) {
         disabled={busy || !wardName.trim() || !guardianName.trim()}
         className="mt-4 w-full border-[3px] border-ink bg-saffron px-6 py-3 font-display text-lg font-bold shadow-poster-sm transition-transform active:translate-x-[2px] active:translate-y-[2px] active:shadow-none disabled:opacity-40"
       >
-        {busy ? "बन रही है…" : "ढाल जोड़ो · Create pair"}
+        {busy ? pick(lang, S_GUARDIAN.creating)[0] : pick(lang, S_GUARDIAN.createBtn)[0]}
       </button>
     </section>
   );
@@ -317,9 +321,10 @@ function CreatePair({ onCreated }: { onCreated: (p: GuardianPair) => void }) {
 // (docs/CONTRACTS.md; case-insensitive, bare code accepted).
 
 function JoinByCode({ onJoined }: { onJoined: (p: WardPair) => void }) {
+  const lang = useLang();
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState<"" | "notfound" | "conn">("");
 
   async function join() {
     setBusy(true);
@@ -329,7 +334,7 @@ function JoinByCode({ onJoined }: { onJoined: (p: WardPair) => void }) {
         `/api/guardian/links/resolve?pair_code=${encodeURIComponent(code.trim())}`
       );
       if (link.error || !link._id) {
-        setError("यह code नहीं मिला — दोबारा देख कर डालें · code not found");
+        setError("notfound");
         return;
       }
       onJoined({
@@ -338,7 +343,7 @@ function JoinByCode({ onJoined }: { onJoined: (p: WardPair) => void }) {
         ward_name: link.ward_name,
       });
     } catch {
-      setError("जुड़ नहीं पाए — connection जाँचें · could not connect");
+      setError("conn");
     } finally {
       setBusy(false);
     }
@@ -347,9 +352,9 @@ function JoinByCode({ onJoined }: { onJoined: (p: WardPair) => void }) {
   return (
     <section className="mt-5 border-2 border-ink bg-paper p-4">
       <p className="font-bold">
-        आपके अपनों ने code भेजा है?
+        {pick(lang, S_GUARDIAN.joinTitle)[0]}
         <span className="plate mt-0.5 block font-normal text-inksoft">
-          GOT A PAIR CODE? JOIN AS THE PROTECTED ONE
+          {pick(lang, S_GUARDIAN.joinTitle)[1]}
         </span>
       </p>
       <div className="mt-2.5 flex gap-2">
@@ -368,10 +373,14 @@ function JoinByCode({ onJoined }: { onJoined: (p: WardPair) => void }) {
           disabled={busy || !code.trim()}
           className="shrink-0 border-[3px] border-ink bg-paper px-4 font-display font-bold hover:bg-paper2 disabled:opacity-40"
         >
-          {busy ? "…" : "जुड़ो"}
+          {busy ? "…" : pick(lang, S_GUARDIAN.joinBtn)[0]}
         </button>
       </div>
-      {error && <p className="mt-2 text-sm font-bold text-saffdeep">{error}</p>}
+      {error && (
+        <p className="mt-2 text-sm font-bold text-saffdeep">
+          {pick(lang, error === "notfound" ? S_GUARDIAN.joinErrNotFound : S_GUARDIAN.joinErrConn)[0]}
+        </p>
+      )}
     </section>
   );
 }
@@ -379,22 +388,22 @@ function JoinByCode({ onJoined }: { onJoined: (p: WardPair) => void }) {
 // ---------------------------------------------------------------- ward faces
 
 function WardJoined({ guardianName, wardName }: { guardianName: string; wardName: string }) {
+  const lang = useLang();
+  const wardPrefix = wardName ? (lang === "en" ? `${wardName}, ` : `${wardName} जी, `) : "";
   return (
     <section className="border-[3px] border-ink bg-paper p-6 text-center shadow-poster">
       <IShieldCheck className="mx-auto h-14 w-14 text-saffdeep" />
-      <h2 className="mt-3 font-display text-3xl font-extrabold">ढाल जुड़ गई!</h2>
+      <h2 className="mt-3 font-display text-3xl font-extrabold">
+        {pick(lang, S_GUARDIAN.joinedTitle)[0]}
+      </h2>
       <p className="mt-2">
-        {wardName ? `${wardName} जी, ` : ""}अब हर बड़े खतरे पर {guardianName} से पूछा जाएगा —
-        आपकी जेब पर परिवार की नज़र।
-      </p>
-      <p className="plate mt-1.5 text-inksoft">
-        PAIRED WITH {guardianName} — RISKY CHECKS ASK THEM FIRST
+        {fmt(pick(lang, S_GUARDIAN.joinedSub)[0], { ward: wardPrefix, g: guardianName })}
       </p>
       <Link
         href="/check"
         className="mt-5 inline-block border-[3px] border-ink bg-saffron px-8 py-3 font-display text-lg font-bold shadow-poster-sm transition-transform active:translate-x-[2px] active:translate-y-[2px] active:shadow-none"
       >
-        जाँच करने चलें →
+        {pick(lang, S_GUARDIAN.goCheck)[0]}
       </Link>
       <div className="mt-4">
         <button
@@ -404,7 +413,7 @@ function WardJoined({ guardianName, wardName }: { guardianName: string; wardName
           }}
           className="plate text-inksoft underline underline-offset-2 hover:text-ink"
         >
-          ढाल हटाएँ · UNPAIR
+          {pick(lang, S_GUARDIAN.unpair)[0]}
         </button>
       </div>
     </section>
@@ -454,7 +463,7 @@ function GuardianInner() {
 
   return (
     <div className="min-h-screen bg-paper">
-      <TopBar title_hi="परिवार की ढाल" title_en="GUARDIAN MODE" />
+      <TopBar title_hi={S_GUARDIAN.title.hi} title_en={S_GUARDIAN.title.en} />
       <main className="mx-auto max-w-xl p-4 pb-16">
         {mode === "loading" && (
           <div className="h-40 animate-pulse border-2 border-line bg-paper2" />

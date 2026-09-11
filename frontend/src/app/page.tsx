@@ -7,28 +7,16 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api";
 import type { Trends } from "@/lib/types";
+import { S_HOME } from "@/lib/labels";
+import { pick, useLang, type LangText } from "@/lib/lang";
+import LangToggle from "@/components/LangToggle";
 import { IArrowR, IGlobe, IShield, ISiren, IUsers } from "@/components/icons";
 
-const SURFACES = [
-  {
-    href: "/guardian",
-    Icon: IUsers,
-    hi: "परिवार की ढाल",
-    en: "Guardian mode — family approves risky payments",
-  },
-  {
-    href: "/intel",
-    Icon: IGlobe,
-    hi: "धोखों का नक्शा",
-    en: "Live scam intel from the community",
-  },
-  {
-    href: "/recover",
-    Icon: ISiren,
-    hi: "पहला घंटा",
-    en: "Just got scammed? Recovery kit",
-  },
-] as const;
+const SURFACES: { href: string; Icon: typeof IUsers; label: LangText; sub: LangText }[] = [
+  { href: "/guardian", Icon: IUsers, label: S_HOME.sGuardian, sub: S_HOME.sGuardianSub },
+  { href: "/intel", Icon: IGlobe, label: S_HOME.sIntel, sub: S_HOME.sIntelSub },
+  { href: "/recover", Icon: ISiren, label: S_HOME.sRecover, sub: S_HOME.sRecoverSub },
+];
 
 function Odometer({ value }: { value: number }) {
   const [shown, setShown] = useState<number | null>(null);
@@ -67,6 +55,7 @@ function Odometer({ value }: { value: number }) {
 }
 
 export default function Home() {
+  const lang = useLang();
   const [health, setHealth] = useState<"checking" | "up" | "down">("checking");
   const [reports, setReports] = useState<number | null>(null);
 
@@ -86,21 +75,22 @@ export default function Home() {
 
       <main className="mx-auto flex w-full max-w-xl flex-1 flex-col px-5 pb-4">
         <div className="flex-1 pt-8">
-          {/* wordmark lockup */}
-          <IShield className="h-11 w-11 text-ink" />
+          {/* wordmark lockup + language pill */}
+          <div className="flex items-start justify-between">
+            <IShield className="h-11 w-11 text-ink" />
+            <LangToggle />
+          </div>
           <h1 className="type-wordmark mt-1 font-display font-extrabold tracking-tight">
             ढाल
           </h1>
-          <p className="plate -mt-2 text-inksoft">DHAAL — डिजिटल ठगी के खिलाफ</p>
+          <p className="plate -mt-2 text-inksoft">{pick(lang, S_HOME.markSub)[0]}</p>
 
           <p className="type-hero mt-6 font-display font-bold">
-            पैसे भेजने से पहले —
+            {pick(lang, S_HOME.promise1)[0]}
             <br />
-            एक जाँच।
+            {pick(lang, S_HOME.promise2)[0]}
           </p>
-          <p className="mt-2 max-w-sm text-inksoft">
-            Message, QR, link, number या call — before you pay, one check.
-          </p>
+          <p className="mt-2 max-w-sm text-inksoft">{pick(lang, S_HOME.promiseSub)[0]}</p>
 
           {/* THE action */}
           <Link
@@ -109,13 +99,11 @@ export default function Home() {
           >
             <span className="flex items-center justify-between gap-3">
               <span className="font-display text-3xl font-extrabold leading-none">
-                अभी जाँच करो
+                {pick(lang, S_HOME.cta)[0]}
               </span>
               <IArrowR className="h-8 w-8 shrink-0" />
             </span>
-            <span className="plate mt-1.5 block opacity-70">
-              PASTE · QR PHOTO · VOICE — CHECK NOW
-            </span>
+            <span className="plate mt-1.5 block opacity-70">PASTE · QR PHOTO · VOICE</span>
           </Link>
 
           {/* live community proof */}
@@ -123,9 +111,9 @@ export default function Home() {
             <div className="mt-7 flex items-center gap-3.5">
               <Odometer value={reports} />
               <p className="text-sm leading-snug text-inksoft">
-                इस हफ्ते Rajasthan में
-                <span className="block font-bold text-ink">verified scam reports</span>
-                हर report — सबकी ढाल
+                {pick(lang, S_HOME.counter1)[0]}
+                <span className="block font-bold text-ink">{pick(lang, S_HOME.counter2)[0]}</span>
+                {pick(lang, S_HOME.counter3)[0]}
               </p>
             </div>
           )}
@@ -140,8 +128,12 @@ export default function Home() {
               >
                 <s.Icon className="h-6 w-6 shrink-0 text-saffdeep" />
                 <span className="min-w-0 flex-1">
-                  <span className="block text-lg font-bold leading-tight">{s.hi}</span>
-                  <span className="block truncate text-sm text-inksoft">{s.en}</span>
+                  <span className="block text-lg font-bold leading-tight">
+                    {pick(lang, s.label)[0]}
+                  </span>
+                  <span className="block truncate text-sm text-inksoft">
+                    {pick(lang, s.sub)[0]}
+                  </span>
                 </span>
                 <IArrowR className="h-5 w-5 shrink-0 text-inksoft group-hover:text-ink" />
               </Link>
