@@ -72,6 +72,18 @@ def _strip_negated(sentence: str) -> str:
 
 
 # ---- reported/educational framing (suppresses convictions, never directives)
+# H17: impersonal NEWS/ADVISORY frame — a third-party actor described to the
+# public, nobody addressed. Suppression logic below lets this override even
+# directive-shaped vocabulary, but ONLY when nothing targets "you/aap".
+_NEWS_FRAME = re.compile(
+    r"police\s+warn|advisory|पुलिस\s+ने\s+(?:चेताया|चेतावनी)|"
+    r"fraudsters\s+(?:are|demand|ask)|scammers\s+(?:are|demand|ask)|"
+    r"ठग\s+(?:लोग|माँग|मांग)|con\s?men|racket\s+busted|गिरोह",
+    re.I)
+_SECOND_PERSON = re.compile(
+    r"\byour?\b|\baap(?:ka|ke|ki)?\b|आप(?:का|के|की)?|\btum(?:hara|he)?\b|"
+    r"तुम्हार|तुम्हें|तेरा|\btera\b", re.I)
+
 _AWARENESS = re.compile(
     r"awareness|workshop|seminar|lecture|classroom|professor|teacher|training|"
     r"advisory|warn(?:ed|ing)\s+(?:us|me|people|about)|beware\s+of|savdhan\s+rahe|"
@@ -158,7 +170,12 @@ CATEGORIES: dict[str, tuple[int, list, list]] = {
         "videshi dost", "customs par atka", "कस्टम में अटका",
         "customs clearance", "airport par parcel", "parcel me pound",
         "parcel me dollar", "पाउंड रखे",
-    ]), []),
+        # H17: the held-consignment ransom frame, any phrasing
+        "customs bond", "customs security", "international package",
+    ]) + [
+        re.compile(r"(?:holding|held|detained|seized)[^.।!?]{0,35}"
+                   r"(?:package|parcel|पार्सल|shipment|consignment)", re.I),
+    ], []),
     "loan_fee": (30, _rx([
         "loan approve", "loan approved", "pre-approved loan",
         "pre approved loan", "instant loan", "लोन approve", "लोन मंजूर",
@@ -207,8 +224,16 @@ _CROSS = [
           "security deposit", "शुल्क भेज", "फीस जमा", "file charge",
           "gst charge", "gst jama", "gst जमा", "delivery charge",
           "customs duty", "custom duty", "क्लीयरेंस फीस", "clearance fee",
-          "verification amount", "release fee"])
-     + [re.compile(r"(?:charge|fee|shulk|शुल्क|फीस)[^.।!?]{0,25}(?:jama|जमा|bhar|भर|pay\s+kar)", re.I)]),
+          "verification amount", "release fee",
+          # H17 fee-noun synonyms (judge misses: bond/deposit words)
+          "security bond", "customs bond", "clearance deposit",
+          "clearance charge", "bond amount", "सिक्योरिटी बॉन्ड"])
+     + [re.compile(r"(?:charge|fee|shulk|शुल्क|फीस)[^.।!?]{0,25}(?:jama|जमा|bhar|भर|pay\s+kar)", re.I),
+        # H17 passive requirement: "a ... bond/deposit of Rs X is required" —
+        # runs on negation-stripped text, so "no deposit required" never fires
+        re.compile(r"(?:bond|deposit|fee|charge|शुल्क|फीस)[^.।!?]{0,30}"
+                   r"(?:is\s+required|required\s+before|is\s+needed|"
+                   r"देना\s+होगा|भरना\s+होगा|अनिवार्य\s+है)", re.I)]),
     # Victim-voiced coercion — judges type DESCRIPTIONS of the threat, not the
     # scammer's script ("I was told to send money or I'd be arrested"). H11.
     ("coercion_extortion", 30, "Money demanded under threat", "धमकी देकर पैसे माँगे जा रहे हैं",
@@ -241,7 +266,11 @@ _CROSS = [
 # ---- credentials: request vs delivery vs mention (per-sentence) -------------
 _CRED_MENTION = _rx(["otp", "pin", "cvv", "password", "पासवर्ड", "mpin",
                      "one time password", "one-time code", "one time code",
-                     "verification code", "card number", "expiry date"])
+                     "verification code", "card number", "expiry date",
+                     # periphrasis (H17 judge miss): scammers avoid the word
+                     # OTP — "the six digits that just arrived" IS the OTP
+                     "digit", "digits", "अंक", "अंकों", "छह number",
+                     "chhe number"])
 _CRED_DELIVERY = _rx(["is your otp", "is your one time password", "otp for",
                       "one time password for", "otp is", "code is"])
 # directive verb → credential, or credential → directive/direction, in ONE
@@ -249,9 +278,16 @@ _CRED_DELIVERY = _rx(["is your otp", "is your one time password", "otp for",
 # qualified code phrases count.
 _CRED_TOKEN = (r"(?:otp|ओटीपी|one[\s-]?time\s+(?:password|code)|verification\s+code|"
                r"security\s+code|sms\s+code|\d{1,2}[\s-]?digit\s+code|pin|mpin|"
-               r"upi\s+pin|cvv|password|पासवर्ड|पिन)")
+               r"upi\s+pin|cvv|password|पासवर्ड|पिन"
+               # H17 periphrasis family: a counted-digits noun phrase, or
+               # "digits that (just) arrived/came" — the OTP without its name
+               r"|(?:\d{1,2}|four|five|six|चार|पाँच|छह|chaar|paanch|chhe)"
+               r"[\s-]?(?:digits?|अंकों?|अंक)"
+               r"|(?:digits?|अंक(?:ों)?)\s+(?:that|jo|जो)[^.।!?]{0,30}?"
+               r"(?:arrived|came|received|mile|aaye?|आया|आए|मिला|मिले))")
 _CRED_REQ_A = re.compile(
-    r"(?:send|share|forward|tell|give|type|enter|read\s+out|confirm|batao?|"
+    r"(?:send|share|forward|tell|give|type|enter|read\s+out|confirm|"
+    r"reply\s+(?:with|karke)|batao?|"
     r"बता(?:ओ|इए|एँ|एं|ये|यें)?|bhej(?:o|iye|ein|en)?|भेज(?:ो|िए|ें|े)?|"
     r"likh(?:o|iye)?|daal(?:o|iye)?|डाल(?:ो|िए|ें)?|dij(?:iye|iy?e)|दीजिए|"
     r"de\s+do|दे\s+दो)\w*\b[^.।!?]{0,50}?" + _CRED_TOKEN,
@@ -279,7 +315,23 @@ _BAIT_GET = _rx(["refund", "रिफंड", "cashback", "कैशबैक", 
                  "disbursal", "salary milegi", "job milegi",
                  # v4 families: bonus/benefit release, govt-yojana payouts
                  "bonus", "बोनस", "policy", "yojana", "योजना", "मिलेंगे",
-                 "milenge", "release hone", "रिलीज़", "on hold", "atka"])
+                 "milenge", "release hone", "रिलीज़", "on hold", "atka",
+                 # H17 windfall families: inheritance/legacy money
+                 "inheritance", "विरासत", "वसीयत", "virasat", "wasiyat",
+                 "legacy"]) + [
+    # money someone "left you" — money-scoped so "left you a voicemail" never
+    # counts (H17 judge miss: inheritance advance-fee)
+    re.compile(r"left\s+you[^.।!?]{0,25}(?:₹|\brs\.?\b|rupees|lakh|लाख|crore|"
+               r"करोड़|\d{4,9}|property|estate)", re.I),
+    re.compile(r"(?:आपके|aapke)\s+(?:naam|नाम)[^.।!?]{0,25}(?:छोड़|chhod)", re.I),
+    # a HELD/DETAINED deliverable ransomed behind a fee (H17 judge miss:
+    # customs bond). Requires the hold verb — plain COD/delivery lines with a
+    # parcel word never count.
+    re.compile(r"(?:holding|held|detained|stuck|seized|rok(?:a|\s+diya)|रोक(?:ा|\s+दिया)|atka|अटका)"
+               r"[^.।!?]{0,35}(?:package|parcel|पार्सल|shipment|consignment|courier|कूरियर)", re.I),
+    re.compile(r"(?:package|parcel|पार्सल|shipment|consignment)[^.।!?]{0,35}"
+               r"(?:\bhold\b|holding|held|detained|stuck|seized|custody|rok(?:a|\s+diya)|रोक(?:ा|\s+दिया)|atka|अटका)", re.I),
+]
 _BAIT_SEND = _rx(["paise bhejo", "पैसे भेजो", "paise bhej", "पैसे भेज",
                   "send money", "pay first", "pehle pay", "pehle bhejo",
                   "पहले भेजो", "pehle bhejein", "पहले भेजें", "transfer karo",
@@ -296,6 +348,22 @@ _BAIT_SEND = _rx(["paise bhejo", "पैसे भेजो", "paise bhej", "प
     # money-scoped deposits only — "documents jama karo" must never count
     re.compile(r"(?:₹|\brs\.?\b|paise|पैसे|fee|फीस|charge|शुल्क|amount|"
                r"\d{2,7})[^.।!?]{0,18}(?:jama|जमा)", re.I),
+    # H17 send-verb synonyms, money-scoped: remit/deposit/wire ₹X — and the
+    # Hinglish verb-final order "2500 rupees ... remit karein". Reverse form
+    # is remit/wire ONLY: "Rs X was deposited to your account" (a legit
+    # credit notice) must never read as a send demand.
+    re.compile(r"\b(?:remit|wire)\b[^.।!?]{0,35}(?:₹|\brs\.?\b|rupees|"
+               r"\d{3,7})", re.I),
+    # imperative deposit: amount must FOLLOW immediately — "was deposited to
+    # your account" (a credit notice) must never read as a send demand
+    re.compile(r"\bdeposit\s+(?:₹|\brs\.?\s?|rupees\s)?\d{2,7}", re.I),
+    re.compile(r"(?:₹|\brs\.?\b|rupees|\d{3,7})[^.।!?]{0,35}"
+               r"\b(?:remit|wire)\b", re.I),
+    # H17 cross-sentence referent send: "send it to the account below/this
+    # UPI" — the money antecedent lives in an earlier sentence; the composite
+    # still requires a bait/fee co-signal, so bare logistics never fire
+    re.compile(r"send\s+(?:it|this|the\s+(?:amount|fee|bond|deposit))\s+to\s+"
+               r"(?:the\s+|this\s+|इस\s+)?(?:account|upi|खाते|number\s+below|below)", re.I),
 ]
 
 _COLLECT_PHRASE = re.compile(
@@ -345,15 +413,17 @@ _SELF_QUERY = re.compile(
 # later bare directive — "send it here", "wo mujhe bata do", "code bhejo" —
 # is a credential request even without the word OTP in that sentence.
 _CODE_DELIVERED = re.compile(
-    r"(?:otp|code|कोड|ओटीपी)[^.।!?]{0,50}(?:aaya|आया|aya|mila|मिला|received|"
+    r"(?:otp|code|कोड|ओटीपी|digits?|अंक)[^.।!?]{0,50}(?:aaya|आया|aya|mila|मिला|"
+    r"मिले|aaye|आए|received|arrived|"
     r"bheja (?:hai|gaya)|भेजा (?:है|गया)|sent (?:you|to you))"
-    r"|(?:just|abhi|अभी)\s+(?:got|received|aaya|आया)[^.।!?]{0,20}(?:otp|code|कोड)",
+    r"|(?:just|abhi|अभी)\s+(?:got|received|arrived|aaya|आया)[^.।!?]{0,20}"
+    r"(?:otp|code|कोड|digits?|अंक)",
     re.I)
 _BARE_REF_REQ = re.compile(
-    r"(?:send|share|forward|tell|batao?|बता(?:ओ|इए|एँ|एं)?|bhej(?:o|iye|ein)?|"
+    r"(?:send|share|forward|tell|reply\s+with|batao?|बता(?:ओ|इए|एँ|एं)?|bhej(?:o|iye|ein)?|"
     r"भेज(?:ो|िए|ें)?|likh(?:o|iye)?)\w*\b[^.।!?]{0,30}?"
-    r"(?:\bit\b|\bthat\b|\bhere\b|code|कोड|use|उसे|wo(?:h)?\b|वो|वह|mujhe|मुझे)"
-    r"|(?:\bit\b|use|उसे|wo(?:h)?\b|वो|वह|code|कोड)[^.।!?]{0,25}?"
+    r"(?:\bit\b|\bthem\b|\bthat\b|\bhere\b|code|कोड|use|उसे|unhe|उन्हें|wo(?:h)?\b|वो|वह|mujhe|मुझे)"
+    r"|(?:\bit\b|\bthem\b|use|उसे|unhe|उन्हें|wo(?:h)?\b|वो|वह|code|कोड)[^.।!?]{0,25}?"
     r"(?:bhej|भेज|bata|बता|send|share|forward|yahan|यहाँ|is\s+(?:number|chat))",
     re.I)
 
@@ -515,9 +585,17 @@ def detect(text: str, signals: list, evidence: list | None = None) -> list[str]:
         r"paid|pay\s+kar\s+diya|जमा\s+कर\s+दिया)", re.I)
     completed_self = bool(_COMPLETED.search(text)) and not directive_evidence
     aware_m = _AWARENESS.search(text)
-    reported = (bool(aware_m) or completed_self) and not directive_evidence
+    # H17: an impersonal news/advisory frame ("Police warn: fraudsters demand
+    # a customs bond…") may quote the scam's own vocabulary — that quoted fee
+    # is not a demand AT the reader. It suppresses only while nothing in the
+    # text targets "you/aap"; the moment a second person appears, directive
+    # evidence wins again (victim reports and forwarded scams keep flagging).
+    news_m = _NEWS_FRAME.search(text)
+    impersonal_news = bool(news_m) and not _SECOND_PERSON.search(text)
+    reported = (bool(aware_m) or bool(news_m) or completed_self) and (
+        not directive_evidence or impersonal_news)
     if reported:
-        frame_m = aware_m or _COMPLETED.search(text)
+        frame_m = aware_m or news_m or _COMPLETED.search(text)
         _ev(evidence, "reported_speech", frame_m.group(0), None,
             frame_m.start(), frame_m.end())
         signals.append(make_signal(

@@ -422,4 +422,55 @@ ev_check("4C evidence: refund_promise offset slices to its quote and links the s
          bool(_evp) and _u16_slice(_tp, _evp[0]["start"], _evp[0]["end"]) == _evp[0]["quote"]
          and _evp[0]["signal"] == "pay_uri_refund_bait" and _evp[0]["factual"] is False)
 
+# --- H17 judge-review misses: periphrasis + windfall/held-benefit families ---
+# The three externally-reproduced misses, verbatim (regression data — these
+# influenced fixes and are NEVER counted as fresh-eval evidence):
+check("H17: OTP periphrasis 'six digits that just arrived'",
+      "For account validation, reply with the six digits that just arrived by SMS. Our agent is waiting.",
+      "suspicious", want_signal="credential_request")
+check("H17: inheritance advance-fee (remit clearance deposit)",
+      "Your late uncle left you 8 lakh rupees. Remit a clearance deposit of 2500 rupees to release the inheritance.",
+      "suspicious", want_signal="advance_fee_refund")
+check("H17: held-parcel customs bond",
+      "We are holding your international package. A refundable customs security bond of Rs 350 is required before delivery. Send it to the account below.",
+      "danger", want_signal="advance_fee_refund")
+# generalization probes — same relations, different words/languages/order:
+check("H17: Hindi digits periphrasis",
+      "खाते की पुष्टि के लिए जो छह अंक अभी SMS में आए हैं वो हमें बताइए।",
+      "suspicious", want_signal="credential_request")
+check("H17: split-sentence 'reply with them' referent",
+      "Six digits have just arrived by SMS. Reply with them to keep your account active.",
+      "suspicious", want_signal="credential_request")
+check("H17: Hinglish verb-final 'remit karein' inheritance",
+      "Aapke swargiya chacha aapke naam 8 lakh chhod gaye hain. Wasiyat release karne ke liye 2500 rupees ka clearance deposit remit karein.",
+      "suspicious", want_signal="advance_fee_refund")
+check("H17: Hindi held-parcel bond",
+      "आपका international parcel customs में रोका गया है। Delivery से पहले ₹350 का security bond जमा करें।",
+      "danger", want_signal="advance_fee_refund")
+# benign guards for the SAME vocabulary — the families must not leak:
+check("H17 guard: bank OTP delivery stays clean",
+      "123456 is your OTP for txn of Rs 4,999 at Amazon. Do not share it with anyone.",
+      "no_known_risk", forbid_signal="credential_request")
+check("H17 guard: delivery-agent OTP flow stays clean",
+      "Share the OTP with the delivery boy when your package arrives at the door.",
+      "no_known_risk", forbid_signal="credential_request")
+check("H17 guard: self-flow six-digits question stays clean",
+      "Where do I enter the six digits from the SMS in the official bank app?",
+      "no_known_risk", forbid_signal="credential_request")
+check("H17 guard: rental security deposit stays clean",
+      "The rent agreement needs a security deposit of Rs 20,000 payable to the landlord at signing.",
+      "no_known_risk", forbid_signal="advance_fee_refund")
+check("H17 guard: COD parcel line stays clean",
+      "Your parcel is out for delivery. Pay Rs 200 cash on delivery to the courier.",
+      "no_known_risk", forbid_signal="advance_fee_refund")
+check("H17 guard: refund credited notice stays clean (reverse-verb trap)",
+      "Your refund of Rs 1,200 was deposited to your account ending 4321.",
+      "no_known_risk", forbid_signal="advance_fee_refund")
+check("H17 guard: impersonal police-warning news suppressed",
+      "Police warn: fraudsters are demanding a fake customs bond of Rs 350 to release parcels. Never pay such fees.",
+      "no_known_risk", want_signal="reported_or_educational")
+check("H17 guard: victim report of demand still flags (second person present)",
+      "The caller said my parcel is held and told me to send a customs bond for your release fee of Rs 350.",
+      "danger")
+
 print(f"\nALL {PASS} CHECKS PASSED")
