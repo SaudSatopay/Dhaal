@@ -24,9 +24,9 @@ Claim: `[ ]` → `[WIP-saud]` / `[WIP-parva]` / `[WIP-harsh]`, **push immediatel
 - [x] **P0 H1–H4** Deterministic **signal engine** in code (this is the product's spine): UPI URI parser (collect vs pay, amount, payee), lookalike-domain detector (levenshtein vs seeded brand/bank domain list in `backend/data/brands.py`), URL heuristics (shorteners, IP literals, punycode, suspicious TLDs, redirect unwrap via httpx), scam-script keyword patterns (KYC expiry, lottery, digital arrest, electricity, OLX/army, fake customer care), blocklist lookup. Scoring function → verdict. **LLM has zero verdict weight.**
 - [x] **P0 H4–H6** Claude layer: scam-category classification + `explanation_hi/en` generated FROM detected signals only (template fallback when API down) · wire `/api/check` fully to CONTRACTS shape · Mongo persistence (in-memory fallback stays). *(Mongo done early per Saud's request: `store.py` — Atlas + per-call memory failover; needs `MONGODB_URI` in Vercel env. Claude live path needs `ANTHROPIC_API_KEY`; untested until keys land. Tests: `backend/tests/run_api_checks.py`.)*
 - [x] **P0 H6–H8** Reports → verify → indicator upsert → live blocklist in `/api/check` *(done + tested in H4–H6 store work)* · `/api/intel/trends` aggregations *(per-category/per-city/per-day live overlay on the fixture baseline — totals semantics unchanged so seed.py numbers hold)*.
-- [ ] **P1 H8–H10** Sarvam: `/api/transcribe` (ASR) + TTS on `speak:true` (base64 wav) with auto-fallback.
-- [ ] **P1 H10–H12** Guardian endpoints end-to-end · `/api/recovery/kit` (Claude + fixed templates fallback).
-- [ ] **H12+** Harden: timeouts, retry-once, per-call latency log (numbers for PPT), kill flaky paths.
+- [WIP-harsh] **P1 H8–H10** Sarvam: `/api/transcribe` (ASR) + TTS on `speak:true` (base64 wav) with auto-fallback.
+- [ ] **P1 H10–H12** Guardian endpoints end-to-end · `/api/recovery/kit` (Claude + fixed templates fallback). *(resolve-by-code folded in — see Parva's request)*
+- [WIP-harsh] **H12+** Harden: timeouts, retry-once, per-call latency log (numbers for PPT), kill flaky paths. *(starting early: latency lines + retry-once land with the Sarvam commit)*
 
 ### Glue — Saud (root, `scripts/`, deploys, fixtures)
 - [x] Kickoff: PS locked · docs rewritten · scaffold + stub API serving all contracts
@@ -46,7 +46,7 @@ Claim: `[ ]` → `[WIP-saud]` / `[WIP-parva]` / `[WIP-harsh]`, **push immediatel
 
 - [x] FOR saud, FROM parva — **frontend redeploy** — DONE, all your surfaces are live on dhaal-delta.vercel.app (landing verified in browser, "shield online").
 - [ ] FOR harsh, FROM saud — **SARVAM_API_KEY is live** in root `.env` (local) and backend Vercel prod env (key validated: 200 on /translate). Your H8–H10 ASR/TTS layer is fully unblocked — ship it and it works with zero env steps.
-- [ ] FOR harsh, FROM parva — guardian pairing UX: frontend hands the ward a link/QR carrying `link_id` (works today, demo-safe, live on `/guardian`). For the product-grade "ward types the code" flow, add `GET /api/guardian/links/resolve?pair_code=DHAAL-XXXX` → link object (contract change yours to push). NOT demo-blocking — fold into your P1 H10–H12 guardian pass if there's room.
+- [WIP-harsh] FOR harsh, FROM parva — guardian pairing UX: frontend hands the ward a link/QR carrying `link_id` (works today, demo-safe, live on `/guardian`). For the product-grade "ward types the code" flow, add `GET /api/guardian/links/resolve?pair_code=DHAAL-XXXX` → link object (contract change yours to push). NOT demo-blocking — fold into your P1 H10–H12 guardian pass if there's room.
 
 ## Blockers (Saud clears these first)
 
