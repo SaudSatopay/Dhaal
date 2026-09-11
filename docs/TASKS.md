@@ -70,3 +70,5 @@ Claim: `[ ]` → `[WIP-saud]` / `[WIP-parva]` / `[WIP-harsh]`, **push immediatel
 
 - [x] Repo workflow scaffolding (pre-event)
 - [x] PS triage across all 106 pages → locked **Fintech PS#7 → Dhaal (ढाल)**
+
+- [x] FOR saud, FROM parva — wow-pass deploy — **DONE + verified live in browser**: radar landing (real city pings, 458 odometer, ticker), verdict theater, masthead ticker, /intel poster war desk, /learn simulator. All five shipped.
