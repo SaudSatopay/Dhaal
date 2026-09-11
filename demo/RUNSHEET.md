@@ -64,7 +64,7 @@ Laptop: `/intel` trends — *"इस हफ्ते Rajasthan में 200+ ve
 
 ## Beat 7b — WhatsApp bot (where scams actually live)
 
-*"Scam WhatsApp par aata hai — to ढाल bhi WhatsApp par hai."* Judge forwards ANY message (or our Beat-1 card) to the Dhaal WhatsApp number → verdict lands back **in the same chat** in ~6s, with signals. Setup before demo: judges send the sandbox join code once (printed on the QR card). This beat needs zero app install — the shield meets people where the scam finds them.
+*"Scam WhatsApp par aata hai — to ढाल bhi WhatsApp par hai."* **Dhaal WhatsApp: +1 (737) 250-8034 · pairing: send `join twilio-trial` once.** Twilio trial pairs ONE phone at a time — so the DRIVER PHONE is pre-paired; the judge dictates or shows any message, driver forwards it, and the verdict lands back in the same chat in ~6s with signals. Say: *"production mein yeh number public hota hai — trial sirf pairing limit hai."* Zero app install — the shield meets people where the scam finds them.
 
 ## Beat 8 — the judge's own pocket (closer)
 
