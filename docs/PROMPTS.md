@@ -6,7 +6,7 @@ Prerequisites per member (do before the event): Claude Code installed + logged i
 
 ---
 
-## Prompt 0 — KICKOFF (Saud only, once, the moment problem statements drop)
+## Prompt 0 — KICKOFF ✅ DONE (executed at kickoff — PS locked: Fintech #7 → Dhaal. Kept for reference only; start with your loop prompt below.)
 
 ```
 Read CLAUDE.md and all of docs/ first. I'm Saud (@SaudSatopay) — Glue lane and
@@ -136,7 +136,9 @@ My loop — repeat until I say stop:
    the code — Parva builds against it, Saud wires deploys from it.
 4. Build it. Every external call (Claude, Sarvam, Atlas) gets a mocked
    fallback behind MOCK_MODE — venue Wi-Fi will die. Golden-path endpoints
-   first; the wow layer (Indic voice loop) is H8–H12, only after MVP works.
+   first; the deterministic signal engine IS the product's spine — the LLM
+   narrates but never decides a verdict. Wow layer (voice + guardian +
+   intel flywheel) is H8–H12, only after MVP works.
 5. Verify the API runs, commit small ("backend: ..."), pull --rebase, push,
    tick the task, un-WIP. Secrets in .env only.
 

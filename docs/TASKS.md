@@ -1,40 +1,51 @@
 # Task Board — the live coordination file
 
-Claim a task: change `[ ]` to `[WIP-saud]` / `[WIP-parva]` / `[WIP-harsh]`, **push immediately** (the push is the lock). Done: `[x]`, un-WIP, push. Re-read this file after every `git pull --rebase`.
+Claim: `[ ]` → `[WIP-saud]` / `[WIP-parva]` / `[WIP-harsh]`, **push immediately** (push = lock). Done: `[x]`, un-WIP, push. Re-read after every `git pull --rebase`. P0 = golden path, P1 = wow, P2 = nice.
 
 ## Ownership map (who may edit what)
 
 | Lane | Owner | Owns |
 |---|---|---|
 | **Product** | Parva | `frontend/**` · PPT · demo choreography |
-| **Engine** | Harsh (@harshh-2505) | `backend/**` · AI pipelines · Data models + API sections of `docs/CONTRACTS.md` |
-| **Glue** | Saud (@SaudSatopay) | root configs · deploy configs · `scripts/` · `demo/` (seed data) · `README.md` · rest of `docs/` |
-
-Rule: you edit only what your lane owns. Anything else goes through **Requests** below.
+| **Engine** | Harsh (@harshh-2505) | `backend/**` · signal engine + AI pipelines · Data/API sections of `docs/CONTRACTS.md` |
+| **Glue** | Saud (@SaudSatopay) | root configs · deploys · `scripts/` · fixtures/seed data · `README.md` · rest of `docs/` |
 
 ## Board
 
-*(Kickoff session replaces these placeholders with real tasks per lane, tagged with hour targets — MVP by H8, wow by H12, freeze at H12.)*
+### Product — Parva (`frontend/`)
+- [ ] **P0 H1–H3** `/check`: input card with 3 tabs — paste text/URL/UPI · QR image upload (**decode client-side with `jsqr`**, send `qr_text`) · mic (MediaRecorder → `/api/transcribe`) with typed fallback → POST `/api/check` → render verdict card: big verdict state (danger/suspicious/no_known_risk in Hindi+English), signal list with per-signal weight + detail, category chip. Stub API answers already.
+- [ ] **P0 H3–H5** Report flow on verdict card ("Report scam" → POST `/api/reports`) + `/intel` console: moderation queue (poll `?status=pending`, verify/reject buttons) + trends board (`/api/intel/trends`: category bars, 7-day line, top indicators, city chips).
+- [ ] **P0 H5–H7** `/guardian`: pairing screen (create link → show `pair_code`), guardian inbox (poll 3s, request cards with reason summary, Allow/Block), ward waiting/decision states. Two-browser demo works.
+- [ ] **P1 H7–H10** Voice polish: record UX, spoken-verdict playback (`tts_audio_b64`), Hindi-first labels with English subtitles; `/recover` flow (form → render kit: 1930 script, complaint draft, bank letter, checklist, copy buttons).
+- [ ] **P1 H10–H12** Golden-path polish mobile-first: loading/error/empty states, contrast beat styling, demo choreography pass with Saud.
+- [ ] **H12+** PPT + pitch script (own it); rehearse ×3.
 
-### Product — Parva
-- [ ] (kickoff fills)
+### Engine — Harsh (`backend/`)
+- [ ] **P0 H1–H4** Deterministic **signal engine** in code (this is the product's spine): UPI URI parser (collect vs pay, amount, payee), lookalike-domain detector (levenshtein vs seeded brand/bank domain list in `backend/data/brands.py`), URL heuristics (shorteners, IP literals, punycode, suspicious TLDs, redirect unwrap via httpx), scam-script keyword patterns (KYC expiry, lottery, digital arrest, electricity, OLX/army, fake customer care), blocklist lookup. Scoring function → verdict. **LLM has zero verdict weight.**
+- [ ] **P0 H4–H6** Claude layer: scam-category classification + `explanation_hi/en` generated FROM detected signals only (template fallback when API down) · wire `/api/check` fully to CONTRACTS shape · Mongo persistence (in-memory fallback stays).
+- [ ] **P0 H6–H8** Reports → verify → indicator upsert → live blocklist in `/api/check` · `/api/intel/trends` aggregations.
+- [ ] **P1 H8–H10** Sarvam: `/api/transcribe` (ASR) + TTS on `speak:true` (base64 wav) with auto-fallback.
+- [ ] **P1 H10–H12** Guardian endpoints end-to-end · `/api/recovery/kit` (Claude + fixed templates fallback).
+- [ ] **H12+** Harden: timeouts, retry-once, per-call latency log (numbers for PPT), kill flaky paths.
 
-### Engine — Harsh
-- [ ] (kickoff fills)
+### Glue — Saud (root, `scripts/`, deploys, fixtures)
+- [x] Kickoff: PS locked · docs rewritten · scaffold + stub API serving all contracts
+- [ ] **P0 H1–H3** Deploy: Vercel (frontend) + Railway (backend) · env wiring · QR to live URL.
+- [ ] **P0 H3–H5** Fixtures + seeds final: scam SMS set, collect-QR + legit-QR images, digital-arrest script, blocklisted demo number with 43 reports, ~200 seeded intel reports (`scripts/seed.py`) · brand-domain seed list for Harsh.
+- [ ] **Hourly** Golden-path QA walk; breakages → Blockers; unblocking Parva/Harsh beats own tasks.
+- [ ] **P1 H8** Judge-mode dry run on venue network; decide live-vs-mock default per external call; rehearse "judge's own inbox" beat + fixture fallback.
+- [ ] **H12–H15** Backup demo video · freeze enforcement · README rewrite.
+- [ ] **H15+** Submission package + QR cards · rehearsal timekeeping · submit 30 min early.
 
-### Glue — Saud
-- [ ] (kickoff fills)
-
-## Requests (cross-lane asks — add, push, then ping them in person/chat)
-
-Format: `- [ ] FOR harsh, FROM parva — need /api/triage to also return confidence score`
+## Requests (cross-lane asks — add, push, ping in person)
 
 - *(none yet)*
 
-## Blockers (things stopping a lane right now — Saud clears these first)
+## Blockers (Saud clears these first)
 
 - *(none yet)*
 
 ## Done
 
-- *(move finished items here if the board gets noisy)*
+- [x] Repo workflow scaffolding (pre-event)
+- [x] PS triage across all 106 pages → locked **Fintech PS#7 → Dhaal (ढाल)**
