@@ -174,4 +174,20 @@ chk_b = c.post("/api/check", json={"type": "text", "payload": "+919999888771"}).
 ok("rejecting a verified report withdraws it",
    not any(s["id"] == "community_blocklist" for s in chk_b["signals"]))
 
+# --- H13: WhatsApp webhook (TwiML) + insufficient-information outcome ---
+wa = c.post("/api/whatsapp", data={"From": "whatsapp:+911234567890",
+                                   "Body": FX.KYC_SCAM_TEXT})
+ok("whatsapp twiml verdict", wa.status_code == 200
+   and wa.text.startswith("<?xml") and "DANGER" in wa.text and "<Message>" in wa.text)
+wa2 = c.post("/api/whatsapp", data={"From": "whatsapp:+911234567890", "Body": "join sturdy-lion"})
+ok("whatsapp join welcome", "Dhaal" in wa2.text and "<Message>" in wa2.text)
+nc = c.post("/api/check", json={"type": "text", "payload": "9876512345"}).json()
+ok("bare number asks for context", nc["verdict"] == "no_known_risk"
+   and nc.get("needs_context") and "question_hi" in nc["needs_context"])
+nc2 = c.post("/api/check", json={"type": "text", "payload": FX.KYC_SCAM_TEXT}).json()
+ok("rich input has no context ask", nc2.get("needs_context") is None)
+gl2 = c.post("/api/guardian/links", json={"ward_name": "W", "guardian_name": "G",
+                                          "guardian_phone": "+919812300000"}).json()
+ok("guardian phone stored", gl2.get("guardian_phone") == "+919812300000")
+
 print(f"\nALL {P} API CHECKS PASSED (store={h['store']})")

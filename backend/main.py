@@ -15,7 +15,9 @@ from dotenv import load_dotenv
 load_dotenv(Path(__file__).resolve().parents[1] / ".env")  # repo-root .env (local dev)
 load_dotenv()  # backend/.env; real env vars (Vercel) always win
 
-from fastapi import FastAPI, Request
+from xml.sax.saxutils import escape as _xml_escape
+
+from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
@@ -147,6 +149,22 @@ def check(body: CheckIn):
     if exp_hi is None:
         exp_hi, exp_en = canned_explanation(verdict, category)
 
+    # Insufficient information (H12+ review): a bare unknown number/VPA or a
+    # few stray words carries no verdict-worthy evidence — say so and ask ONE
+    # follow-up instead of implying safety with a green card.
+    needs_context = None
+    _t = body.payload.strip()
+    if score == 0 and (
+        re.fullmatch(r"\+?[\d\s\-]{8,15}", _t)
+        or re.fullmatch(r"[a-z0-9.\-_]{2,}@[a-z]{2,}", _t, re.I)
+        or len(_t.split()) < 4
+    ):
+        needs_context = {
+            "reason": "bare_identifier" if "@" in _t or _t[:1].isdigit() or _t[:1] == "+" else "too_short",
+            "question_hi": "यह किस बारे में है? जो message/call आया था, वह पूरा paste करें — तब सही जाँच होगी।",
+            "question_en": "What is this about? Paste the full message or describe the call — then the check means something.",
+        }
+
     doc = {
         "_id": _id("chk"),
         "input": {"type": body.type, "payload": body.payload, "lang": body.lang},
@@ -155,6 +173,7 @@ def check(body: CheckIn):
         "scam_category": category,
         "analysis": _analysis(body.payload, signals),
         "expected_intent": body.expected_intent,
+        "needs_context": needs_context,
         "tts_audio_b64": None,
         "mocked": mocked,
         "created_at": _now(),
@@ -205,12 +224,15 @@ async def transcribe(request: Request):
 class LinkIn(BaseModel):
     ward_name: str
     guardian_name: str
+    guardian_phone: str = ""  # H12+: "call my trusted person" uses THIS stored
+    #                           number — never one supplied by a suspicious message
 
 
 @app.post("/api/guardian/links")
 def create_link(body: LinkIn):
     doc = {
         "_id": _id("gl"), "ward_name": body.ward_name, "guardian_name": body.guardian_name,
+        "guardian_phone": body.guardian_phone.strip(),
         "pair_code": f"DHAAL-{uuid.uuid4().hex[:4].upper()}", "created_at": _now(),
     }
     return STORE.insert("guardian_links", doc)
@@ -324,7 +346,9 @@ def verify_report(rid: str, body: VerifyIn, request: Request):
     if r["indicator_type"] == "domain":
         value = first_host(value) or value
     was_verified = r.get("status") == "verified"
-    r = STORE.update("reports", rid, {"status": status}) or r
+    r = STORE.update("reports", rid, {
+        "status": status, "decided_at": _now(), "decided_via": "mod-key",
+    }) or r
     if status == "verified":
         STORE.upsert_indicator(value, r["indicator_type"], r["category"])
     elif was_verified:
@@ -402,3 +426,43 @@ def recovery_kit(body: RecoveryIn):
         "checklist": list(t["checklist"]),
         "mocked": True,
     }
+
+
+# ---------------------------------------------------------------- WhatsApp bot
+# Twilio WhatsApp sandbox webhook (H13, Saud's ask): scams arrive on WhatsApp,
+# so the shield answers there — forward any message to the Dhaal number and the
+# verdict comes back in the same chat. Reply is TwiML; latency budget: our p50
+# 5.4s check sits well inside Twilio's ~15s webhook window.
+_WA_VERDICT = {
+    "danger": ("🛑", "खतरा", "DANGER"),
+    "suspicious": ("⚠️", "सावधान", "SUSPICIOUS"),
+    "no_known_risk": ("🟢", "कोई ज्ञात खतरा नहीं", "NO KNOWN RISK"),
+}
+
+
+@app.post("/api/whatsapp")
+async def whatsapp_webhook(request: Request):
+    form = await request.form()
+    body_text = str(form.get("Body") or "").strip()
+    if not body_text or body_text.lower().startswith("join "):
+        msg = ("🛡️ ढाल Dhaal में आपका स्वागत है!\n"
+               "कोई भी suspicious message, link, UPI ID या number यहाँ forward करें — "
+               "तुरंत बताएँगे कि ठगी है या नहीं।\n"
+               "Forward any suspicious message — Dhaal checks it instantly.")
+    else:
+        doc = check(CheckIn(type="text", payload=body_text, lang="hi-IN"))
+        icon, v_hi, v_en = _WA_VERDICT[doc["verdict"]]
+        lines = [f"{icon} *{v_hi} · {v_en}*", "", doc["explanation_hi"]]
+        top = [s for s in doc["signals"] if s["source"] != "llm_pattern"][:3]
+        if top:
+            lines += ["", "*संकेत · Signals:*"]
+            lines += [f"• {s['title_hi']} (+{s['weight']})" for s in top]
+        if doc.get("needs_context"):
+            lines += ["", "❓ " + doc["needs_context"]["question_hi"]]
+        if doc["verdict"] == "danger":
+            lines += ["", "🚑 ठगे गए हों तो पहले घंटे में 1930 पर call करें · dhaal-delta.vercel.app/recover"]
+        lines += ["", "— ढाल Dhaal · dhaal-delta.vercel.app"]
+        msg = "\n".join(lines)
+    twiml = ('<?xml version="1.0" encoding="UTF-8"?><Response><Message>'
+             + _xml_escape(msg) + "</Message></Response>")
+    return Response(content=twiml, media_type="application/xml")
