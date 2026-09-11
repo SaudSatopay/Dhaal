@@ -2,11 +2,12 @@
 
 // Ward-side panel after a risky check pinged the guardian (beat 5).
 // Polls the request every 3s until decided. Blocked = GENTLE, warm, family tone —
-// never scary red; the scam already scared them.
+// saffron heart and ink, never alarm-red; the scam already scared them.
 
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import type { GuardianRequest } from "@/lib/types";
+import { ICheck, IHeart, IShield } from "@/components/icons";
 
 export default function WardGate({
   requestId,
@@ -50,16 +51,12 @@ export default function WardGate({
 
   if (status === "pending") {
     return (
-      <div className="rounded-2xl border-2 border-amber-300 bg-amber-50 p-4 dark:border-amber-700 dark:bg-amber-950/40">
+      <div className="border-2 border-ink bg-paper2 p-4">
         <div className="flex items-center gap-3">
-          <span className="animate-pulse text-3xl" aria-hidden>
-            🛡️
-          </span>
+          <IShield className="blink h-8 w-8 shrink-0 text-saffdeep" />
           <div>
-            <p className="font-bold text-amber-900 dark:text-amber-200">
-              {guardianName} को बताया गया है — जवाब का इंतज़ार…
-            </p>
-            <p className="mt-0.5 text-sm text-amber-800/80 dark:text-amber-300/80">
+            <p className="font-bold">{guardianName} को बताया गया है — जवाब का इंतज़ार…</p>
+            <p className="mt-0.5 text-sm text-inksoft">
               बड़े खतरे पर परिवार की एक नज़र। कुछ भी भेजने से पहले रुके रहिए। · Your guardian
               has been notified, waiting for their reply.
             </p>
@@ -71,19 +68,17 @@ export default function WardGate({
 
   if (status === "blocked") {
     return (
-      <div className="rounded-2xl border-2 border-rose-200 bg-rose-50 p-5 text-center dark:border-rose-800 dark:bg-rose-950/40">
-        <div className="text-4xl" aria-hidden>
-          ❤️
-        </div>
-        <p className="mt-2 text-xl font-bold text-rose-900 dark:text-rose-100">
+      <div className="border-[3px] border-ink bg-paper p-5 text-center shadow-poster-sm">
+        <IHeart className="mx-auto h-9 w-9 text-saffdeep" />
+        <p className="mt-2 font-display text-2xl font-bold leading-tight">
           {guardianName} ने कहा — यह पैसा मत भेजिए
         </p>
         {req?.guardian_note && (
-          <p className="mt-2 rounded-xl bg-white/70 p-3 text-base text-rose-900 dark:bg-rose-900/40 dark:text-rose-100">
+          <p className="mt-3 border border-line bg-paper2 p-3 text-base">
             “{req.guardian_note}”
           </p>
         )}
-        <p className="mt-3 text-sm text-rose-800/80 dark:text-rose-200/80">
+        <p className="mt-3 text-sm text-inksoft">
           कोई पैसा नहीं गया। आपके अपनों की नज़र आप पर है — यही आपकी ढाल है। · Nothing was
           sent. Your family has your back.
         </p>
@@ -92,14 +87,14 @@ export default function WardGate({
   }
 
   return (
-    <div className="rounded-2xl border-2 border-emerald-300 bg-emerald-50 p-4 dark:border-emerald-800 dark:bg-emerald-950/40">
-      <p className="font-bold text-emerald-900 dark:text-emerald-200">
-        ✓ {guardianName} ने कहा — ठीक है
+    <div className="border-2 border-clear bg-paper p-4">
+      <p className="flex items-center gap-2 font-bold text-cleardeep">
+        <ICheck className="h-4 w-4" /> {guardianName} ने कहा — ठीक है
       </p>
       {req?.guardian_note && (
-        <p className="mt-1 text-sm text-emerald-800 dark:text-emerald-300">“{req.guardian_note}”</p>
+        <p className="mt-1 text-sm">“{req.guardian_note}”</p>
       )}
-      <p className="mt-1 text-sm text-emerald-800/80 dark:text-emerald-300/80">
+      <p className="mt-1 text-sm text-inksoft">
         फिर भी रक़म और नाम एक बार खुद जाँच लीजिए। · Still double-check the amount and payee.
       </p>
     </div>

@@ -2,6 +2,7 @@
 
 // Golden-path beat 1–4 surface (docs/PLAN.md): paste / QR / voice → POST /api/check
 // → VerdictCard. QR decoding is CLIENT-side (jsQR) — backend only ever sees qr_text.
+// Visual identity: suraksha poster — paper ground, ink borders, saffron action.
 
 import { useEffect, useRef, useState } from "react";
 import jsQR from "jsqr";
@@ -13,13 +14,14 @@ import VerdictCard from "@/components/VerdictCard";
 import ReportButton from "@/components/ReportButton";
 import WardGate from "@/components/WardGate";
 import { getWardPair, type WardPair } from "@/lib/guardian";
+import { IMic, IPaste, IQr, IShield, IStop } from "@/components/icons";
 
 type Tab = "paste" | "qr" | "voice";
 
-const TABS: { id: Tab; hi: string; en: string; icon: string }[] = [
-  { id: "paste", hi: "पेस्ट करें", en: "Paste", icon: "📋" },
-  { id: "qr", hi: "QR फोटो", en: "QR image", icon: "📷" },
-  { id: "voice", hi: "बोलिए", en: "Voice", icon: "🎤" },
+const TABS: { id: Tab; hi: string; en: string; Icon: typeof IPaste }[] = [
+  { id: "paste", hi: "पेस्ट करें", en: "PASTE", Icon: IPaste },
+  { id: "qr", hi: "QR फोटो", en: "QR IMAGE", Icon: IQr },
+  { id: "voice", hi: "बोलिए", en: "VOICE", Icon: IMic },
 ];
 
 // Cosmetic hint — the engine runs every detector regardless, but an honest type
@@ -34,11 +36,11 @@ function detectType(raw: string): InputType {
 }
 
 const TYPE_HINT: Record<InputType, string> = {
-  text: "message · टेक्स्ट",
-  url: "link · लिंक",
+  text: "MESSAGE",
+  url: "LINK",
   upi: "UPI",
   qr_text: "QR",
-  voice_transcript: "आवाज़ · voice",
+  voice_transcript: "VOICE",
 };
 
 async function decodeQrImage(file: File): Promise<string | null> {
@@ -72,6 +74,29 @@ async function decodeQrImage(file: File): Promise<string | null> {
   }
 }
 
+function ScanShield() {
+  return (
+    <div className="flex flex-col items-center border-[3px] border-ink bg-paper p-6 shadow-poster-sm">
+      <div className="h-16 w-14 text-ink">
+        <svg viewBox="0 0 48 56" className="h-full w-full" aria-hidden="true">
+          <path
+            d="M24 3 6 9.5v13C6 33.8 13.4 41.6 24 46c10.6-4.4 18-12.2 18-23.5v-13Z"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="3"
+            strokeLinejoin="miter"
+          />
+          <g className="scan-line">
+            <line x1="11" y1="25" x2="37" y2="25" stroke="var(--color-saffron)" strokeWidth="3" />
+          </g>
+        </svg>
+      </div>
+      <p className="mt-3 font-display text-xl font-bold">जाँच हो रही है…</p>
+      <p className="plate mt-1 text-inksoft">DHAAL IS CHECKING</p>
+    </div>
+  );
+}
+
 export default function CheckPage() {
   const [tab, setTab] = useState<Tab>("paste");
 
@@ -82,6 +107,12 @@ export default function CheckPage() {
   const [resultFromVoice, setResultFromVoice] = useState(false);
   const resultRef = useRef<HTMLDivElement | null>(null);
 
+  // guardian pairing (ward side) — read once on mount, localStorage is client-only
+  const [wardPair, setWardPairState] = useState<WardPair | null>(null);
+  useEffect(() => {
+    setWardPairState(getWardPair());
+  }, []);
+
   // paste tab
   const [payload, setPayload] = useState("");
 
@@ -91,12 +122,6 @@ export default function CheckPage() {
   const [qrError, setQrError] = useState("");
 
   // voice tab
-  // guardian pairing (ward side) — read once on mount, localStorage is client-only
-  const [wardPair, setWardPairState] = useState<WardPair | null>(null);
-  useEffect(() => {
-    setWardPairState(getWardPair());
-  }, []);
-
   const [recording, setRecording] = useState(false);
   const [recSeconds, setRecSeconds] = useState(0);
   const [transcribing, setTranscribing] = useState(false);
@@ -232,47 +257,45 @@ export default function CheckPage() {
   const detected = detectType(payload);
 
   return (
-    <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950">
-      <TopBar title_hi="जाँच करो" title_en="Check before you pay" />
+    <div className="min-h-screen bg-paper">
+      <TopBar title_hi="जाँच करो" title_en="CHECK BEFORE YOU PAY" />
 
       <main className="mx-auto max-w-xl p-4 pb-16">
         {wardPair && (
-          <p className="mb-3 rounded-xl bg-emerald-50 px-3 py-2 text-center text-xs font-medium text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300">
-            🛡️ {wardPair.guardian_name} आपकी ढाल हैं — बड़े खतरे पर उनसे पूछा जाएगा
+          <p className="mb-3 flex items-center justify-center gap-2 border-2 border-ink bg-paper2 px-3 py-2 text-center text-sm font-semibold">
+            <IShield className="h-4 w-4 shrink-0 text-saffdeep" />
+            {wardPair.guardian_name} आपकी ढाल हैं — बड़े खतरे पर उनसे पूछा जाएगा
           </p>
         )}
-        {/* Tabs */}
-        <div
-          role="tablist"
-          aria-label="input method"
-          className="grid grid-cols-3 gap-1 rounded-xl bg-neutral-200 p-1 dark:bg-neutral-900"
-        >
-          {TABS.map((t) => (
+
+        {/* Tabs — joined signage segments */}
+        <div role="tablist" aria-label="input method" className="flex border-[3px] border-ink bg-paper">
+          {TABS.map((t, i) => (
             <button
               key={t.id}
               role="tab"
               aria-selected={tab === t.id}
               onClick={() => setTab(t.id)}
-              className={`rounded-lg px-2 py-2 text-sm font-medium transition ${
-                tab === t.id
-                  ? "bg-white shadow dark:bg-neutral-700"
-                  : "text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-neutral-800"
-              }`}
+              className={`flex-1 px-2 py-2.5 transition-colors ${
+                i < TABS.length - 1 ? "border-r-2 border-ink" : ""
+              } ${tab === t.id ? "bg-ink text-paper" : "hover:bg-paper2"}`}
             >
-              <span className="block text-base">{t.icon}</span>
-              <span className="block leading-tight">{t.hi}</span>
-              <span className="block text-[11px] text-neutral-500">{t.en}</span>
+              <t.Icon className="mx-auto h-5 w-5" />
+              <span className="mt-1 block text-sm font-bold leading-tight">{t.hi}</span>
+              <span className={`plate block ${tab === t.id ? "text-paper/70" : "text-inksoft"}`}>
+                {t.en}
+              </span>
             </button>
           ))}
         </div>
 
         {/* ---------------- Paste tab ---------------- */}
         {tab === "paste" && (
-          <section className="mt-4 rounded-2xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
-            <label htmlFor="paste-box" className="block font-semibold">
+          <section className="mt-4 border-[3px] border-ink bg-paper p-4 shadow-poster-sm">
+            <label htmlFor="paste-box" className="block font-bold">
               संदेश, link, UPI ID या नंबर यहाँ डालें
-              <span className="block text-xs font-normal text-neutral-500">
-                paste the message, link, UPI ID or phone number
+              <span className="plate mt-0.5 block font-normal text-inksoft">
+                PASTE THE MESSAGE, LINK, UPI ID OR NUMBER
               </span>
             </label>
             <textarea
@@ -281,36 +304,35 @@ export default function CheckPage() {
               value={payload}
               onChange={(e) => setPayload(e.target.value)}
               placeholder="जैसे: आपका खाता बंद हो जाएगा, KYC करें…"
-              className="mt-2 w-full rounded-xl border border-neutral-300 bg-white p-3 text-base outline-none focus:border-blue-500 dark:border-neutral-700 dark:bg-neutral-950"
+              className="mt-2 w-full border-2 border-ink bg-paper p-3 text-base outline-none placeholder:text-inksoft/60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-saffron"
             />
-            <div className="mt-2 flex items-center justify-between gap-2">
-              <span className="text-xs text-neutral-500">
-                {payload.trim() ? `समझा गया · detected: ${TYPE_HINT[detected]}` : ""}
+            <div className="mt-2.5 flex items-end justify-between gap-3">
+              <span className="plate text-inksoft">
+                {payload.trim() ? `समझा गया · ${TYPE_HINT[detected]}` : ""}
               </span>
               <button
                 onClick={() => runCheck(detected, payload)}
                 disabled={busy || !payload.trim()}
-                className="rounded-xl bg-blue-600 px-6 py-2.5 font-semibold text-white hover:bg-blue-700 disabled:opacity-40"
+                className="shrink-0 border-[3px] border-ink bg-saffron px-6 py-2.5 font-display text-lg font-bold shadow-poster-sm transition-transform active:translate-x-[2px] active:translate-y-[2px] active:shadow-none disabled:opacity-40"
               >
-                {busy ? "जाँच जारी…" : "जाँच करो · Check"}
+                {busy ? "जाँच जारी…" : "जाँच करो"}
               </button>
             </div>
 
-            <div className="mt-4 border-t border-neutral-200 pt-3 dark:border-neutral-800">
-              <div className="text-xs font-medium text-neutral-500">
-                आज़मा कर देखिए · try an example
-              </div>
+            <div className="mt-4 border-t-2 border-line pt-3">
+              <div className="plate text-inksoft">आज़मा कर देखिए · TRY AN EXAMPLE</div>
               <div className="mt-2 flex flex-wrap gap-2">
-                {EXAMPLES.map((ex) => (
+                {EXAMPLES.map((ex, i) => (
                   <button
                     key={ex.label_en}
                     onClick={() => {
                       setPayload(ex.text);
                       setResult(null);
                     }}
-                    className="rounded-full border border-neutral-300 px-3 py-1 text-xs hover:bg-neutral-100 dark:border-neutral-700 dark:hover:bg-neutral-800"
+                    className="border-2 border-ink bg-paper px-2.5 py-1 text-xs font-semibold hover:bg-paper2"
                   >
-                    {ex.label_hi} <span className="text-neutral-500">· {ex.label_en}</span>
+                    <span className="mr-1.5 font-mono text-saffdeep">{String(i + 1).padStart(2, "0")}</span>
+                    {ex.label_hi}
                   </button>
                 ))}
               </div>
@@ -320,18 +342,18 @@ export default function CheckPage() {
 
         {/* ---------------- QR tab ---------------- */}
         {tab === "qr" && (
-          <section className="mt-4 rounded-2xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
+          <section className="mt-4 border-[3px] border-ink bg-paper p-4 shadow-poster-sm">
             <label htmlFor="qr-file" className="block cursor-pointer">
-              <span className="font-semibold">QR का photo या screenshot चुनें</span>
-              <span className="block text-xs text-neutral-500">
-                upload a photo / screenshot of the QR — decoded on YOUR phone, image never leaves it
+              <span className="font-bold">QR का photo या screenshot चुनें</span>
+              <span className="plate mt-0.5 block text-inksoft">
+                DECODED ON YOUR PHONE — THE IMAGE NEVER LEAVES IT
               </span>
-              <div className="mt-3 flex min-h-36 items-center justify-center rounded-xl border-2 border-dashed border-neutral-300 p-4 text-center hover:border-blue-500 dark:border-neutral-700">
+              <div className="mt-3 flex min-h-36 items-center justify-center border-2 border-dashed border-ink bg-paper2 p-4 text-center">
                 {qrPreview ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={qrPreview} alt="uploaded QR" className="max-h-48 rounded-lg" />
+                  <img src={qrPreview} alt="uploaded QR" className="max-h-48 border-2 border-ink" />
                 ) : (
-                  <span className="text-4xl">📷</span>
+                  <IQr className="h-12 w-12 text-inksoft" />
                 )}
               </div>
             </label>
@@ -343,72 +365,79 @@ export default function CheckPage() {
               onChange={(e) => onQrFile(e.target.files?.[0])}
             />
             {qrDecoded && (
-              <p className="mt-3 break-all rounded-lg bg-neutral-100 p-2 font-mono text-xs dark:bg-neutral-800">
-                <span className="font-sans font-medium text-neutral-500">decoded → </span>
+              <p className="mt-3 break-all border border-line bg-paper2 p-2 font-mono text-xs">
+                <span className="plate mr-1 text-inksoft">DECODED →</span>
                 {qrDecoded}
               </p>
             )}
-            {qrError && <p className="mt-3 text-sm font-medium text-red-600">{qrError}</p>}
+            {qrError && <p className="mt-3 text-sm font-bold text-saffdeep">{qrError}</p>}
           </section>
         )}
 
         {/* ---------------- Voice tab ---------------- */}
         {tab === "voice" && (
-          <section className="mt-4 rounded-2xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
+          <section className="mt-4 border-[3px] border-ink bg-paper p-4 shadow-poster-sm">
             <div className="text-center">
-              <p className="font-semibold">
+              <p className="font-bold">
                 जो call आया था, वही बोल कर सुनाइए
-                <span className="block text-xs font-normal text-neutral-500">
-                  repeat what the caller said — Dhaal will listen
+                <span className="plate mt-0.5 block font-normal text-inksoft">
+                  REPEAT WHAT THE CALLER SAID — DHAAL WILL LISTEN
                 </span>
               </p>
-              <button
-                onClick={recording ? stopRecording : startRecording}
-                disabled={transcribing}
-                className={`mt-4 h-24 w-24 rounded-full text-4xl shadow-lg transition ${
-                  recording
-                    ? "animate-pulse bg-red-600 text-white"
-                    : "bg-blue-600 text-white hover:bg-blue-700"
-                } disabled:opacity-40`}
-                aria-label={recording ? "stop recording" : "start recording"}
-              >
-                {recording ? "⏹" : "🎤"}
-              </button>
-              <div className="mt-2 h-5 text-sm text-neutral-500">
-                {recording
-                  ? `सुन रहे हैं… ${recSeconds}s — बोलना बंद करने पर ⏹ दबाएँ`
-                  : transcribing
-                    ? "समझ रहे हैं… · transcribing"
-                    : "दबाइए और बोलिए · tap and speak"}
+              <span className="relative mt-4 inline-block">
+                {recording && (
+                  <span className="pulse-ring absolute inset-0 rounded-full border-2 border-danger" aria-hidden="true" />
+                )}
+                <button
+                  onClick={recording ? stopRecording : startRecording}
+                  disabled={transcribing}
+                  className={`flex h-24 w-24 items-center justify-center rounded-full border-[3px] border-ink transition-colors ${
+                    recording ? "bg-danger text-paper" : "bg-saffron text-ink shadow-poster-sm"
+                  } disabled:opacity-40`}
+                  aria-label={recording ? "stop recording" : "start recording"}
+                >
+                  {recording ? <IStop className="h-9 w-9" /> : <IMic className="h-9 w-9" />}
+                </button>
+              </span>
+              <div className="mt-2.5 h-5 text-sm text-inksoft">
+                {recording ? (
+                  <>
+                    सुन रहे हैं… <span className="font-mono font-semibold text-ink">{recSeconds}s</span> — रोकने पर जाँच होगी
+                  </>
+                ) : transcribing ? (
+                  "समझ रहे हैं… · transcribing"
+                ) : (
+                  "दबाइए और बोलिए · tap and speak"
+                )}
               </div>
-              {micError && <p className="mt-2 text-sm font-medium text-amber-600">{micError}</p>}
+              {micError && <p className="mt-2 text-sm font-bold text-saffdeep">{micError}</p>}
             </div>
 
             {transcript && (
               <div className="mt-4">
-                <label htmlFor="transcript-box" className="text-xs font-medium text-neutral-500">
-                  यह सुना गया — गलत हो तो सुधारें · heard this, edit if wrong
+                <label htmlFor="transcript-box" className="plate text-inksoft">
+                  यह सुना गया — गलत हो तो सुधारें · HEARD THIS, EDIT IF WRONG
                 </label>
                 <textarea
                   id="transcript-box"
                   rows={3}
                   value={transcript}
                   onChange={(e) => setTranscript(e.target.value)}
-                  className="mt-1 w-full rounded-xl border border-neutral-300 bg-white p-3 text-base dark:border-neutral-700 dark:bg-neutral-950"
+                  className="mt-1 w-full border-2 border-ink bg-paper p-3 text-base focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-saffron"
                 />
                 <button
                   onClick={() => runCheck("voice_transcript", transcript, true)}
                   disabled={busy || !transcript.trim()}
-                  className="mt-2 w-full rounded-xl bg-blue-600 px-6 py-2.5 font-semibold text-white hover:bg-blue-700 disabled:opacity-40"
+                  className="mt-2 w-full border-[3px] border-ink bg-saffron px-6 py-2.5 font-display text-lg font-bold shadow-poster-sm transition-transform active:translate-x-[2px] active:translate-y-[2px] active:shadow-none disabled:opacity-40"
                 >
-                  {busy ? "जाँच जारी…" : "इसकी जाँच करो · Check this"}
+                  {busy ? "जाँच जारी…" : "इसकी जाँच करो"}
                 </button>
               </div>
             )}
 
-            <div className="mt-5 border-t border-neutral-200 pt-4 dark:border-neutral-800">
-              <label htmlFor="typed-voice" className="text-xs font-medium text-neutral-500">
-                या टाइप करें (mic न चले तो) · or type it instead
+            <div className="mt-5 border-t-2 border-line pt-4">
+              <label htmlFor="typed-voice" className="plate text-inksoft">
+                या टाइप करें (MIC न चले तो) · OR TYPE IT INSTEAD
               </label>
               <TypedVoiceBox
                 disabled={busy || transcribing || recording}
@@ -420,25 +449,17 @@ export default function CheckPage() {
 
         {/* ---------------- Shared result area ---------------- */}
         <div ref={resultRef} className="mt-5 scroll-mt-20">
-          {busy && (
-            <div className="animate-pulse rounded-2xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
-              <div className="h-16 rounded-xl bg-neutral-200 dark:bg-neutral-800" />
-              <div className="mt-3 h-4 w-3/4 rounded bg-neutral-200 dark:bg-neutral-800" />
-              <div className="mt-2 h-4 w-1/2 rounded bg-neutral-200 dark:bg-neutral-800" />
-              <p className="mt-3 text-center text-sm text-neutral-500">
-                ढाल जाँच रही है… · Dhaal is checking
-              </p>
-            </div>
-          )}
+          {busy && <ScanShield />}
           {error && (
-            <div className="rounded-2xl border-2 border-red-300 bg-red-50 p-4 text-sm dark:border-red-900 dark:bg-red-950/40">
-              <p className="font-semibold text-red-700 dark:text-red-300">
-                जाँच नहीं हो पाई · check failed
-              </p>
-              <p className="mt-1 break-all text-red-600 dark:text-red-400">{error}</p>
-              <p className="mt-2 text-neutral-600 dark:text-neutral-400">
-                Internet जाँच कर दोबारा कोशिश करें · check connection and retry
-              </p>
+            <div className="border-[3px] border-ink bg-paper">
+              <div className="hazard-saffron h-3 border-b-2 border-ink" aria-hidden="true" />
+              <div className="p-4">
+                <p className="font-bold">जाँच नहीं हो पाई · CHECK FAILED</p>
+                <p className="mt-1 break-all font-mono text-xs text-inksoft">{error}</p>
+                <p className="mt-2 text-sm text-inksoft">
+                  Internet जाँच कर दोबारा कोशिश करें · check connection and retry
+                </p>
+              </div>
             </div>
           )}
           {result && !busy && result.guardian_request_id && wardPair && (
@@ -478,7 +499,7 @@ function TypedVoiceBox({
 }) {
   const [text, setText] = useState("");
   return (
-    <div className="mt-1 flex gap-2">
+    <div className="mt-1.5 flex gap-2">
       <input
         id="typed-voice"
         value={text}
@@ -487,12 +508,12 @@ function TypedVoiceBox({
           if (e.key === "Enter" && text.trim() && !disabled) onSubmit(text);
         }}
         placeholder="call में जो कहा गया…"
-        className="w-full rounded-xl border border-neutral-300 bg-white p-3 text-base dark:border-neutral-700 dark:bg-neutral-950"
+        className="w-full border-2 border-ink bg-paper p-3 text-base placeholder:text-inksoft/60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-saffron"
       />
       <button
         onClick={() => onSubmit(text)}
         disabled={disabled || !text.trim()}
-        className="shrink-0 rounded-xl bg-blue-600 px-4 font-semibold text-white hover:bg-blue-700 disabled:opacity-40"
+        className="shrink-0 border-[3px] border-ink bg-paper px-4 font-display font-bold hover:bg-paper2 disabled:opacity-40"
       >
         जाँचें
       </button>
