@@ -394,4 +394,32 @@ _kinds2 = [e["kind"] for e in _f2["evidence"]]
 ev_check("evidence: overlapping findings all preserved (context + request + threat)",
          "code_delivery_context" in _kinds2 and "credential_request" in _kinds2)
 
+# --- H16 §4C pay-URI refund bait: promise money IN + executable PAY request ---
+check("4C: refund promise + pay URI = danger with bait VPA",
+      "आपका ₹5,000 का refund आ गया है! पाने के लिए यह QR scan करें: "
+      "upi://pay?pa=refund.desk@ybl&pn=RefundDesk&am=4999&cu=INR",
+      "danger", want_signal="pay_uri_refund_bait",
+      want_fact={"promised_incoming": "5000", "parse.status": "valid"})
+check("4C: cashback promise + amount-less pay URI still suspicious",
+      "₹2,000 cashback मिलेगा! claim: upi://pay?pa=merchant.pay@okhdfcbank&pn=Shop",
+      "suspicious", want_signal="pay_uri_refund_bait")
+check("4C: plain pay URI without promise stays clean",
+      "upi://pay?pa=shop.demo@okicici&pn=Shop&am=250&cu=INR",
+      "no_known_risk", itype="upi", forbid_signal="pay_uri_refund_bait")
+check("4C: promise + COLLECT stays in the collect lane (no double composite)",
+      "₹15,000 का refund पाने के लिए approve करें: "
+      "upi://collect?pa=refund.helpdesk@okaxis&am=15000&cu=INR",
+      "danger", want_signal="collect_refund_bait",
+      forbid_signal="pay_uri_refund_bait", want_category="fake_collect")
+check("4C: refund NOTIFICATION prose alone stays clean",
+      "आपका ₹5,000 का refund process हो गया है, 2 दिन में खाते में आएगा।",
+      "no_known_risk", forbid_signal="pay_uri_refund_bait")
+_tp = ("आपका ₹5,000 का refund आ गया है! पाने के लिए यह QR scan करें: "
+       "upi://pay?pa=refund.desk@ybl&pn=RefundDesk&am=4999&cu=INR")
+_vp, _sp, _sigp, _cp, _fp = run_signal_engine(_tp, "text", {})
+_evp = [e for e in _fp["evidence"] if e["kind"] == "refund_promise"]
+ev_check("4C evidence: refund_promise offset slices to its quote and links the signal",
+         bool(_evp) and _u16_slice(_tp, _evp[0]["start"], _evp[0]["end"]) == _evp[0]["quote"]
+         and _evp[0]["signal"] == "pay_uri_refund_bait" and _evp[0]["factual"] is False)
+
 print(f"\nALL {PASS} CHECKS PASSED")

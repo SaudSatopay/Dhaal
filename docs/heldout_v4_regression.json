@@ -1,10 +1,10 @@
 {
  "summary": {
-  "battery": "v4-REGRESSION-RERUN (set reclassified as development/regression data after post-publication family fixes; the FROZEN published number is docs/heldout_v4.json = 87/110)",
+  "battery": "v4-REGRESSION-RERUN (set reclassified as development/regression data after post-publication family fixes; re-run again after the 4C pay-URI refund-bait composite; the FROZEN published number is docs/heldout_v4.json = 87/110)",
   "authorship": "developer-authored (separate blind session; no human validation)",
   "labels_frozen_before_run": true,
   "runs": 1,
-  "engine_commit": "075d1d4",
+  "engine_commit": "88d7981",
   "environment": "local TestClient",
   "external_services": "STUBBED OFF (no LLM narration, no TTS, no network; community blocklist = seeded fixtures only)",
   "total": "100/110",

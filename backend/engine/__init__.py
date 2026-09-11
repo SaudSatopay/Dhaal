@@ -10,7 +10,10 @@ same QR yields the same payment facts whatever the user expected; expectation
 only feeds mismatch detection. Missing evidence stays unknown, never guessed.
 """
 
+import re
+
 from engine import blocklist, domains, scripts, upi, urls
+from engine.common import make_signal
 
 DANGER_AT = 60
 SUSPICIOUS_AT = 30
@@ -31,6 +34,27 @@ _FACT_ENUMS = {
 
 def _u16(s: str, char_idx: int) -> int:
     return len(s[:char_idx].encode("utf-16-le")) // 2
+
+
+# H16 §4C: an amount PROMISED to the user in PROSE (refund/cashback/prize
+# "you'll get ₹X"). upi:// URIs are blanked LENGTH-PRESERVINGLY first, so a
+# request's own am= never reads as a promise and match offsets stay raw-text
+# offsets (same trick as scripts._strip_negated).
+_PROMISE_WORDS = re.compile(
+    r"refund|रिफंड|cashback|कैशबैक|prize|इनाम|jeet|जीत|milega|मिलेगा|"
+    r"milenge|मिलेंगे|wapas|वापस|credited|aayega|आएगा", re.I)
+_AMOUNT_IN_PROSE = re.compile(r"(?:₹|rs\.?\s?)\s?([\d,]{2,9})", re.I)
+_URI_BLANK = re.compile(r"upi://[^\s\"'<>]*")
+
+
+def _promised_incoming(text: str):
+    """(amount_str, start, end) of the first promised-in amount, else None."""
+    prose = _URI_BLANK.sub(lambda m: " " * len(m.group(0)), text)
+    for pm in _AMOUNT_IN_PROSE.finditer(prose):
+        window = prose[max(0, pm.start() - 45):pm.end() + 45]
+        if _PROMISE_WORDS.search(window):
+            return pm.group(1).replace(",", ""), pm.start(), pm.end()
+    return None
 
 
 # evidence kind -> (linked signal id, factual). factual=True marks records
@@ -56,6 +80,7 @@ _EV_META: dict[str, tuple[str | None, bool]] = {
     "apk_file": ("apk_sideload", False),
     "reported_speech": ("reported_or_educational", True),
     "destination": (None, True),
+    "refund_promise": ("pay_uri_refund_bait", False),
 }
 
 _EV_TO_ACTION = {
@@ -123,16 +148,8 @@ def _build_facts(text, input_type, expected_intent, upi_info, url_info,
     # H16 §4C: an amount PROMISED to the user (refund/cashback/prize "you'll
     # get ₹X") — extracted from prose only, never from inside a upi:// URI, so
     # the reality check can contrast promised-IN with requested-OUT.
-    import re as _re
-    prose = _re.sub(r"upi://[^\s\"'<>]*", " ", text)
-    promised = None
-    for pm in _re.finditer(r"(?:₹|rs\.?\s?)\s?([\d,]{2,9})", prose, _re.I):
-        window = prose[max(0, pm.start() - 45):pm.end() + 45].lower()
-        if _re.search(r"refund|रिफंड|cashback|कैशबैक|prize|इनाम|jeet|जीत|"
-                      r"milega|मिलेगा|milenge|मिलेंगे|wapas|वापस|credited|"
-                      r"aayega|आएगा", window):
-            promised = pm.group(1).replace(",", "")
-            break
+    pr = _promised_incoming(text)
+    promised = pr[0] if pr else None
 
     facts = {
         "input_kind": input_type,
@@ -172,6 +189,31 @@ def run_signal_engine(
     community_cat = blocklist.detect(
         text, url_info["hosts"], upi_info["vpas"], indicators or {}, signals
     )
+
+    # H16 §4C composite: prose PROMISES money IN while the same message
+    # carries an EXECUTABLE PAY request — "pay to receive your refund".
+    # Receiving money never requires authorizing a payment. The collect twin
+    # (collect_refund_bait) lives in engine/upi.py; this is the pay-URI lane.
+    _parse = upi_info.get("parse")
+    _promise = _promised_incoming(text)
+    if _promise and _parse and _parse.get("status") == "valid" \
+            and _parse.get("action") == "pay":
+        p_amt, p_s, p_e = _promise
+        req_amt = _parse.get("amount")
+        signals.append(make_signal(
+            "pay_uri_refund_bait", "deterministic", 45,
+            "'Refund' that OPENS a payment", "'Refund' जो payment खुलवाता है",
+            (f"₹{p_amt} promised IN — but the link opens a "
+             + (f"₹{req_amt} " if req_amt else "")
+             + "PAY request: authorizing it sends money OUT of your account. "
+               "Receiving money never requires you to pay."),
+            (f"₹{p_amt} आने का वादा — पर link "
+             + (f"₹{req_amt} की " if req_amt else "")
+             + "PAY request खोलता है: authorize करते ही पैसे आपके खाते से "
+               "जाएँगे। पैसे पाने के लिए कभी pay नहीं करना पड़ता।"),
+        ))
+        evidence.append({"kind": "refund_promise", "span": text[p_s:p_e][:120],
+                         "sentence": None, "start": p_s, "end": p_e})
 
     # destinations — visible identifiers the money/replies would flow to.
     # FACTUAL records: extraction is not an accusation and never implies the
