@@ -310,7 +310,20 @@ per feature, stop at whatever the clock allows:
    indicators — "⚠ +91-98xxx… · 129 reports · digital arrest". 20 lines of
    code, massive alive-ness.
 
-4. (stretch) /learn — "ठग को पहचानो" simulator: 5 rounds, real fixture
+4. /intel WAR-ROOM REDESIGN (Saud: "looks out of place and out of theme —
+   beautify the shit out of it"): the ink-dark page currently reads like a
+   different product. Rebuild it INSIDE the poster identity — paper ground,
+   ink borders, saffron/hazard accents, Anek Devanagari headers, stamp motifs
+   — the same visual world as /check and the landing, dialled up:
+   hazard-striped section bands, the big weekly number as a stamp-style
+   plate, the day-line chart and category bars restyled with poster tokens
+   (ink strokes, saffron fills, mono numerals), moderation queue as
+   hazard-notice cards with heavy verify/reject plates. It must feel like
+   the war desk OF THIS poster world, not a generic dark dashboard. If a
+   dark band earns its place (e.g. the radar strip), it uses the SAME ink +
+   paper-text + saffron system as the deck's LIVE DEMO slide — no new greys.
+
+5. (stretch) /learn — "ठग को पहचानो" simulator: 5 rounds, real fixture
    messages (mix scam/legit from lib/fixtures), user guesses, Dhaal reveals
    verdict + signals, score at end + "अपना inbox जाँचो" CTA. Pure frontend +
    /api/check calls.
