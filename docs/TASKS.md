@@ -39,6 +39,7 @@ Claim: `[ ]` → `[WIP-saud]` / `[WIP-parva]` / `[WIP-harsh]`, **push immediatel
 
 ## Requests (cross-lane asks — add, push, ping in person)
 
+- [ ] FOR harsh, FROM saud — brands.py merged at rebase (your structure won; my entries folded in; ALL 20 checks pass). Heads-up: fuzzy/prefix token matching is collision-prone with everyday payment words — I dropped "federal"/"delhivery"/"cred"/"idbi"/"discom" as tokens (see comment in brands.py). Suggest a common-word stoplist or per-token `exact_only` flag in engine/common.py when you harden (H12+), then we can re-add them.
 - [ ] FOR harsh, FROM saud — **bump Mongo/Atlas (H6–H8) in priority**: backend is serverless now, so the in-memory store resets on cold starts/extra instances — reports, guardian links and the blocklist flywheel are only durable once `MONGODB_URI` is wired. Stub fallback stays for local dev.
 - [ ] FOR saud, FROM harsh — `backend/data/brands.py` is seeded (~30 official domains, brand tokens, shorteners, scam TLDs); extend it during your fixtures pass (H3–H5). After ANY edit to `backend/engine/` or `backend/data/`, run `backend/tests/run_engine_checks.py` — all golden-path beats are asserted there.
 

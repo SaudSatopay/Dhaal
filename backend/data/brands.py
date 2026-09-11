@@ -39,15 +39,18 @@ BRAND_TOKENS = [
     "sbi", "onlinesbi", "sbicard", "yono",
     "hdfc", "hdfcbank", "icici", "icicibank", "axis", "axisbank",
     "kotak", "pnb", "canara", "unionbank", "baroda", "idfc",
-    "yesbank", "indusind", "federal", "rblbank", "aubank", "idbi",
+    "yesbank", "indusind", "rblbank", "aubank",
     "paytm", "phonepe", "gpay", "googlepay", "bhim", "npci",
-    "cred", "mobikwik", "freecharge", "amazonpay",
+    "mobikwik", "freecharge", "amazonpay",
     "rbi", "uidai", "aadhaar", "aadhar", "irctc", "lic", "epfo",
-    "incometax", "jvvnl", "discom",
+    "incometax", "jvvnl",
     "airtel", "jio", "vodafone",
     "amazon", "flipkart", "meesho", "olx",
-    "indiapost", "bluedart", "delhivery",
+    "indiapost", "bluedart",
 ]
+# Deliberately NOT tokens (fuzzy/prefix collisions with everyday payment words —
+# domains above stay whitelisted): "federal"≈general · "delhivery"≈delivery ·
+# "cred" prefixes credit/credited · "idbi"≈idli · "discom"≈discount.
 
 # URL shorteners — destination hidden; engine unwraps when network allowed.
 SHORTENER_DOMAINS = {
