@@ -1,8 +1,8 @@
-# Engine evaluation — honest edition (v3, at rules freeze)
+# Engine evaluation — honest edition (v4, post-H14 hardening)
 
 Three kinds of evidence, kept separate on purpose. Development results show responsiveness to failure; the regression suite shows nothing already fixed can silently return; **only the held-out battery measures generalization** — its rules were frozen before the inputs were written, it ran exactly once against production, and its misses are published unedited.
 
-Reproduce everything: `cd backend && python tests/run_engine_checks.py && python tests/run_api_checks.py` (all published payloads are cases).
+Reproduce everything: `cd backend && python tests/run_engine_checks.py && python tests/run_api_checks.py && python tests/run_guardian_auth_checks.py` (all published payloads are cases; suites run keyless against the in-memory store). Held-out raws carry exact inputs, labels, engine commit and dependency state; batteries re-run via `tests/run_heldout_v3.py` (verdicts are deterministic; narration text may vary).
 
 ## 1 · Development batteries (found → fixed → became regression; NOT accuracy claims)
 
@@ -12,14 +12,57 @@ Reproduce everything: `cd backend && python tests/run_engine_checks.py && python
 | H11 coercion, victim-voiced (7) | 3/7 | fixed | threat *descriptions* need their own family |
 | H11 bare-VPA impersonation (5) | 1/5 | fixed | brand-in-VPA only ran on QR payloads |
 | H12 external review (5 independent cases) | 0/5 | fixed | ambient single words convicted; "do not share" neutralized requests; `mode=01` misread as collect (NPCI: QR-initiated); refund-advance under threshold; duplicate signal stacking |
+| H14 external review battery (18 clause-level cases) | mixed | fixed | negation had no sentence scope ("Do not send money" counted as a demand); credential logic fired on mentions and self-help; safety-advice suffixes laundered real asks; reported speech scored as attacks; delivery/ride OTP flows flagged; v2 miss families (telecom, family-emergency, chain-forward, apk, brand-subdomain) |
 
 These numbers demonstrate iteration speed, not field accuracy — once fixed and folded into regression, the cases stop being independent evidence.
 
 ## 2 · Regression suite (runs on every push)
 
-**35 engine checks + 32 API contract checks green.** Includes every demo beat, every battery payload above, moderation-gate 401/200, verification idempotency AND reversal, guardian decision `link_id` auth, intent-mismatch both ways on the same QR, parsed-`upi://` needs-context exemption, and the live Sarvam round trip locally (TTS speaks → own audio back through ASR).
+**61 engine + 48 API + 32 guardian-authorization checks green** (H14). Includes every demo beat, every battery payload above, clause-level semantics (negation scope, requester attribution, reported speech, agent-flow OTPs), facts consistency (same QR ⇒ same facts under both expectations), assessment outcomes across web/WhatsApp/guardian, moderation-gate 401/200, identifier-extraction flywheel with exact-contribution reversal, WhatsApp signature validation, recovery branching, and every published guardian bypass path (no-credential, ward-credential, cross-pairing, request-id+link_id, legacy pairing, revoked tokens, reused/expired codes).
 
-## 3 · Held-out battery v2 — 60 cases (rules FROZEN at `aa7f715` · single run vs PROD · unedited)
+## 3 · Held-out battery v3 — 64 cases, BLIND-AUTHORED (rules FROZEN at `95b3b5b` · single run vs PROD · unedited)
+
+v3 fixes v2's biggest methodology weakness: the cases were written by a **separate session that never read the engine**, while the engine was rewritten (H14) without reading the cases — labels + rationale per case, sealed until the freeze. Grading pre-declared in `backend/tests/run_heldout_v3.py`; ran exactly once against prod (deployed commit `9254f9e`; engine frozen at `95b3b5b` — the two commits between are frontend-only); raw with exact inputs in `docs/heldout_v3.json`. Community blocklist live, LLM narration on (zero verdict weight).
+
+**Total: 53/64.** Confusion matrix (expected → predicted):
+
+| | → flag | → clean | → context | → unsupported |
+|---|---|---|---|---|
+| **flag (26)** | **22** | 4 | 0 | 0 |
+| **clean (28)** | 3 | **25** | 0 | 0 |
+| **context (8)** | 0 | 4 | **4** | 0 |
+| **unsupported (2)** | 0 | 0 | 0 | **2** |
+
+| Metric | Value | Target (engineering, not guaranteed) |
+|---|---|---|
+| Recall on harmful | **22/26 (84.6%)** | >90% — **missed** |
+| False warnings on legitimate | **3/28 (10.7%)** | <5% — **missed** |
+| Strongest-warning (danger) precision | **9/10 (90%)** | >95% — **missed** (the 1: a hard-negative news report) |
+| Any-warning precision | 22/25 (88%) | — |
+| Abstention on assessable inputs | 0/54 | (no over-asking) |
+| Insufficient-info handling | 4/8 | the weakest slice |
+| Unsupported-input handling | 2/2 | |
+| Per language | hi 16/20 · en 21/23 · hinglish 16/21 | |
+
+All 11 misses, unedited, each with the gap it names:
+
+| Case | Expected → Got | Gap |
+|---|---|---|
+| "instant personal loan… GST advance charge" | flag → clean 15 | pattern needs adjacency: "instant loan" ≠ "instant **personal** loan" |
+| "jo **code** abhi aapke phone par aaya wo mujhe bata dijiye" | flag → clean 15 | bare "code" was excluded from credential tokens (promo-code FP trade) — delivered-code reference + directive not modeled |
+| Sextortion ("recorded you… transfer Rs 20,000") | flag → clean 15 | **sextortion family absent entirely** |
+| Paytm care: "रिक्वेस्ट को अपने ऐप में स्वीकार करें" | flag → clean 25 | collect-approve mechanic only matched the English phrase "collect request", not Devanagari "रिक्वेस्ट…स्वीकार" |
+| Explainer video: "aaj ke session me samjhte hain ki digital arrest scam kaise chalta hai" | clean → susp 35 | reported-speech markers miss the tutorial-voice register |
+| News: "समाचार: साइबर पुलिस ने… गिरोह को गिरफ़्तार किया" | clean → **danger 60** | "समाचार/ख़बर" absent from awareness markers — worst FP of the run |
+| "Kal police station gaye the passport verification ke liye… court me property case" | clean → susp 35 | two innocent weak tokens + the mere word "verification" as context co-fired a family |
+| Bare threat "अंजाम भुगतना पड़ेगा, सोच लेना।" | context → **clean 0** | 5 words slip the too-short gate: threats without asks need their own context trigger — this produced false reassurance |
+| Bank a/c + IFSC alone | context → clean 0 | bare-identifier shapes cover phone/VPA, not account numbers |
+| "yeh upi id sahi hai na" | context → clean 0 | referent-less question ("this/it" with nothing attached) not detected |
+| "Can you send it now?" | context → clean 0 | same referent-less-question gap |
+
+**Read:** the four insufficient-info misses are the ugliest — each handed a green card to an unjudgeable input, exactly what the assessment outcome exists to prevent; the gate is length/shape-based and needs threat-without-ask and referent-less-question triggers. The three false positives are all reported-speech registers (tutorial, news headline, small talk near trigger words) — the awareness layer works (4 other discussion cases passed) but its marker list is enumerable-and-incomplete by construction. The four scam misses are two pattern-adjacency defects, one Devanagari phrasing hole, and one wholly missing family (sextortion). **Per freeze discipline nothing was fixed before publication; targets missed are reported missed.** These eleven rows are the next battery's development set.
+
+## 3b · Held-out battery v2 — 60 cases (historical · rules frozen at `aa7f715` · published 51/60)
 
 60 new cases authored after the freeze, from scam typology (1930/RBI/news categories) — including deliberately hard negatives. Grading was pre-declared in the runner (`backend/tests/run_heldout_v2.py`); the battery ran exactly once; raw run in `docs/heldout_v2.json`. Same-author caveat as v1: cases are written by the team, post-freeze — independent, not adversarial third-party.
 
@@ -73,4 +116,4 @@ All 9 misses, unedited:
 
 ## Known limits (say these; don't hide them)
 
-Keyword-family detection — paraphrase coverage grows with the community corpus, not the rulebook · threats without a payment ask stay under threshold by design (precision trade) · lookalike coverage = Indian banks/PSPs/govt + major global consumer brands, not the whole internet · **no reported-speech awareness** — describing a scam can score like receiving one (v2 FP) · **credential family can't yet separate "give me your OTP" from legit share-OTP-with-agent delivery/ride flows** (v2 FPs) · five scam families named-and-missing per v2 (telecom-regulator, family-emergency, chain-forward, apk-sideload, brand-subdomain combos) · moderation is one shared key tonight (roadmap: per-moderator accounts, auto-verify thresholds) · seeded rows are labelled "synthetic demo" in the UI.
+Keyword-family detection — paraphrase coverage grows with the community corpus, not the rulebook · reported-speech handling is marker-based and register-incomplete (v3: tutorial voice, news headlines) · the too-short/needs-context gate misses threats-without-asks and referent-less questions (v3's worst rows — green cards on unjudgeable input) · sextortion family absent (v3) · lookalike coverage = Indian banks/PSPs/govt + major consumer brands, not the whole internet · scores are heuristic weights, **not calibrated probabilities** · automated batteries are not user testing · moderation is one shared key tonight (roadmap: per-moderator accounts) · WhatsApp transport auth is test-verified only (Twilio sandbox parked on trial tier) · guardian notifications require the ward's page open (polling) — no background push is claimed · pre-existing frontend `set-state-in-effect` lint debt (runtime-fine) · seeded rows are labelled "synthetic demo" in the UI. *(v2-era limits now fixed and regression-locked: agent-flow OTPs, discussion-context suppression basics, family-emergency/chain-forward/apk/telecom families.)*

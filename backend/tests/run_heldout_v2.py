@@ -124,8 +124,9 @@ for i, case in enumerate(CASES, 1):
         "needs_context": (d.get("needs_context") or {}).get("reason"),
         "error": d.get("error"), "pass": p,
     })
-    print(f"[{i:2}/60] {cid} {expect:7} -> {d.get('verdict') or d.get('error'):>13} "
-          f"{d.get('score', ''):>3} {'ok' if p else 'MISS'}")
+    # verdict can be null under the H14 contract (needs_context) — str() it
+    print(f"[{i:2}/60] {cid} {expect:7} -> {str(d.get('verdict') or d.get('error')):>13} "
+          f"{str(d.get('score', '')):>3} {'ok' if p else 'MISS'}")
 
 n = lambda e: [r for r in rows if r["expect"] == e]
 hit = lambda rs: sum(r["pass"] for r in rs)

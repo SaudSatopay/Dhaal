@@ -3,16 +3,23 @@
 # dataset. NOT independent evidence for the new engine — its misses were
 # development inputs for H14 — which is exactly why it is reported as a
 # comparison, separately from the blind v3 battery.
+import ast
 import json
+import re
 import sys
 import time
 import urllib.request
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
-from run_heldout_v2 import API, CASES  # noqa: E402
+# run_heldout_v2.py executes its battery at module top level (it IS the v2
+# artifact's script) — so extract its CASES literal instead of importing it.
+_SRC = (Path(__file__).resolve().parent / "run_heldout_v2.py").read_text(encoding="utf-8")
+API = "https://dhaal-api.vercel.app/api/check"
+_m = re.search(r"CASES = (\[.*?\n\])\n", _SRC, re.S)
+CASES = ast.literal_eval(_m.group(1))
+assert len(CASES) == 60, f"expected 60 v2 cases, parsed {len(CASES)}"
 
 OUT = Path(__file__).resolve().parents[2] / "docs" / "heldout_v2_on_new_engine.json"
 
