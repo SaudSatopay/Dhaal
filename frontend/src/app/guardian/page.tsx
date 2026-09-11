@@ -21,6 +21,7 @@ import {
   setGuardianPair,
   setWardPair,
   type GuardianPair,
+  type WardPair,
 } from "@/lib/guardian";
 import TopBar from "@/components/TopBar";
 import { ICheck, ICross, IShield, IShieldCheck } from "@/components/icons";
@@ -311,6 +312,70 @@ function CreatePair({ onCreated }: { onCreated: (p: GuardianPair) => void }) {
   );
 }
 
+// ---------------------------------------------------------------- join by code
+// Ward-side "type the code" flow — GET /api/guardian/links/resolve?pair_code=
+// (docs/CONTRACTS.md; case-insensitive, bare code accepted).
+
+function JoinByCode({ onJoined }: { onJoined: (p: WardPair) => void }) {
+  const [code, setCode] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  async function join() {
+    setBusy(true);
+    setError("");
+    try {
+      const link = await api<GuardianLink & { error?: string }>(
+        `/api/guardian/links/resolve?pair_code=${encodeURIComponent(code.trim())}`
+      );
+      if (link.error || !link._id) {
+        setError("यह code नहीं मिला — दोबारा देख कर डालें · code not found");
+        return;
+      }
+      onJoined({
+        link_id: link._id,
+        guardian_name: link.guardian_name,
+        ward_name: link.ward_name,
+      });
+    } catch {
+      setError("जुड़ नहीं पाए — connection जाँचें · could not connect");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <section className="mt-5 border-2 border-ink bg-paper p-4">
+      <p className="font-bold">
+        आपके अपनों ने code भेजा है?
+        <span className="plate mt-0.5 block font-normal text-inksoft">
+          GOT A PAIR CODE? JOIN AS THE PROTECTED ONE
+        </span>
+      </p>
+      <div className="mt-2.5 flex gap-2">
+        <input
+          value={code}
+          onChange={(e) => setCode(e.target.value.toUpperCase())}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && code.trim() && !busy) join();
+          }}
+          placeholder="DHAAL-4821"
+          maxLength={12}
+          className="w-full border-2 border-ink bg-paper p-2.5 font-mono text-lg tracking-[0.15em] placeholder:text-inksoft/40"
+        />
+        <button
+          onClick={join}
+          disabled={busy || !code.trim()}
+          className="shrink-0 border-[3px] border-ink bg-paper px-4 font-display font-bold hover:bg-paper2 disabled:opacity-40"
+        >
+          {busy ? "…" : "जुड़ो"}
+        </button>
+      </div>
+      {error && <p className="mt-2 text-sm font-bold text-saffdeep">{error}</p>}
+    </section>
+  );
+}
+
 // ---------------------------------------------------------------- ward faces
 
 function WardJoined({ guardianName, wardName }: { guardianName: string; wardName: string }) {
@@ -398,13 +463,22 @@ function GuardianInner() {
           <WardJoined guardianName={ward.guardian_name} wardName={ward.ward_name} />
         )}
         {mode === "guardian-create" && (
-          <CreatePair
-            onCreated={(p) => {
-              setGuardianPair(p);
-              setGPair(p);
-              setMode("guardian-inbox");
-            }}
-          />
+          <>
+            <CreatePair
+              onCreated={(p) => {
+                setGuardianPair(p);
+                setGPair(p);
+                setMode("guardian-inbox");
+              }}
+            />
+            <JoinByCode
+              onJoined={(p) => {
+                setWardPair(p);
+                setWard(p);
+                setMode("ward");
+              }}
+            />
+          </>
         )}
         {mode === "guardian-inbox" && gPair && (
           <GuardianInbox

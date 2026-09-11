@@ -36,6 +36,8 @@ export const CATEGORY_UI: Record<ScamCategory, { hi: string; en: string }> = {
   electricity: { hi: "बिजली बिल धोखा", en: "Electricity bill scam" },
   olx_army: { hi: "OLX / आर्मी धोखा", en: "OLX / army scam" },
   customer_care: { hi: "नकली कस्टमर केयर", en: "Fake customer care" },
+  job_scam: { hi: "नौकरी धोखा", en: "Job scam" },
+  loan_fee: { hi: "लोन फ़ीस धोखा", en: "Loan-fee scam" },
   other: { hi: "अन्य धोखा", en: "Other scam" },
 };
 

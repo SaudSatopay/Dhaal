@@ -14,6 +14,8 @@ export type ScamCategory =
   | "electricity"
   | "olx_army"
   | "customer_care"
+  | "job_scam"
+  | "loan_fee"
   | "other";
 
 export type Signal = {
