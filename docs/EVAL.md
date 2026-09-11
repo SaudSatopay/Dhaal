@@ -46,9 +46,9 @@ All 9 misses, unedited:
 
 **Read of the misses:** the 6 scam misses are five *missing families* (telecom-regulator, family-emergency ×2, chain-forward, apk-sideload) plus one combination bug — not random noise; each is a nameable rule the community corpus would surface. The 3 false positives are the exact hard negatives we wrote to find the precision boundary: the credential family cannot yet tell "give me your OTP" from "show the rider your OTP", and pattern-matching has no reported-speech awareness. **Per freeze discipline, none of these are fixed tonight** — they are the next battery's development set, and this score stands as published.
 
-## 3a · Held-out battery v1 — 10 cases (historical)
+## 3a · Held-out battery v1 — 10 cases (historical · description CORRECTED)
 
-10 new cases written blind after all H12 fixes. **Result: 5/10 — all 5 benign cases clean (0 false positives), 5 scam misses.** Raw run in `docs/heldout_h12.json`.
+10 new cases written blind after all H12 fixes. **Result: 5/10.** Two prior claims about this battery were wrong and are corrected here (caught by external review): the set contained **3 benign and 7 expected-to-flag cases, not 5/5** — so 5/10 = 2 scam hits + 3 benign clean, and "all 5 benign clean, 0 false positives" overstated the benign sample. Additionally its raw file (`docs/heldout_h12.json`) recorded only short case labels, **not the exact inputs** — irreproducible as published. Both defects are fixed from v2 onward (exact payloads in every raw file) and v3 adds full per-case labels + rationale.
 
 | Case | Expected | Got | |
 |---|---|---|---|

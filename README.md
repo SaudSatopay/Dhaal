@@ -49,7 +49,7 @@ The defence has to live where the decision happens: **in the user's hand, at the
 | Surface | What happens |
 |---|---|
 | 🔍 **जाँच / Check** | Paste text, a link, a UPI ID, a number — upload a **QR photo** (decoded on-device with jsQR; the image never leaves the phone) — or press the mic and **speak**. The signal engine inspects it and returns **खतरा · सावधान · कोई ज्ञात खतरा नहीं** with every signal named, weighted, and explained in Hindi + English. Then Dhaal **speaks the warning aloud**. |
-| 👨‍👩‍👧 **परिवार की ढाल / Guardian** | Pair a parent's phone with a family member's (QR or type-the-code). A risky check on the ward's phone pings the guardian for a 10-second **Allow / Block** with a note — protection without surveillance: the guardian sees the risk, never the ward's transactions. |
+| 👨‍👩‍👧 **परिवार की ढाल / Guardian** | Pair a parent's phone with a family member's (single-use QR code or type-the-code; role-scoped capability tokens, revocable both ways). A risky check on the ward's phone pings the guardian for a 10-second **Advise-stop / Allow** with a note — the guardian *advises*, the ward always holds the phone. Protection without surveillance: the guardian sees the risk, never the ward's transactions. |
 | 🗺️ **धोखों का नक्शा / Intel** | Anyone can report a scam. A human moderator verifies it. The number/UPI/domain instantly joins the **shared blocklist** that protects every user's next check. Live war-room board: this week's verified reports, trends by scam type, by day, by city, most-reported indicators. |
 | 🚑 **पहला घंटा / Recover** | Just got scammed? The first hour decides whether money comes back (the 1930 system has recovered ₹3,400+ crore — when people report fast). Dhaal generates the **1930 call script, the cybercrime.gov.in complaint draft, and the bank dispute letter** — personalised, in Hindi, with copy buttons. |
 
@@ -152,10 +152,10 @@ Every external call logs a `[latency]` line; retry-once everywhere; deterministi
 | Endpoint | Purpose |
 |---|---|
 | `GET /api/health` | `{ok, mock_mode, store: "atlas"\|"memory"}` |
-| `POST /api/check` | the core: `{type: text\|url\|upi\|qr_text\|voice_transcript, payload, lang, speak, ward_link_id}` → verdict + weighted signals + bilingual explanation (+ `tts_audio_b64` when `speak`) |
+| `POST /api/check` | the core: `{type: text\|url\|upi\|qr_text\|voice_transcript, payload, lang, speak, ward_token, expected_intent}` → **assessment** (`assessed`/`needs_context`/`unsupported_input`) + verdict (null when unassessed) + weighted signals + parsed **facts** + bilingual explanation (+ `tts_audio_b64` when `speak`) |
 | `POST /api/transcribe` | multipart audio (webm/m4a) → Saarika ASR; or JSON `{typed_text}` fallback |
-| `POST /api/guardian/links` · `GET /api/guardian/links/resolve?pair_code=` | create / join a guardian pair |
-| `GET /api/guardian/requests?link_id=` · `POST …/{id}/decision` | guardian inbox · Allow/Block |
+| `POST /api/guardian/links` · `POST /api/guardian/links/claim` · `POST …/links/revoke` | create / redeem (single-use, expiring code) / sever a guardian pair — role capability tokens, hashed at rest, headers only |
+| `GET /api/guardian/requests` · `POST …/{id}/decision` (both token-authed) | guardian inbox · Advise-stop/Allow |
 | `POST /api/reports` · `GET /api/reports?status=pending` · `POST …/{id}/verify` | report → moderate → blocklist |
 | `GET /api/intel/trends` | war-room aggregates: totals, by category/day/city, top indicators |
 | `POST /api/recovery/kit` | personalised 1930 script + complaint draft + bank letter |
