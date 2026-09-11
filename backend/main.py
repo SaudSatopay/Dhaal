@@ -326,6 +326,19 @@ def _assess(payload: str, score: int, facts: dict):
             "question_hi": "कौन-सा QR? उसकी photo QR tab में डालें या उसमें लिखा upi:// text paste करें — तभी जाँच होगी।",
             "question_en": "WHICH QR? Upload its photo in the QR tab or paste its upi:// text — then it can be checked.",
         }
+    # a bare bank account (+IFSC) with no story: an identifier is not a
+    # message — ask what came WITH it (v5-105 family; same treatment a bare
+    # phone number already gets)
+    if len(t.split()) <= 10 and score < engine_mod.SUSPICIOUS_AT \
+            and (re.search(r"(?:खाता|a/?c|account)[^0-9]{0,6}[\d\s]{8,22}", t, re.I)
+                 or (_ACCOUNT_RE.search(t)
+                     and re.search(r"ifsc|आईएफ़?एससी", t, re.I))) \
+            and not re.search(r"debit|credit|balance|txn|ref\b", t, re.I):
+        return "needs_context", {
+            "reason": "bare_identifier",
+            "question_hi": "यह खाता नंबर किसने भेजा, और किस लिए? साथ आया पूरा message paste करें — अकेला नंबर जाँचा नहीं जा सकता।",
+            "question_en": "WHO sent this account number, and for what? Paste the message that came with it — a bare number can't be judged.",
+        }
     words = len(t.split())
     if words < 4 and not (p and p.get("status") == "valid"):
         return "needs_context", {

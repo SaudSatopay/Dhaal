@@ -113,9 +113,13 @@ CATEGORIES: dict[str, tuple[int, list, list]] = {
         "इंस्पेक्टर", "verification fee",
     ])),
     "lottery": (30, _rx([
-        "lottery", "लॉटरी", "lucky draw", "jackpot", "kbc", "crorepati",
-        "lakh jeet", "jeet gaye",
-    ]), _rx([
+        "lottery", "लॉटरी", "lucky draw", "लकी ड्रा", "jackpot", "kbc",
+        "crorepati", "lakh jeet", "jeet gaye", "bumper draw", "बम्पर",
+    ]) + [
+        # money-scoped "you won ₹X" — cricket scores never carry a currency
+        re.compile(r"(?:won|jeet[ae]?|जीत[ae]?)\s?[^.।!?]{0,25}"
+                   r"(?:₹|\brs\.?\b|lakh|लाख|crore|करोड़|\d[\d,]{4,})", re.I),
+    ], _rx([
         "prize", "इनाम", "winner", "jeeta", "जीते", "claim",
     ])),
     "kyc_expiry": (25, _rx([
@@ -127,7 +131,10 @@ CATEGORIES: dict[str, tuple[int, list, list]] = {
         "नंबर बंद हो",
     ]) + [
         re.compile(r"\bsim\b[^.।!?]{0,30}(?:deactivat|block|band|suspend)", re.I),
-        re.compile(r"\bnumber\b[^.।!?]{0,25}(?:deactivat|disconnect|band|बंद)", re.I),
+        re.compile(r"(?:\bnumber\b|नंबर)[^.।!?]{0,25}(?:deactivat|disconnect|band|बंद)", re.I),
+        # v5: account frozen/held pending "verification" — any word order
+        re.compile(r"(?:खाता|account|a/c)[^.।!?]{0,30}(?:रोक|freeze|frozen|"
+                   r"\bhold\b|lock|suspend)", re.I),
     ], _rx([
         "trai",
     ])),
@@ -145,7 +152,11 @@ CATEGORIES: dict[str, tuple[int, list, list]] = {
     "customer_care": (25, _rx([
         "customer care", "कस्टमर केयर", "helpline number", "toll free",
         "refund process", "complaint number", "care number",
-    ]), _rx([
+        # v5: support-callback frames ("we saw your complaint… refund")
+        "saw your complaint", "regarding your complaint",
+    ]) + [
+        re.compile(r"process[^.।!?]{0,20}refund|refund[^.।!?]{0,15}process", re.I),
+    ], _rx([
         "रिफंड", "refund",
     ])),
     "job_scam": (30, _rx([
@@ -154,14 +165,23 @@ CATEGORIES: dict[str, tuple[int, list, list]] = {
         "रोज़ कमा", "liking videos", "like videos", "telegram task",
         "limited seats", "instagram follow", "task team", "टास्क टीम",
         "prepaid task", "प्रीपेड टास्क", "पहला टास्क", "welcome task",
-    ]), _rx([
+        # v5 regression families: recruitment-fee frames
+        "work-from-home", "data entry job", "per task", "har task",
+        "rate hotels", "rate products", "kit fee", "joining fee",
+    ]) + [
+        re.compile(r"(?:shortlisted|selected)[^.।!?]{0,35}(?:job|role|position|"
+                   r"work[- ]?from[- ]?home|wfh|internship|data\s+entry)", re.I),
+    ], _rx([
         "youtube video", "registration",
     ])),
     "investment_doubling": (30, _rx([
         "double your money", "money double", "paisa double", "पैसा डबल",
         "guaranteed return", "guaranteed profit", "फिक्स रिटर्न",
         "daily profit", "trading group", "trading tips group",
+        # v5 regression family: crypto-doubling events
+        "get 2x", "2x back", "double back", "usdt",
     ]) + [
+        re.compile(r"send\s+any[^.।!?]{0,25}(?:usdt|crypto|btc|coin)", re.I),
         re.compile(r"\d{1,3}\s?%\s?(?:return|profit|munafa|रिटर्न)", re.I),
         re.compile(r"(?:deposit|invest|जमा)[^.।!?]{0,30}(?:double|profit|return|डबल)", re.I),
     ], []),
@@ -186,7 +206,9 @@ CATEGORIES: dict[str, tuple[int, list, list]] = {
         # gap-tolerant (v3-009: "instant PERSONAL loan", "loan ... approve
         # ho gaya", "GST/charge before disbursal")
         re.compile(r"\b(?:instant|pre.?approved)\b[^.।!?]{0,25}\bloan\b", re.I),
-        re.compile(r"\bloan\b[^.।!?]{0,40}(?:approve|approved|sanction|मंजूर|pass ho)", re.I),
+        re.compile(r"(?:\bloan\b|लोन|ऋण)[^.।!?]{0,40}(?:approve|approved|अप्रूव|"
+                   r"sanction|मंजूर|स्वीकृत|pass ho)", re.I),
+        re.compile(r"(?:इंस्टेंट|तत्काल)[^.।!?]{0,20}(?:लोन|ऋण)", re.I),
         re.compile(r"(?:disbursal|disburse|loan amount)[^.।!?]{0,50}(?:pehle|पहले|before|first)", re.I),
     ], []),
 }
@@ -227,12 +249,17 @@ _CROSS = [
           "verification amount", "release fee",
           # H17 fee-noun synonyms (judge misses: bond/deposit words)
           "security bond", "customs bond", "clearance deposit",
-          "clearance charge", "bond amount", "सिक्योरिटी बॉन्ड"])
+          "clearance charge", "bond amount", "सिक्योरिटी बॉन्ड",
+          # v5 regression: recruitment/insurance fee skins
+          "kit fee", "joining fee", "training fee", "joining amount",
+          "reactivation fee", "reactivation charge", "unlock fee",
+          "टोकन राशि", "token राशि", "trial payment", "ट्रायल भुगतान"])
      + [re.compile(r"(?:charge|fee|shulk|शुल्क|फीस)[^.।!?]{0,25}(?:jama|जमा|bhar|भर|pay\s+kar)", re.I),
         # H17 passive requirement: "a ... bond/deposit of Rs X is required" —
         # runs on negation-stripped text, so "no deposit required" never fires
-        re.compile(r"(?:bond|deposit|fee|charge|शुल्क|फीस)[^.।!?]{0,30}"
+        re.compile(r"(?:bond|deposit|fee|charge|शुल्क|फीस|राशि)[^.।!?]{0,30}"
                    r"(?:is\s+required|required\s+before|is\s+needed|"
+                   r"is\s+payable|payable\s+before|देय\s+है|"
                    r"देना\s+होगा|भरना\s+होगा|अनिवार्य\s+है)", re.I)]),
     # Victim-voiced coercion — judges type DESCRIPTIONS of the threat, not the
     # scammer's script ("I was told to send money or I'd be arrested"). H11.
@@ -260,7 +287,10 @@ _CROSS = [
           "bhugatna padega", "बुरा होगा", "bura hoga", "देख लेंगे",
           "dekh lenge", "छोड़ूँगा नहीं", "chhodunga nahi",
           "you will regret", "regret this", "i know where you live",
-          "जान से", "jaan se", "ghar jaanta", "घर जानता"])),
+          "जान से", "jaan se", "ghar jaanta", "घर जानता",
+          # v5: bare menace-knowledge ("I know what you did… dekhta hu")
+          "dekhta hu", "देखता हूँ", "देखता हूं", "sab pata hai",
+          "सब पता है"])),
 ]
 
 # ---- credentials: request vs delivery vs mention (per-sentence) -------------
@@ -269,8 +299,11 @@ _CRED_MENTION = _rx(["otp", "pin", "cvv", "password", "पासवर्ड", "
                      "verification code", "card number", "expiry date",
                      # periphrasis (H17 judge miss): scammers avoid the word
                      # OTP — "the six digits that just arrived" IS the OTP
-                     "digit", "digits", "अंक", "अंकों", "छह number",
-                     "chhe number"])
+                     "digit", "digits", "अंक", "अंकों", "ank", "anko",
+                     "छह number", "chhe number",
+                     # card-details harvest phrasings
+                     "card details", "कार्ड की जानकारी", "कार्ड विवरण",
+                     "card ki jankari"])
 _CRED_DELIVERY = _rx(["is your otp", "is your one time password", "otp for",
                       "one time password for", "otp is", "code is"])
 # directive verb → credential, or credential → directive/direction, in ONE
@@ -282,9 +315,10 @@ _CRED_TOKEN = (r"(?:otp|ओटीपी|one[\s-]?time\s+(?:password|code)|verifi
                # H17 periphrasis family: a counted-digits noun phrase, or
                # "digits that (just) arrived/came" — the OTP without its name
                r"|(?:\d{1,2}|four|five|six|चार|पाँच|छह|chaar|paanch|chhe)"
-               r"[\s-]?(?:digits?|अंकों?|अंक)"
+               r"[\s-]?(?:digits?|अंकों?|अंक|ank(?:o)?\b)(?:\s+ka\s+number)?"
                r"|(?:digits?|अंक(?:ों)?)\s+(?:that|jo|जो)[^.।!?]{0,30}?"
-               r"(?:arrived|came|received|mile|aaye?|आया|आए|मिला|मिले))")
+               r"(?:arrived|came|received|mile|aaye?|आया|आए|मिला|मिले)"
+               r"|card\s+details|कार्ड\s+(?:की\s+जानकारी|विवरण)|card\s+ki\s+jankari)")
 _CRED_REQ_A = re.compile(
     r"(?:send|share|forward|tell|give|type|enter|read\s+out|confirm|"
     r"reply\s+(?:with|karke)|batao?|"
@@ -295,12 +329,21 @@ _CRED_REQ_A = re.compile(
 _CRED_REQ_B = re.compile(
     _CRED_TOKEN + r"[^.।!?]{0,70}?(?:bhej|भेज|bata|बता|share|send|forward|"
     r"dij(?:iye|e)|दीजिए|दे\s+दो|मुझे|mujhe|यहाँ|yahan|"
-    r"is\s+(?:number|chat)|इस\s+(?:नंबर|चैट)|हमें|humein)",
+    r"is\s+(?:number|chat)|इस\s+(?:नंबर|चैट)|हमें|humein|"
+    r"darj|दर्ज|enter\s+kar|भर(?:ें|िए|o)?\b)",
     re.I)
 # telling/showing an OTP to a physically present platform agent is a real flow
 _AGENT_CTX = re.compile(
     r"driver|rider|delivery\s*(?:boy|agent|partner|executive|associate)|courier\s*(?:boy|wala)|"
-    r"डिलीवरी|ड्राइवर|राइडर|कूरियर", re.I)
+    r"डिलीवरी|ड्राइवर|राइडर|कूरियर"
+    # v5 FP fix: direction-to-agent phrasings without the word "delivery"
+    r"|(?:with|to)\s+the\s+agent|agent\s+(?:ko|at\s+(?:the\s+)?door)|एजेंट\s+को", re.I)
+# v5 miss fix: the agent exemption is for a PHYSICAL handoff. A caller
+# CLAIMING to be the courier ("courier boy bol raha hu... OTP batao") is a
+# counterparty request over the phone — the exemption must not apply.
+_CALLER_CLAIM = re.compile(
+    r"bol\s+rah[ai]\s+h(?:u|un|oon)|बोल\s+रह[ाी]\s+(?:हूँ|हूं)|"
+    r"calling\s+from|speaking\s+from|मैं\s+.{0,25}(?:से|department)\s+बोल", re.I)
 _CHAT_DIRECTION = re.compile(
     r"मुझे|mujhe|to\s+me|this\s+chat|is\s+(?:number|chat)|इस\s+(?:नंबर|चैट)|"
     r"हमें|humein|whatsapp\s+kar|call\s+par|फोन\s+पर\s+बता", re.I)
@@ -318,7 +361,10 @@ _BAIT_GET = _rx(["refund", "रिफंड", "cashback", "कैशबैक", 
                  "milenge", "release hone", "रिलीज़", "on hold", "atka",
                  # H17 windfall families: inheritance/legacy money
                  "inheritance", "विरासत", "वसीयत", "virasat", "wasiyat",
-                 "legacy"]) + [
+                 "legacy",
+                 # v5 regression: selection/maturity windfalls
+                 "shortlisted", "selected for", "maturity", "मैच्योरिटी",
+                 "आपको मिली है", "जीत लिया"]) + [
     # money someone "left you" — money-scoped so "left you a voicemail" never
     # counts (H17 judge miss: inheritance advance-fee)
     re.compile(r"left\s+you[^.।!?]{0,25}(?:₹|\brs\.?\b|rupees|lakh|लाख|crore|"
@@ -346,8 +392,14 @@ _BAIT_SEND = _rx(["paise bhejo", "पैसे भेजो", "paise bhej", "प
                r"[^.।!?]{0,12}(?:₹|\brs\.?\b|\d{3,7})", re.I),
 ] + [
     # money-scoped deposits only — "documents jama karo" must never count
-    re.compile(r"(?:₹|\brs\.?\b|paise|पैसे|fee|फीस|charge|शुल्क|amount|"
-               r"\d{2,7})[^.।!?]{0,18}(?:jama|जमा)", re.I),
+    re.compile(r"(?:₹|\brs\.?\b|paise|पैसे|fee|फीस|charge|शुल्क|amount|राशि|"
+               r"\d{2,7})[^.।!?]{0,26}(?:jama|जमा)", re.I),
+    # money-scoped bhugtan/payable forms ("2 रुपये का ट्रायल भुगतान करें",
+    # "clearance charge of 6,300 is payable")
+    re.compile(r"(?:₹|\brs\.?\b|रुपये|rupees|\d{1,7})[^.।!?]{0,25}"
+               r"(?:भुगतान|bhugtan)", re.I),
+    re.compile(r"(?:fee|charge|deposit|bond|शुल्क|फीस|राशि)[^.।!?]{0,30}"
+               r"(?:payable|is\s+required|देय)", re.I),
     # H17 send-verb synonyms, money-scoped: remit/deposit/wire ₹X — and the
     # Hinglish verb-final order "2500 rupees ... remit karein". Reverse form
     # is remit/wire ONLY: "Rs X was deposited to your account" (a legit
@@ -443,6 +495,25 @@ _CHAIN_FWD = _rx(["forward this message", "forward karo", "forward karein",
                   "share to groups", "share with 10"])
 _APK = re.compile(r"\b[\w-]{2,}\.apk\b|apk\s+(?:file|download|install)|"
                   r"download\s+(?:kar(?:ke|o)|करके)\s+install", re.I)
+
+# ---- v5 families: reverse-refund and scan-to-receive (counterparty baits) ---
+_ACCIDENT_SENT = re.compile(
+    r"(?:accidentally|galti\s+se|गलती\s+से|by\s+mistake)[^.।!?]{0,45}"
+    r"(?:refund|sent|transferr?ed|credited|bhej|भेज|chala\s+gaya|चला\s+गया)"
+    r"|(?:refunded|sent|transferr?ed|bhej\s+diya)[^.।!?]{0,25}"
+    r"(?:by\s+mistake|galti\s+se|गलती\s+से)", re.I)
+_RETURN_ASK = re.compile(
+    r"(?:\breturn\b|refund\s+(?:it|back)|wapas\s+(?:bhej|kar)|"
+    r"वापस\s+(?:भेज|कर)|send\s+(?:it\s+)?back)", re.I)
+_QR_SENT_TO_YOU = re.compile(
+    r"(?:qr|क्यूआर)\s*(?:code)?[^.।!?]{0,30}(?:bhej\s+raha|भेज\s+रहा|bheja|भेजा|"
+    r"sending|sent)|(?:bhej\s+raha|sending)[^.।!?]{0,15}(?:qr|क्यूआर)", re.I)
+_SCAN_DIRECTIVE = re.compile(
+    r"scan\s+kar|स्कैन\s+कर|\bscan\b[^.।!?]{0,20}(?:karo|karke|करो|करके)", re.I)
+_MONEY_IN_CTX = re.compile(
+    r"khareed|खरीद|\bbuy(?:ing)?\b|payment\s+(?:milega|aayega)|"
+    r"paise\s+(?:milenge|aayenge)|पैसे\s+(?:मिलेंगे|आएँगे|आएंगे)|"
+    r"advance\s+(?:de|deta|दे)", re.I)
 
 _MAX_SPAN = 120
 
@@ -542,8 +613,10 @@ def detect(text: str, signals: list, evidence: list | None = None) -> list[str]:
         if not m:
             continue
         # in-person platform flow: OTP told/shown to a present agent — exempt
-        # unless the ask redirects to the requester's own chat/number.
-        if _AGENT_CTX.search(raw_s) and not _CHAT_DIRECTION.search(raw_s):
+        # unless the ask redirects to the requester's own chat/number, or the
+        # "agent" is the CALLER asking for it (identity claim = counterparty).
+        if _AGENT_CTX.search(raw_s) and not _CHAT_DIRECTION.search(raw_s) \
+                and not _CALLER_CLAIM.search(raw_s):
             _ev(evidence, "credential_agent_flow", raw_s, i,
                 s_off, s_off + len(raw_s))
             continue
@@ -580,9 +653,14 @@ def detect(text: str, signals: list, evidence: list | None = None) -> list[str]:
                               (new_number_span and send_dir_m)))
 
     # ---- reported/educational framing: describing a scam ≠ receiving one ----
+    # v5 regression bug: bare "ho gaya" matched SCAMMER claims too ("loan
+    # अप्रूव हो गया") and suppressed them as victim self-reports. The
+    # register is FIRST-PERSON completion only: an I-actor near the verb.
     _COMPLETED = re.compile(
-        r"(?:kar\s+diya|कर\s+दिया|ho\s+gaya|हो\s+गया|bhar\s+diya|भर\s+दिया|"
-        r"paid|pay\s+kar\s+diya|जमा\s+कर\s+दिया)", re.I)
+        r"(?:maine|मैंने|\bi\b)\s?[^.।!?]{0,30}?"
+        r"(?:kar\s+diya|कर\s+दिया|bhar\s+diya|भर\s+दिया|de\s+diya|दे\s+दिया|"
+        r"bhej\s+diy[ae]|भेज\s+दिय[ेा]|paid|jama\s+kar\s+diya|जमा\s+कर\s+दिया)"
+        r"|pay\s+kar\s+diya|paise\s+bhej\s+diye|पैसे\s+भेज\s+दिए", re.I)
     completed_self = bool(_COMPLETED.search(text)) and not directive_evidence
     aware_m = _AWARENESS.search(text)
     # H17: an impersonal news/advisory frame ("Police warn: fraudsters demand
@@ -733,6 +811,38 @@ def detect(text: str, signals: list, evidence: list | None = None) -> list[str]:
             "Unverified 'new number' asking for money", "बिना पहचान पक्की किए पैसे की माँग",
             "A new number claiming to be family and asking for money must be verified — call them on the number you ALREADY have before sending anything.",
             "नया नंबर खुद को अपना बताकर पैसे माँगे तो पहले उनके पुराने नंबर पर call करके पक्का करें — उसके बिना कुछ न भेजें।",
+        ))
+
+    # v5 family: "we sent it by MISTAKE — return it" (reverse-refund play:
+    # the money usually never arrived, or is stolen money laundered through you)
+    acc_m = _ACCIDENT_SENT.search(stripped_all)
+    ret_m = _RETURN_ASK.search(stripped_all) if acc_m else None
+    if acc_m and ret_m:
+        _ev(evidence, "accidental_transfer", acc_m.group(0), None,
+            acc_m.start(), acc_m.end())
+        _ev(evidence, "accidental_transfer", ret_m.group(0), None,
+            ret_m.start(), ret_m.end())
+        signals.append(make_signal(
+            "accidental_transfer_bait", "deterministic", 35,
+            "'Sent by mistake — return it'", "'गलती से भेज दिए — वापस करो'",
+            "Check your OWN bank statement first: the 'mistaken transfer' usually never arrived — or is stolen money you'd be laundering back.",
+            "पहले अपनी bank statement खुद देखें — 'गलती से आए' पैसे अक्सर आए ही नहीं होते, या चोरी के पैसे होते हैं।",
+        ))
+
+    # v5 family: buyer "sending you a QR — scan to GET paid". Receiving money
+    # never requires scanning or approving anything.
+    qr_m = _QR_SENT_TO_YOU.search(text)
+    scan_m = _SCAN_DIRECTIVE.search(stripped_all) if qr_m else None
+    if qr_m and scan_m and _MONEY_IN_CTX.search(text):
+        _ev(evidence, "scan_to_receive", qr_m.group(0), None,
+            qr_m.start(), qr_m.end())
+        _ev(evidence, "scan_to_receive", scan_m.group(0), None,
+            scan_m.start(), scan_m.end())
+        signals.append(make_signal(
+            "scan_to_receive_bait", "deterministic", 35,
+            "'Scan to RECEIVE money'", "'पैसे पाने के लिए scan करो'",
+            "Receiving money never requires scanning a QR or approving anything — a buyer's 'payment QR' moves money OUT of your account.",
+            "पैसे PANE के लिए कभी QR scan या approve नहीं करना पड़ता — 'buyer' का भेजा QR आपके खाते से पैसे काटता है।",
         ))
 
     if chain_m:

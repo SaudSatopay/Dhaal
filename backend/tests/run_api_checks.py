@@ -149,12 +149,14 @@ ok("recovery date never assumed", "____" in kit_otp["call_script_1930"])
 t = c.post("/api/transcribe", json={"typed_text": "hello", "lang_hint": "hi-IN"}).json()
 ok("transcribe typed fallback", t["transcript"] == "hello")
 
-# transcribe multipart with no Sarvam key -> fixture transcript, mocked: true
-t2 = c.post("/api/transcribe",
+# H17 contract change: real audio + no ASR must be an HONEST 503 — the
+# fixture-substitution this test used to assert was the fabrication pattern
+# retired alongside the IVR fallback (fixture remains only under MOCK_MODE).
+r2 = c.post("/api/transcribe",
             files={"audio": ("clip.webm", b"\x1aE\xdf\xa3fake-webm-bytes", "audio/webm")},
-            data={"lang_hint": "hi-IN"}).json()
-ok("transcribe multipart fallback", t2["transcript"] == FX.DIGITAL_ARREST_TRANSCRIPT
-   and t2["mocked"] is True)
+            data={"lang_hint": "hi-IN"})
+ok("transcribe multipart: dead ASR -> 503 no_transcript (no fixture)",
+   r2.status_code == 503 and r2.json().get("status") == "no_transcript")
 
 # speak:true offline -> null audio, never an error
 spk = c.post("/api/check", json={"type": "text", "payload": FX.KYC_SCAM_TEXT,

@@ -235,4 +235,22 @@ def detect(text: str, input_type: str, signals: list,
                 f"'{vpa}' में refund/support/verify जैसे शब्द official दिखने के लिए हैं।",
             ))
             break
+
+    # v5 family: bait words in the payee DISPLAY NAME of an EXECUTABLE
+    # request ("pn=Bank Refund") — the name a UPI app shows at authorize time
+    # was chosen to look like money coming in. Weight lands at suspicious on
+    # its own: an executable request wearing a refund costume is the trick.
+    # (Skipped when payee_impersonation already fired — one deceptive payee
+    # identity is ONE finding, not two stacking weights.)
+    for u in executable if not info["claimed_brand"] else []:
+        pn_low = (u["payee_name"] or "").lower()
+        if pn_low and any(w in pn_low for w in SUSPICIOUS_VPA_WORDS):
+            signals.append(make_signal(
+                "baited_payee_name", "deterministic", 30,
+                "Payee NAME dressed as refund/reward",
+                "Payee का नाम refund/reward जैसा",
+                f"This payment request's display name '{u['payee_name']}' uses refund/support wording — a request never GIVES money, whatever it is named.",
+                f"इस payment request का नाम '{u['payee_name']}' refund/support जैसा रखा गया है — request कभी पैसे देती नहीं, नाम कुछ भी हो।",
+            ))
+            break
     return info

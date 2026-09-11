@@ -81,6 +81,8 @@ _EV_META: dict[str, tuple[str | None, bool]] = {
     "reported_speech": ("reported_or_educational", True),
     "destination": (None, True),
     "refund_promise": ("pay_uri_refund_bait", False),
+    "accidental_transfer": ("accidental_transfer_bait", False),
+    "scan_to_receive": ("scan_to_receive_bait", False),
 }
 
 _EV_TO_ACTION = {
