@@ -22,7 +22,7 @@ Claim: `[ ]` → `[WIP-saud]` / `[WIP-parva]` / `[WIP-harsh]`, **push immediatel
 
 ### Engine — Harsh (`backend/`)
 - [x] **P0 H1–H4** Deterministic **signal engine** in code (this is the product's spine): UPI URI parser (collect vs pay, amount, payee), lookalike-domain detector (levenshtein vs seeded brand/bank domain list in `backend/data/brands.py`), URL heuristics (shorteners, IP literals, punycode, suspicious TLDs, redirect unwrap via httpx), scam-script keyword patterns (KYC expiry, lottery, digital arrest, electricity, OLX/army, fake customer care), blocklist lookup. Scoring function → verdict. **LLM has zero verdict weight.**
-- [ ] **P0 H4–H6** Claude layer: scam-category classification + `explanation_hi/en` generated FROM detected signals only (template fallback when API down) · wire `/api/check` fully to CONTRACTS shape · Mongo persistence (in-memory fallback stays).
+- [WIP-harsh] **P0 H4–H6** Claude layer: scam-category classification + `explanation_hi/en` generated FROM detected signals only (template fallback when API down) · wire `/api/check` fully to CONTRACTS shape · Mongo persistence (in-memory fallback stays). *(Mongo bumped to now per Saud's request — serverless store resets.)*
 - [ ] **P0 H6–H8** Reports → verify → indicator upsert → live blocklist in `/api/check` · `/api/intel/trends` aggregations.
 - [ ] **P1 H8–H10** Sarvam: `/api/transcribe` (ASR) + TTS on `speak:true` (base64 wav) with auto-fallback.
 - [ ] **P1 H10–H12** Guardian endpoints end-to-end · `/api/recovery/kit` (Claude + fixed templates fallback).
