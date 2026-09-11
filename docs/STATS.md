@@ -24,6 +24,13 @@ Parva: swap any deck placeholders for these. Each has a source; say numbers exac
 > "हर महीने 23 अरब UPI payments — और हर एक को एक इंसान 3 सेकंड में approve करता है, बिना किसी जानकारी के। 2025 में ₹22,000 करोड़ hacking से नहीं गए — मनाने से गए।"
 > "Banks can't stop a payment you authorise yourself. So the shield has to live where the decision happens — in your hand."
 
+## Measured performance (prod, H10 battery — quote these in architecture slide)
+
+- **Verdict latency: p50 5.4s** (3.7–5.8s, n=6) — deterministic signals compute in milliseconds; the wait is live Claude narration. Say: *"the verdict itself is instant and rule-based — the seconds are the explanation being written for this exact message."*
+- Spoken warning (verdict + Sarvam TTS): ~14s end-to-end — demo driver narrates over it (see runsheet).
+- Typed transcribe roundtrip: 0.2s · Sarvam ASR: ~0.6s per clip · webm from browsers accepted natively.
+- Reliability: every external call has deterministic fallback; engine 26-check + API 23-check suites green on every push.
+
 ## Live product stats (ours, real, from Atlas — update just before submission)
 
 - Community blocklist: pull live from `/api/intel/trends` (`total_reports`, top indicators). Don't hardcode — the number grows.

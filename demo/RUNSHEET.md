@@ -44,6 +44,9 @@ Expected: danger + **Dhaal speaks the warning back in Hindi**. This is the digit
 
 ## Beat 5 — guardian mode (two screens)
 
+> **Pre-paired backup (durable in Atlas, survives everything):** code **DHAAL-52E3** · ward link: `https://dhaal-delta.vercel.app/guardian?link=gl_adda9dd0ba&g=Rahul&w=Sunita%20Devi` — if live pairing fumbles on stage, open this link on Phone A and go straight to the risky-check beat.
+> **Voice-beat timing note:** verdict + spoken warning ≈ 12–15s end-to-end. Never wait silently — narrate: *"Dhaal समझ रहा है, जवाब बोल कर देगा…"* The pause reads as gravitas if you own it.
+
 Phone A (ward) runs a danger check with guardian linked → Laptop (guardian inbox) gets the request → tap **Block** with note → Phone A shows the gentle Hindi message.
 Say: *"दादी के पैसे, पोते की एक tap — बिना दादी की privacy तोड़े।"*
 
