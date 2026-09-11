@@ -76,56 +76,140 @@ os.environ["META_APP_SECRET"] = ""
 ok("wa unsigned refused when secret set", r_unsigned.status_code == 403)
 ok("wa signed accepted", r_signed.status_code == 200)
 
-# ---- scam text -> engine -> reply -------------------------------------------
+# ---- H16 §5: durable inbound + outbox ---------------------------------------
+# stubs return HTTP status ints now (send_text contract)
 SENT.clear()
-r = c.post("/api/wa/webhook", json=wa_event(
-    {"id": "wamid.A1", "from": "919811110001", "type": "text",
-     "text": {"body": FX.KYC_SCAM_TEXT}}))
-ok("wa scam handled", r.status_code == 200 and r.json().get("replied") is True)
+main.wa_meta.send_text = lambda to, body: (SENT.append((to, body)) or 200)
+
+def wa_send(msg_id, body_txt, sender="919811110001"):
+    return c.post("/api/wa/webhook", json=wa_event(
+        {"id": msg_id, "from": sender, "type": "text", "text": {"body": body_txt}}))
+
+r = wa_send("wamid.A1", FX.KYC_SCAM_TEXT)
+ev = main.STORE.get("wa_events", "wamid.A1")
+ok("wa scam: accepted durably, analyzed, sent",
+   r.json()["accepted"] == ["wamid.A1"] and ev["outbox_state"] == "sent"
+   and ev["attempts"][0]["status"] == 200)
 ok("wa reply carries verdict, score-as-risk (not probability)",
-   len(SENT) == 1 and SENT[0][0] == "919811110001"
-   and "खतरा · DANGER" in SENT[0][1] and "/100 risk signals" in SENT[0][1]
+   len(SENT) == 1 and "खतरा · DANGER" in SENT[0][1]
+   and "/100 risk signals" in SENT[0][1]
    and "probability" not in SENT[0][1].lower())
+r2 = wa_send("wamid.A1", FX.KYC_SCAM_TEXT)
+ok("wa duplicate delivery deduped atomically, no double reply",
+   r2.json()["deduped"] == ["wamid.A1"] and len(SENT) == 1)
 
-# Meta retries: identical message id must not double-reply
-r2 = c.post("/api/wa/webhook", json=wa_event(
-    {"id": "wamid.A1", "from": "919811110001", "type": "text",
-     "text": {"body": FX.KYC_SCAM_TEXT}}))
-ok("wa duplicate delivery deduped", r2.json().get("deduped") is True and len(SENT) == 1)
-
-# needs-context: question leads, no green verdict line
+# batch: multiple entries/changes/messages in ONE webhook, receipts ignored
 SENT.clear()
-c.post("/api/wa/webhook", json=wa_event(
-    {"id": "wamid.A2", "from": "919811110001", "type": "text",
-     "text": {"body": "9876512345"}}))
+batch = {"entry": [
+    {"changes": [
+        {"value": {"messages": [
+            {"id": "wamid.B1", "from": "919811110001", "type": "text",
+             "text": {"body": FX.KYC_SCAM_TEXT}},
+            {"id": "wamid.B2", "from": "919811110002", "type": "text",
+             "text": {"body": FX.LEGIT_BANK_TEXT}}]}},
+        {"value": {"statuses": [{"id": "wamid.B1", "status": "delivered"}]}}]},
+    {"changes": [
+        {"value": {"messages": [
+            {"id": "wamid.B3", "from": "919811110003", "type": "image",
+             "image": {"id": "m1"}}]}}]},
+]}
+rb = c.post("/api/wa/webhook", json=batch).json()
+ok("wa batch: every message across entries/changes processed, receipts skipped",
+   set(rb["accepted"]) == {"wamid.B1", "wamid.B2", "wamid.B3"}
+   and rb["ignored_changes"] == 1 and len(SENT) == 3)
+ok("wa batch: media got the honest unsupported reply",
+   any("photo/qr/voice" in b.lower() for _, b in SENT))
+ok("wa clean reply calm", any("कोई ज्ञात खतरा नहीं" in b for _, b in SENT))
+
+# needs-context: question leads, no green verdict + convo armed
+SENT.clear()
+wa_send("wamid.C1", "9822554433", sender="919811110007")
 ok("wa needs-context reply asks, never green",
    "और जानकारी चाहिए" in SENT[0][1] and "NO KNOWN RISK" not in SENT[0][1])
-
-# clean text stays calm
+ok("wa convo state armed for the sender (expiring)",
+   main.STORE.get("wa_convo", "919811110007")["expires_at"] > __import__("time").time())
+# the sender answers — routed into the SAME check as clarification
 SENT.clear()
-c.post("/api/wa/webhook", json=wa_event(
-    {"id": "wamid.A3", "from": "919811110001", "type": "text",
-     "text": {"body": FX.LEGIT_BANK_TEXT}}))
-ok("wa clean reply", "कोई ज्ञात खतरा नहीं" in SENT[0][1])
+wa_send("wamid.C2", "unhone paise mange the", sender="919811110007")
+ok("wa clarification answer upgrades the SAME check",
+   len(SENT) == 1 and ("सावधान" in SENT[0][1] or "खतरा" in SENT[0][1]))
+ok("wa convo cleared after the answer",
+   main.STORE.get("wa_convo", "919811110007")["expires_at"] == 0)
 
-# media -> honest unsupported, not a silent drop or empty-caption check
+# send failure -> outbox pending with recorded attempt; retry via drain
 SENT.clear()
-c.post("/api/wa/webhook", json=wa_event(
-    {"id": "wamid.A4", "from": "919811110001", "type": "image",
-     "image": {"id": "media123"}}))
-ok("wa media honestly unsupported", "photo/qr/voice" in SENT[0][1].lower())
+main.wa_meta.send_text = lambda to, body: 500  # transient
+wa_send("wamid.F1", FX.KYC_SCAM_TEXT, sender="919811110008")
+evf = main.STORE.get("wa_events", "wamid.F1")
+ok("wa transient failure -> pending outbox, attempt recorded, backoff set",
+   evf["outbox_state"] == "pending" and evf["attempts"][0]["status"] == 500
+   and evf["next_attempt_at"] > __import__("time").time())
+main.wa_meta.send_text = lambda to, body: (SENT.append((to, body)) or 200)
+drain0 = c.post("/api/wa/outbox/drain").json()
+ok("wa backoff respected: not due yet, drain skips it",
+   all(x["id"] != "wamid.F1" for x in drain0["results"]))
+main.STORE.update("wa_events", "wamid.F1", {"next_attempt_at": 0})
+drain1 = c.post("/api/wa/outbox/drain").json()
+evf2 = main.STORE.get("wa_events", "wamid.F1")
+ok("wa drain retries due work to success; engine ran only once",
+   evf2["outbox_state"] == "sent" and len(SENT) == 1
+   and len(evf2["attempts"]) == 2)
 
-# delivery receipts (statuses) must never be checked or replied to
+# timeout ambiguity recorded honestly; permanent 4xx stops retrying
+main.wa_meta.send_text = lambda to, body: 0  # transport timeout
+wa_send("wamid.T1", FX.KYC_SCAM_TEXT, sender="919811110009")
+evt = main.STORE.get("wa_events", "wamid.T1")
+ok("wa timeout marked ambiguous, retryable (at-least-once documented)",
+   evt["outbox_state"] == "pending" and evt["attempts"][0]["ambiguous_timeout"])
+main.wa_meta.send_text = lambda to, body: 400  # permanent
+main.STORE.update("wa_events", "wamid.T1", {"next_attempt_at": 0})
+c.post("/api/wa/outbox/drain")
+evt2 = main.STORE.get("wa_events", "wamid.T1")
+ok("wa permanent failure -> failed_permanent, no endless retries",
+   evt2["outbox_state"] == "failed_permanent")
+
+# abandoned mid-processing (instance died after durable accept) -> recovered
+main.wa_meta.send_text = lambda to, body: (SENT.append((to, body)) or 200)
 SENT.clear()
-r = c.post("/api/wa/webhook", json={"entry": [{"changes": [{"value": {
-    "statuses": [{"id": "wamid.A1", "status": "delivered"}]}}]}]})
-ok("wa status updates ignored", r.json().get("ignored") == "status_update"
-   and len(SENT) == 0)
+main.STORE.insert("wa_events", {
+    "_id": "wamid.Z1", "from": "919811110010", "mtype": "text",
+    "body_text": FX.KYC_SCAM_TEXT, "status": "accepted",
+    "created_at": "2026-09-10T00:00:00+00:00"})
+c.post("/api/wa/outbox/drain")
+evz = main.STORE.get("wa_events", "wamid.Z1")
+ok("wa abandoned accepted work recovered by drain (analyze + send)",
+   evz["outbox_state"] == "sent" and len(SENT) == 1)
+
+# concurrent drains: the lease keeps delivery single-flight
+SENT.clear()
+main.STORE.insert("wa_events", {
+    "_id": "wamid.R1", "from": "919811110011", "mtype": "text",
+    "body_text": "x", "status": "analyzed", "reply_text": "test-reply",
+    "outbox_state": "pending", "attempts": [], "next_attempt_at": 0,
+    "created_at": "2026-09-10T00:00:00+00:00"})
+from concurrent.futures import ThreadPoolExecutor as _TPE5
+with _TPE5(max_workers=6) as ex:
+    list(ex.map(lambda _: main._wa_outbox_attempt(
+        main.STORE.get("wa_events", "wamid.R1")), range(6)))
+ok("wa concurrent delivery attempts: exactly one send (lease)",
+   len(SENT) == 1 and main.STORE.get("wa_events", "wamid.R1")["outbox_state"] == "sent")
+
+# drain auth: cron secret honored, junk refused when configured
+os.environ["CRON_SECRET"] = "cr0n-s3cret"
+os.environ["MOD_KEY"] = "mk-block"
+r401 = c.post("/api/wa/outbox/drain")
+r200 = c.get("/api/wa/outbox/drain", headers={"Authorization": "Bearer cr0n-s3cret"})
+os.environ["CRON_SECRET"] = ""
+os.environ["MOD_KEY"] = ""
+ok("wa drain auth: unauthorized refused, cron bearer accepted",
+   r401.status_code == 401 and r200.status_code == 200)
 
 # junk body -> 200 (Meta must not retry-storm us), nothing sent
+SENT.clear()
 r = c.post("/api/wa/webhook", content=b"not-json",
            headers={"Content-Type": "application/json"})
 ok("wa junk body acked without action", r.status_code == 200 and len(SENT) == 0)
+
 
 # ---- Exotel IVR — RETIRED (H16): routes are dead before any compute ---------
 CALLED = {"fetch": 0, "asr": 0, "tts": 0}
@@ -249,25 +333,6 @@ wa_closed = c.post("/api/wa/webhook", json=wa_event(
 os.environ["VERCEL"] = ""
 ok("wa missing secret fails closed on prod", wa_closed.status_code == 403)
 
-# WA: failed send -> redelivery retries ONLY the send (no double engine work)
-SENT.clear()
-_real_send = main.wa_meta.send_text
-main.wa_meta.send_text = lambda to, body: False  # first send fails
-r1 = c.post("/api/wa/webhook", json=wa_event(
-    {"id": "wamid.RETRY1", "from": "919811110004", "type": "text",
-     "text": {"body": FX.KYC_SCAM_TEXT}}))
-main.wa_meta.send_text = lambda to, body: (SENT.append((to, body)) or True)
-r2 = c.post("/api/wa/webhook", json=wa_event(
-    {"id": "wamid.RETRY1", "from": "919811110004", "type": "text",
-     "text": {"body": FX.KYC_SCAM_TEXT}}))
-ok("wa failed send retried on redelivery, send-only",
-   r1.json().get("replied") is False and r2.json().get("resent") is True
-   and len(SENT) == 1 and "खतरा · DANGER" in SENT[0][1])
-r3 = c.post("/api/wa/webhook", json=wa_event(
-    {"id": "wamid.RETRY1", "from": "919811110004", "type": "text",
-     "text": {"body": FX.KYC_SCAM_TEXT}}))
-ok("wa retry never double-sends after success",
-   r3.json().get("deduped") is True and "resent" not in r3.json() and len(SENT) == 1)
 
 # assessment gaps from held-out v3 (post-publication fixes) -------------------
 th = c.post("/api/check", json={"type": "text", "payload": "अंजाम भुगतना पड़ेगा, सोच लेना।"}).json()

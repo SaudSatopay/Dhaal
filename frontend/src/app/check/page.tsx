@@ -176,7 +176,7 @@ export default function CheckPage() {
   // H15 verdict-first: the deterministic verdict renders in ~1s (fast:true —
   // grounded rules explanation, no LLM/TTS wait); AI narration + audio then
   // upgrade the SAME card in place. The verdict never changes after render.
-  const [narrating, setNarrating] = useState(false);
+  const [narratingFor, setNarratingFor] = useState<string | null>(null);
   const [clarifying, setClarifying] = useState(false);
 
   // H16 §4B: send the tapped answer; the SAME check upgrades in place with a
@@ -223,7 +223,7 @@ export default function CheckPage() {
       setResult(res);
       setResultFromVoice(type === "voice_transcript");
       if (res.assessment === "assessed") {
-        setNarrating(true);
+        setNarratingFor(res._id);
         api<Partial<Check> & { check_id: string }>(
           `/api/check/${res._id}/narration`,
           { method: "POST", body: JSON.stringify({ speak }) }
@@ -243,7 +243,7 @@ export default function CheckPage() {
             )
           )
           .catch(() => {}) // rules text already on screen — never downgrade
-          .finally(() => setNarrating(false));
+          .finally(() => setNarratingFor((cur) => (cur === res._id ? null : cur)));
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -753,18 +753,39 @@ export default function CheckPage() {
                     ))}
                   </div>
                 )}
-              <button
-                onClick={() => {
-                  setResult(null);
-                  setTab("paste");
-                  setTimeout(() => document.getElementById("paste-box")?.focus(), 50);
-                }}
-                className="mt-3 border-[3px] border-ink bg-saffron px-5 py-2 font-display font-bold shadow-poster-sm transition-transform active:translate-x-[2px] active:translate-y-[2px] active:shadow-none"
-              >
-                {result.assessment === "unsupported_input"
-                  ? pick(lang, S_CHECK.unsupAction)[0]
-                  : pick(lang, S_CHECK.ctxAction)[0]}
-              </button>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button
+                  onClick={() => {
+                    setResult(null);
+                    setTab("paste");
+                    setTimeout(() => document.getElementById("paste-box")?.focus(), 50);
+                  }}
+                  className="border-[3px] border-ink bg-saffron px-5 py-2 font-display font-bold shadow-poster-sm transition-transform active:translate-x-[2px] active:translate-y-[2px] active:shadow-none"
+                >
+                  {result.assessment === "unsupported_input"
+                    ? pick(lang, S_CHECK.unsupAction)[0]
+                    : pick(lang, S_CHECK.ctxAction)[0]}
+                </button>
+                {/* H16 §7: the question itself is speakable on request */}
+                <button
+                  onClick={async () => {
+                    try {
+                      const n = await api<{ tts_audio_b64: string | null }>(
+                        `/api/check/${result._id}/narration`,
+                        { method: "POST", body: JSON.stringify({ speak: true }) }
+                      );
+                      if (n.tts_audio_b64) {
+                        new Audio(`data:audio/wav;base64,${n.tts_audio_b64}`)
+                          .play()
+                          .catch(() => {});
+                      }
+                    } catch {}
+                  }}
+                  className="border-2 border-ink bg-paper px-4 py-2 text-sm font-semibold hover:bg-paper2"
+                >
+                  🔊 {pick(lang, S_COMMON.listen)[0]}
+                </button>
+              </div>
             </section>
           ) : (
             <>
@@ -800,7 +821,7 @@ export default function CheckPage() {
                   </span>
                 </p>
               )}
-              {result && !busy && narrating && (
+              {result && !busy && narratingFor === result._id && (
                 <p className="mb-2 animate-pulse border border-line bg-paper2 px-3 py-1.5 text-center font-mono text-xs text-inksoft">
                   {pick(lang, S_CHECK.narrating)[0]}
                 </p>

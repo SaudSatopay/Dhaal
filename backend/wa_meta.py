@@ -42,11 +42,16 @@ def verify_signature(raw_body: bytes, header: str) -> bool:
     return hmac.compare_digest(digest, header[len("sha256="):])
 
 
-def send_text(to_wa_id: str, body: str) -> bool:
-    """POST /{phone_number_id}/messages — plain text reply to a user."""
+def send_text(to_wa_id: str, body: str) -> int:
+    """POST /{phone_number_id}/messages — plain text reply to a user.
+    Returns the HTTP status so the outbox can classify: 2xx sent · 4xx
+    (not 429) permanent/config · 429/5xx transient · 0 = transport error or
+    TIMEOUT. A timeout is AMBIGUOUS — the message may or may not have been
+    delivered; the outbox retries, which makes delivery at-least-once (a rare
+    duplicate reply is the accepted cost of never silently dropping one)."""
     if not configured():
         print("[latency] wa_send skipped=not_configured")
-        return False
+        return 503  # config missing — retryable once env is fixed
     t0 = time.perf_counter()
     try:
         r = _client.post(
@@ -57,14 +62,13 @@ def send_text(to_wa_id: str, body: str) -> bool:
                                            "body": body[:4000]}},
         )
         ms = (time.perf_counter() - t0) * 1000
-        ok = r.status_code < 300
-        # never log message bodies or tokens — status + id only
+        # never log message bodies or tokens — status + latency only
         print(f"[latency] wa_send_ms={ms:.0f} status={r.status_code}")
-        return ok
+        return r.status_code
     except Exception as e:
         ms = (time.perf_counter() - t0) * 1000
         print(f"[latency] wa_send_ms={ms:.0f} error={type(e).__name__}")
-        return False
+        return 0
 
 
 def mark_read(message_id: str) -> None:

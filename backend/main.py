@@ -558,11 +558,31 @@ def narrate_check(cid: str, body: NarrateIn):
 
     updates = {}
     if not already_llm and not MOCK_MODE and doc.get("assessment") == "assessed":
+        # H16 §7: SINGLE-FLIGHT — concurrent enrichment must not duplicate
+        # paid LLM work. CAS claims the run; a racer gets the current grounded
+        # text back untouched. Stale claims (dead instance) self-expire; total
+        # attempts bounded so failures can't loop the meter forever.
+        if int(doc.get("narration_attempts", 0)) >= 3:
+            return view(doc, False)
+        claim = STORE.update_if("checks", cid, {"narration_state": None},
+                                {"narration_state": time.time(),
+                                 "narration_attempts":
+                                     int(doc.get("narration_attempts", 0)) + 1})
+        if not claim:
+            running_since = doc.get("narration_state")
+            if isinstance(running_since, (int, float)) \
+                    and time.time() - running_since > 60:
+                claim = STORE.update_if("checks", cid,
+                                        {"narration_state": running_since},
+                                        {"narration_state": time.time()})
+            if not claim:
+                return view(doc, False)  # someone else is enriching — no dup
         t0 = time.perf_counter()
         out = llm.narrate(doc["input"]["payload"], doc["input"]["type"],
                           doc["verdict"], doc["score"], doc["signals"],
                           doc.get("scam_category"), facts=doc.get("facts"))
         print(f"[latency] narration_enrich_ms={round((time.perf_counter() - t0) * 1000)}")
+        updates["narration_state"] = None  # release; retry allowed on failure
         if out:
             updates.update({"explanation_hi": out["explanation_hi"],
                             "explanation_en": out["explanation_en"],
@@ -1325,6 +1345,184 @@ def wa_webhook_verify(request: Request):
     return JSONResponse({"error": "verification failed"}, status_code=403)
 
 
+# --- H16 §5: durable inbound + outbox with real retries ----------------------
+# Serverless truth (Vercel Python): nothing survives the response — so retry
+# scheduling is DATA, not threads. Every accepted message is persisted BEFORE
+# analysis; every reply lives in a per-event outbox with attempt history and
+# next_attempt_at; delivery is driven by (a) the immediate in-request attempt,
+# (b) opportunistic drains piggybacked on later webhook traffic, (c) the
+# drain endpoint hit by Vercel Cron (Hobby tier: DAILY — minute-level cadence
+# honestly requires an external pinger or paid cron; documented in CHANNELS).
+# Delivery guarantee is AT-LEAST-ONCE: a transport timeout is ambiguous, we
+# retry, and a rare duplicate reply is preferred over a silent drop.
+_WA_BACKOFF_S = [60, 300, 900, 3600, 10800]
+_WA_MAX_ATTEMPTS = 6
+_WA_BATCH_INLINE = 4  # analyze at most this many messages inside one webhook
+_WA_LEASE_STALE_S = 120
+_WA_ACCEPT_STALE_S = 60
+_WA_CONVO_TTL_S = 30 * 60
+
+
+def _wa_classify(status: int) -> str:
+    if 200 <= status < 300:
+        return "sent"
+    if status == 429 or status >= 500 or status == 0:
+        return "transient"   # 0 = transport error/timeout — AMBIGUOUS, retry
+    if status in (401, 403):
+        return "config"      # bad/expired token: retry slowly once env fixed
+    return "permanent"       # other 4xx: this message will never send
+
+
+def _wa_outbox_attempt(ev: dict) -> dict:
+    """One leased delivery attempt for an event's pending outbox. The CAS
+    lease makes concurrent drains single-flight; stale leases (dead instance)
+    are recovered by _wa_recover_stale."""
+    now = _now()
+    leased = STORE.update_if("wa_events", ev["_id"],
+                             {"outbox_state": "pending"},
+                             {"outbox_state": "sending", "lease_at": now})
+    if not leased:
+        return {"id": ev["_id"], "skipped": "not_pending_or_leased"}
+    status = wa_meta.send_text(leased["from"], leased.get("reply_text", ""))
+    attempts = list(leased.get("attempts", []))
+    attempts.append({"at": now, "status": status,
+                     "ambiguous_timeout": status == 0})
+    klass = _wa_classify(status)
+    n = len(attempts)
+    if klass == "sent":
+        fields = {"outbox_state": "sent", "replied": True, "sent_at": _now()}
+    elif klass == "permanent" or n >= _WA_MAX_ATTEMPTS:
+        fields = {"outbox_state": "failed_permanent", "replied": False}
+    else:
+        delay = (_WA_BACKOFF_S[min(n - 1, len(_WA_BACKOFF_S) - 1)]
+                 if klass != "config" else 1800)
+        fields = {"outbox_state": "pending",
+                  "next_attempt_at": time.time() + delay}
+    fields["attempts"] = attempts
+    STORE.update("wa_events", ev["_id"], fields)
+    return {"id": ev["_id"], "result": fields["outbox_state"], "status": status}
+
+
+def _wa_queue_reply(msg_id: str, reply: str, check_id: str | None) -> dict:
+    """Persist the reply into the event's outbox, then attempt immediately."""
+    STORE.update("wa_events", msg_id, {
+        "status": "analyzed", "check_id": check_id, "reply_text": reply,
+        "outbox_state": "pending", "attempts": [],
+        "next_attempt_at": time.time(),
+    })
+    return _wa_outbox_attempt(STORE.get("wa_events", msg_id))
+
+
+def _wa_analyze_event(ev: dict) -> dict:
+    """Analysis for one accepted event — runs inline OR from a drain
+    (recovering work abandoned by a dead instance). Expensive engine/LLM work
+    happens at most once per event (status CAS accepted->analyzing)."""
+    won = STORE.update_if("wa_events", ev["_id"], {"status": "accepted"},
+                          {"status": "analyzing"})
+    if not won:
+        return {"id": ev["_id"], "skipped": "already_analyzed"}
+    sender, mtype = ev["from"], ev.get("mtype", "text")
+    body_text = (ev.get("body_text") or "").strip()[:_WA_MAX_BODY]
+    wa_meta.mark_read(ev["_id"])
+    if mtype not in ("text", "button"):
+        return _wa_queue_reply(ev["_id"], _WA_MEDIA_UNSUPPORTED, None)
+    if not body_text or body_text.lower().startswith("join "):
+        return _wa_queue_reply(ev["_id"], _WA_WELCOME, None)
+
+    # sender-scoped clarification (expiring): a short answer after our
+    # question routes into the SAME check instead of a fresh one
+    convo = STORE.get("wa_convo", sender)
+    if convo and convo.get("expires_at", 0) > time.time():
+        answer_id = None
+        low = body_text.lower()
+        if re.search(r"paise|पैसे|money|₹|rupay", low):
+            answer_id = "asked_money"
+        elif re.search(r"\botp\b|pin|password|पासवर्ड|ओटीपी", low):
+            answer_id = "asked_otp"
+        elif re.search(r"refund|रिफंड|इनाम|prize|cashback", low):
+            answer_id = "says_refund"
+        elif re.search(r"pata nahi|पता नहीं|nahi pata|don'?t know|idk", low):
+            answer_id = "dont_know"
+        body = ClarifyIn(answer_id=answer_id,
+                         text=None if answer_id else body_text)
+        out = clarify_check(convo["check_id"], body)
+        STORE.update("wa_convo", sender, {"expires_at": 0})
+        if isinstance(out, dict):  # clarified (JSONResponse means fall through)
+            return _wa_queue_reply(ev["_id"], _wa_text(out), out["_id"])
+
+    doc = check(CheckIn(type="text", payload=body_text, lang="hi-IN"))
+    if doc["assessment"] == "needs_context":
+        row = {"_id": sender, "check_id": doc["_id"],
+               "reason": (doc.get("needs_context") or {}).get("reason"),
+               "expires_at": time.time() + _WA_CONVO_TTL_S}
+        if not STORE.insert_new("wa_convo", row):
+            STORE.update("wa_convo", sender, row)
+    return _wa_queue_reply(ev["_id"], _wa_text(doc), doc["_id"])
+
+
+def _wa_recover_stale() -> dict:
+    """Recover work abandoned mid-processing: stuck 'sending' leases back to
+    pending; 'accepted'/'analyzing' events older than the stale window get
+    (re)analyzed. Analysis re-run after an 'analyzing' crash may repeat the
+    engine once — acceptable; outbox sends stay single-flight-leased."""
+    now_t = time.time()
+    recovered = {"leases": 0, "analyzed": 0}
+    for ev in STORE.list("wa_events", {"outbox_state": "sending"}):
+        try:
+            stale = (datetime.now(timezone.utc)
+                     - datetime.fromisoformat(ev.get("lease_at"))).total_seconds()
+        except (TypeError, ValueError):
+            stale = _WA_LEASE_STALE_S + 1
+        if stale > _WA_LEASE_STALE_S or stale < 0:
+            if STORE.update_if("wa_events", ev["_id"],
+                               {"outbox_state": "sending"},
+                               {"outbox_state": "pending",
+                                "next_attempt_at": now_t}):
+                recovered["leases"] += 1
+    for status in ("accepted", "analyzing"):
+        for ev in STORE.list("wa_events", {"status": status}):
+            try:
+                age = (datetime.now(timezone.utc)
+                       - datetime.fromisoformat(ev["created_at"])).total_seconds()
+            except (TypeError, ValueError):
+                age = _WA_ACCEPT_STALE_S + 1
+            if age > _WA_ACCEPT_STALE_S or age < 0:  # future-dated = skewed clock, recover anyway
+                if status == "analyzing":  # dead mid-analysis: rewind first
+                    if not STORE.update_if("wa_events", ev["_id"],
+                                           {"status": "analyzing"},
+                                           {"status": "accepted"}):
+                        continue
+                    ev = STORE.get("wa_events", ev["_id"])
+                _wa_analyze_event(ev)
+                recovered["analyzed"] += 1
+    return recovered
+
+
+def _wa_drain(cap: int = 10) -> dict:
+    """Attempt every due pending outbox row (bounded)."""
+    now_t = time.time()
+    due = [ev for ev in STORE.list("wa_events", {"outbox_state": "pending"})
+           if ev.get("next_attempt_at", 0) <= now_t]
+    results = [_wa_outbox_attempt(ev) for ev in due[:cap]]
+    return {"due": len(due), "attempted": len(results), "results": results}
+
+
+@app.get("/api/wa/outbox/drain")   # Vercel Cron requests are GETs
+@app.post("/api/wa/outbox/drain")
+def wa_outbox_drain(request: Request):
+    """Retry driver. Auth: moderator key, OR Vercel Cron's own
+    `Authorization: Bearer $CRON_SECRET`, OR open locally."""
+    auth = request.headers.get("authorization", "")
+    cron_ok = (os.getenv("CRON_SECRET", "").strip()
+               and auth == f"Bearer {os.getenv('CRON_SECRET').strip()}")
+    if not (cron_ok or _mod_ok(request)):
+        return JSONResponse({"error": "not authorized"}, status_code=401)
+    recovered = _wa_recover_stale()
+    drained = _wa_drain(cap=10)
+    return {"ok": True, "recovered": recovered, **drained,
+            "durable": not STORE_DEGRADED()}
+
+
 @app.post("/api/wa/webhook")
 async def wa_webhook(request: Request):
     raw = await request.body()
@@ -1338,66 +1536,47 @@ async def wa_webhook(request: Request):
         return JSONResponse({"error": "invalid signature"}, status_code=403)
     try:
         payload = json.loads(raw.decode("utf-8"))
-        value = payload["entry"][0]["changes"][0]["value"]
+        entries = payload.get("entry") or []
     except Exception:
         return {"ok": True, "ignored": "unparseable"}  # 200: Meta must not retry junk
 
-    # delivery/read receipts arrive on the same webhook — never "check" those
-    if "messages" not in value:
-        return {"ok": True, "ignored": "status_update"}
-
-    msg = value["messages"][0]
-    msg_id = str(msg.get("id", ""))[:120]
-    sender = str(msg.get("from", ""))[:20]
-    if not msg_id or not sender:
-        return {"ok": True, "ignored": "no_id_or_sender"}
-
-    # Meta RETRIES on timeouts/non-200 — dedupe by message id so a slow check
-    # never produces a double reply. First write wins. H15: if the FIRST
-    # attempt computed a reply but the outbound send failed (e.g. the number
-    # was still registering), a redelivery retries JUST the send — never the
-    # engine/LLM work, and never twice on success.
-    prior = STORE.get("wa_events", msg_id)
-    if prior:
-        if prior.get("replied") is False and prior.get("reply_text"):
-            resent = wa_meta.send_text(prior.get("from", sender), prior["reply_text"])
-            if resent:
-                STORE.update("wa_events", msg_id, {"replied": True,
-                                                   "status": "answered_on_retry"})
-            return {"ok": True, "deduped": True, "resent": resent}
-        return {"ok": True, "deduped": True}
-    STORE.insert("wa_events", {"_id": msg_id, "from": sender,
-                               "status": "processing", "created_at": _now()})
-
-    mtype = msg.get("type")
-    if mtype == "text":
-        body_text = str(msg.get("text", {}).get("body", "")).strip()[:_WA_MAX_BODY]
-    elif mtype == "button":
-        body_text = str(msg.get("button", {}).get("text", "")).strip()[:_WA_MAX_BODY]
-    else:
-        # image/audio/document/etc — honest unsupported reply, no silent drop
-        wa_meta.mark_read(msg_id)
-        sent = wa_meta.send_text(sender, _WA_MEDIA_UNSUPPORTED)
-        STORE.update("wa_events", msg_id,
-                     {"status": "unsupported_media", "replied": sent})
-        return {"ok": True, "handled": "media_unsupported"}
-
-    wa_meta.mark_read(msg_id)
-    if not body_text:
-        reply = _WA_WELCOME
-        doc_id = None
-    else:
-        doc = check(CheckIn(type="text", payload=body_text, lang="hi-IN"))
-        reply = _wa_text(doc)
-        doc_id = doc["_id"]
-    sent = wa_meta.send_text(sender, reply)
-    STORE.update("wa_events", msg_id,
-                 {"status": "answered" if sent else "send_failed",
-                  "check_id": doc_id, "replied": sent,
-                  # kept ONLY when the send failed, so a redelivery can retry
-                  # the send without redoing (or double-charging) the check
-                  "reply_text": None if sent else reply})
-    return {"ok": True, "replied": sent}
+    accepted, deduped, ignored = [], [], 0
+    inline_budget = _WA_BATCH_INLINE
+    for entry in entries[:10]:
+        for change in (entry.get("changes") or [])[:10]:
+            value = change.get("value") or {}
+            if "messages" not in value:
+                ignored += 1  # delivery/read receipts — never analyzed
+                continue
+            for msg in (value.get("messages") or [])[:10]:
+                msg_id = str(msg.get("id", ""))[:120]
+                sender = str(msg.get("from", ""))[:20]
+                if not msg_id or not sender:
+                    continue
+                mtype = msg.get("type", "")
+                body_text = ""
+                if mtype == "text":
+                    body_text = str(msg.get("text", {}).get("body", ""))
+                elif mtype == "button":
+                    body_text = str(msg.get("button", {}).get("text", ""))
+                # DURABLE ACCEPT before any analysis; atomic first-writer-wins
+                # dedupe on the provider message id.
+                fresh = STORE.insert_new("wa_events", {
+                    "_id": msg_id, "from": sender, "mtype": mtype,
+                    "body_text": body_text[:_WA_MAX_BODY],
+                    "status": "accepted", "created_at": _now(),
+                })
+                if not fresh:
+                    deduped.append(msg_id)
+                    continue
+                if inline_budget > 0:
+                    inline_budget -= 1
+                    _wa_analyze_event(STORE.get("wa_events", msg_id))
+                accepted.append(msg_id)
+    # opportunistic drain: webhook traffic doubles as the retry heartbeat
+    piggy = _wa_drain(cap=3)
+    return {"ok": True, "accepted": accepted, "deduped": deduped,
+            "ignored_changes": ignored, "drained": piggy["attempted"]}
 
 
 # ---------------------------------------------------------------- IVR (Exotel)

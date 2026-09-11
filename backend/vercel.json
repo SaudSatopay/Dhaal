@@ -1,8 +1,23 @@
 {
   "rewrites": [
-    { "source": "/(.*)", "destination": { "type": "service", "service": "web" } }
+    {
+      "source": "/(.*)",
+      "destination": {
+        "type": "service",
+        "service": "web"
+      }
+    }
   ],
   "services": {
-    "web": { "root": ".", "entrypoint": "main.py" }
-  }
+    "web": {
+      "root": ".",
+      "entrypoint": "main.py"
+    }
+  },
+  "crons": [
+    {
+      "path": "/api/wa/outbox/drain",
+      "schedule": "0 3 * * *"
+    }
+  ]
 }
