@@ -193,7 +193,7 @@ export default function CheckPage() {
           lang: apiLang(lang),
           speak,
           expected_intent: expectedIntent,
-          ward_link_id: wardPair?.link_id ?? null,
+          ward_token: wardPair?.ward_token ?? null,
         }),
       });
       setResult(res);
@@ -650,20 +650,40 @@ export default function CheckPage() {
               </div>
             </div>
           )}
-          {/* H12+ needs-context: a bare number/VPA must never look "cleared".
-              A parsed upi:// URI is NOT context-less (backend's one-token gate
-              over-fires on it — flagged to Harsh); its verdict renders normally. */}
-          {result && !busy && result.needs_context && !/^upi:\/\//i.test(result.input.payload) ? (
-            <section className="chit-in border-[3px] border-caution bg-paper p-4">
+          {/* H14 first-class assessment: needs_context / unsupported_input
+              carry NO verdict — render the question or the parse failure, and
+              never a green card. (The old client-side upi:// exemption is gone:
+              the backend now parses URIs into facts and assesses correctly.) */}
+          {result && !busy && result.assessment !== "assessed" ? (
+            <section
+              className={`chit-in border-[3px] bg-paper p-4 ${
+                result.assessment === "unsupported_input" ? "border-ink" : "border-caution"
+              }`}
+            >
               <p className="plate text-cautiondeep">
-                {pick(lang, S_CHECK.ctxTitle)[0]} · {pick(lang, S_CHECK.ctxTitle)[1]}
+                {result.assessment === "unsupported_input"
+                  ? `${pick(lang, S_CHECK.unsupTitle)[0]} · ${pick(lang, S_CHECK.unsupTitle)[1]}`
+                  : `${pick(lang, S_CHECK.ctxTitle)[0]} · ${pick(lang, S_CHECK.ctxTitle)[1]}`}
               </p>
               <p className="mt-2 text-lg font-semibold leading-snug">
-                {lang === "en" ? result.needs_context.question_en : result.needs_context.question_hi}
+                {lang === "en" ? result.explanation_en : result.explanation_hi}
               </p>
               <p className="mt-1.5 text-sm text-inksoft">
-                {lang === "en" ? result.needs_context.question_hi : result.needs_context.question_en}
+                {lang === "en" ? result.explanation_hi : result.explanation_en}
               </p>
+              {/* sub-threshold findings still shown — thin input, honest output */}
+              {result.signals.filter((s) => s.weight > 0).length > 0 && (
+                <ul className="mt-2 space-y-1">
+                  {result.signals
+                    .filter((s) => s.weight > 0)
+                    .slice(0, 2)
+                    .map((s) => (
+                      <li key={s.id} className="plate text-inksoft">
+                        ▸ {lang === "en" ? s.title_en : s.title_hi} (+{s.weight})
+                      </li>
+                    ))}
+                </ul>
+              )}
               <button
                 onClick={() => {
                   setResult(null);
@@ -672,11 +692,24 @@ export default function CheckPage() {
                 }}
                 className="mt-3 border-[3px] border-ink bg-saffron px-5 py-2 font-display font-bold shadow-poster-sm transition-transform active:translate-x-[2px] active:translate-y-[2px] active:shadow-none"
               >
-                {pick(lang, S_CHECK.ctxAction)[0]}
+                {result.assessment === "unsupported_input"
+                  ? pick(lang, S_CHECK.unsupAction)[0]
+                  : pick(lang, S_CHECK.ctxAction)[0]}
               </button>
             </section>
           ) : (
             <>
+              {/* H14 honesty strips: dead pairing + degraded community intel */}
+              {result && !busy && result.guardian_delivery === "unlinked" && wardPair && (
+                <p className="mb-3 border-2 border-saffdeep bg-paper2 px-3 py-2 text-sm font-bold text-saffdeep">
+                  {pick(lang, S_CHECK.wardUnlinked)[0]}
+                </p>
+              )}
+              {result && !busy && result.community_data === "degraded" && (
+                <p className="mb-3 border border-line bg-paper2 px-3 py-2 text-xs text-inksoft">
+                  {pick(lang, S_CHECK.communityDegraded)[0]}
+                </p>
+              )}
               {result && !busy && result.guardian_request_id && wardPair && (
                 <div className="mb-4">
                   <WardGate

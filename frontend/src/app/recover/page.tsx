@@ -71,6 +71,7 @@ export default function RecoverPage() {
   const [amount, setAmount] = useState("");
   const [channel, setChannel] = useState("upi");
   const [bank, setBank] = useState("");
+  const [when, setWhen] = useState(""); // user-entered; never defaulted to today
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [kit, setKit] = useState<Kit | null>(null);
@@ -87,6 +88,7 @@ export default function RecoverPage() {
           amount: Number(amount) || 0,
           channel,
           bank: bank.trim(),
+          incident_date: when.trim(),
           lang: apiLang(lang),
         }),
       });
@@ -159,7 +161,16 @@ export default function RecoverPage() {
             ))}
           </div>
 
-          <div className="mt-3 grid grid-cols-3 gap-2">
+          <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <label className="plate col-span-1 block text-inksoft">
+              {pick(lang, S_RECOVER.when)[0]}
+              <input
+                value={when}
+                onChange={(e) => setWhen(e.target.value)}
+                placeholder="11-09-2026"
+                className="mt-1 w-full border-2 border-ink bg-paper p-2.5 font-mono text-base tracking-normal placeholder:text-inksoft/50"
+              />
+            </label>
             <label className="plate col-span-1 block text-inksoft">
               {pick(lang, S_RECOVER.amount)[0]}
               <input

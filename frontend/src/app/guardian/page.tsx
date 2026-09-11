@@ -12,7 +12,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import QRCode from "qrcode";
 import { api } from "@/lib/api";
-import type { GuardianLink, GuardianRequest } from "@/lib/types";
+import type { GuardianLinkClaimed, GuardianLinkCreated, GuardianRequest } from "@/lib/types";
 import {
   getGuardianPair,
   getWardPair,
@@ -155,27 +155,31 @@ function GuardianInbox({ pair, onUnpair }: { pair: GuardianPair; onUnpair: () =>
   const [actingOn, setActingOn] = useState<string | null>(null);
   const [wardUrl, setWardUrl] = useState("");
   const [copied, setCopied] = useState(false);
+  const [authDead, setAuthDead] = useState(false);
 
+  // H14: the ward QR/link carries ONLY the pair code (+ display names) —
+  // never the link id, never a token, never the trusted phone number.
   useEffect(() => {
     setWardUrl(
-      `${window.location.origin}/guardian?link=${pair.link_id}&g=${encodeURIComponent(
-        pair.guardian_name
-      )}&w=${encodeURIComponent(pair.ward_name)}${
-        pair.guardian_phone ? `&p=${encodeURIComponent(pair.guardian_phone)}` : ""
-      }`
+      `${window.location.origin}/guardian?pair=${encodeURIComponent(pair.pair_code)}` +
+        `&g=${encodeURIComponent(pair.guardian_name)}&w=${encodeURIComponent(pair.ward_name)}`
     );
   }, [pair]);
 
   const load = useCallback(async () => {
     try {
       const res = await api<{ requests: GuardianRequest[] }>(
-        `/api/guardian/requests?link_id=${pair.link_id}`
+        "/api/guardian/requests",
+        { headers: { "X-Guardian-Token": pair.guardian_token } }
       );
       setRequests(res.requests);
-    } catch {
-      // keep last state; next poll retries
+      setAuthDead(false);
+    } catch (e) {
+      // 401 = token revoked/retired — tell the guardian to re-pair, loudly.
+      if (e instanceof Error && e.message.startsWith("API 401")) setAuthDead(true);
+      // otherwise keep last state; next poll retries
     }
-  }, [pair.link_id]);
+  }, [pair.guardian_token]);
 
   useEffect(() => {
     load();
@@ -188,12 +192,41 @@ function GuardianInbox({ pair, onUnpair }: { pair: GuardianPair; onUnpair: () =>
     try {
       await api(`/api/guardian/requests/${id}/decision`, {
         method: "POST",
-        body: JSON.stringify({ decision, note, link_id: pair.link_id }),
+        headers: { "X-Guardian-Token": pair.guardian_token },
+        body: JSON.stringify({ decision, note }),
       });
       await load();
     } finally {
       setActingOn(null);
     }
+  }
+
+  async function unpair() {
+    // consent works both ways: revoke server-side (kills both tokens), then
+    // forget locally. Best-effort — a dead token is already revoked.
+    try {
+      await api("/api/guardian/links/revoke", {
+        method: "POST",
+        headers: { "X-Guardian-Token": pair.guardian_token },
+        body: JSON.stringify({ reason: "guardian unpaired" }),
+      });
+    } catch {}
+    onUnpair();
+  }
+
+  if (authDead) {
+    return (
+      <section className="border-[3px] border-saffdeep bg-paper p-5 shadow-poster-sm">
+        <p className="font-bold text-saffdeep">{pick(lang, S_GUARDIAN.rePairNotice)[0]}</p>
+        <p className="mt-1 text-sm text-inksoft">{pick(lang, S_GUARDIAN.rePairNotice)[1]}</p>
+        <button
+          onClick={onUnpair}
+          className="mt-3 border-[3px] border-ink bg-saffron px-5 py-2 font-display font-bold shadow-poster-sm"
+        >
+          {pick(lang, S_GUARDIAN.newPair)[0]}
+        </button>
+      </section>
+    );
   }
 
   const pending = requests?.filter((r) => r.status === "pending") ?? [];
@@ -218,6 +251,7 @@ function GuardianInbox({ pair, onUnpair }: { pair: GuardianPair; onUnpair: () =>
         <p className="mt-2 text-sm text-inksoft">
           {fmt(pick(lang, S_GUARDIAN.scanHint)[0], { name: pair.ward_name })}
         </p>
+        <p className="plate mt-1 text-inksoft">{pick(lang, S_GUARDIAN.codeTtlHint)[0]}</p>
         <div className="mt-2.5 flex gap-2">
           <button
             onClick={() => {
@@ -234,7 +268,7 @@ function GuardianInbox({ pair, onUnpair }: { pair: GuardianPair; onUnpair: () =>
             {copied ? "✓ COPIED" : pick(lang, S_GUARDIAN.copyLink)[0]}
           </button>
           <button
-            onClick={onUnpair}
+            onClick={unpair}
             className="plate border border-line px-2.5 py-1 text-inksoft hover:bg-paper2"
           >
             {pick(lang, S_GUARDIAN.newPair)[0]}
@@ -317,7 +351,7 @@ function CreatePair({ onCreated }: { onCreated: (p: GuardianPair) => void }) {
     setBusy(true);
     setError("");
     try {
-      const link = await api<GuardianLink>("/api/guardian/links", {
+      const link = await api<GuardianLinkCreated>("/api/guardian/links", {
         method: "POST",
         body: JSON.stringify({
           ward_name: wardName.trim(),
@@ -325,9 +359,12 @@ function CreatePair({ onCreated }: { onCreated: (p: GuardianPair) => void }) {
           guardian_phone: guardianPhone.trim(),
         }),
       });
+      // the guardian token exists only in this response — persist it now
       onCreated({
-        link_id: link._id,
+        link_id: link.link_id,
+        guardian_token: link.guardian_token,
         pair_code: link.pair_code,
+        pair_code_expires_at: link.pair_code_expires_at,
         ward_name: link.ward_name,
         guardian_name: link.guardian_name,
         guardian_phone: link.guardian_phone || undefined,
@@ -389,37 +426,53 @@ function CreatePair({ onCreated }: { onCreated: (p: GuardianPair) => void }) {
 }
 
 // ---------------------------------------------------------------- join by code
-// Ward-side "type the code" flow — GET /api/guardian/links/resolve?pair_code=
-// (docs/CONTRACTS.md; case-insensitive, bare code accepted).
+// Ward-side "type the code" flow — POST /api/guardian/links/claim (H14):
+// single-use, expiring, case-insensitive, bare code accepted. The response
+// mints the ward's own capability token, shown exactly once.
+
+export type ClaimError = "" | "notfound" | "used" | "expired" | "rate" | "conn";
+
+export async function claimPairCode(code: string): Promise<
+  { ok: true; pair: WardPair } | { ok: false; error: ClaimError }
+> {
+  try {
+    const link = await api<GuardianLinkClaimed>("/api/guardian/links/claim", {
+      method: "POST",
+      body: JSON.stringify({ pair_code: code.trim() }),
+    });
+    return {
+      ok: true,
+      pair: {
+        link_id: link.link_id,
+        ward_token: link.ward_token,
+        guardian_name: link.guardian_name,
+        ward_name: link.ward_name,
+        guardian_phone: link.guardian_phone || undefined,
+      },
+    };
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "";
+    if (msg.startsWith("API 404")) return { ok: false, error: "notfound" };
+    if (msg.startsWith("API 409")) return { ok: false, error: "used" };
+    if (msg.startsWith("API 410")) return { ok: false, error: "expired" };
+    if (msg.startsWith("API 429")) return { ok: false, error: "rate" };
+    return { ok: false, error: "conn" };
+  }
+}
 
 function JoinByCode({ onJoined }: { onJoined: (p: WardPair) => void }) {
   const lang = useLang();
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<"" | "notfound" | "conn">("");
+  const [error, setError] = useState<ClaimError>("");
 
   async function join() {
     setBusy(true);
     setError("");
-    try {
-      const link = await api<GuardianLink & { error?: string }>(
-        `/api/guardian/links/resolve?pair_code=${encodeURIComponent(code.trim())}`
-      );
-      if (link.error || !link._id) {
-        setError("notfound");
-        return;
-      }
-      onJoined({
-        link_id: link._id,
-        guardian_name: link.guardian_name,
-        ward_name: link.ward_name,
-        guardian_phone: link.guardian_phone || undefined,
-      });
-    } catch {
-      setError("conn");
-    } finally {
-      setBusy(false);
-    }
+    const res = await claimPairCode(code);
+    setBusy(false);
+    if (res.ok) onJoined(res.pair);
+    else setError(res.error);
   }
 
   return (
@@ -456,7 +509,18 @@ function JoinByCode({ onJoined }: { onJoined: (p: WardPair) => void }) {
       </div>
       {error && (
         <p className="mt-2 text-sm font-bold text-saffdeep">
-          {pick(lang, error === "notfound" ? S_GUARDIAN.joinErrNotFound : S_GUARDIAN.joinErrConn)[0]}
+          {pick(
+            lang,
+            error === "notfound"
+              ? S_GUARDIAN.joinErrNotFound
+              : error === "used"
+                ? S_GUARDIAN.joinErrUsed
+                : error === "expired"
+                  ? S_GUARDIAN.joinErrExpired
+                  : error === "rate"
+                    ? S_GUARDIAN.joinErrRate
+                    : S_GUARDIAN.joinErrConn
+          )[0]}
         </p>
       )}
     </section>
@@ -468,6 +532,22 @@ function JoinByCode({ onJoined }: { onJoined: (p: WardPair) => void }) {
 function WardJoined({ guardianName, wardName }: { guardianName: string; wardName: string }) {
   const lang = useLang();
   const wardPrefix = wardName ? (lang === "en" ? `${wardName}, ` : `${wardName} जी, `) : "";
+
+  async function unpairWard() {
+    // sever server-side too (consent both ways) — best effort, then forget
+    try {
+      const tok = getWardPair()?.ward_token;
+      if (tok) {
+        await api("/api/guardian/links/revoke", {
+          method: "POST",
+          headers: { "X-Ward-Token": tok },
+          body: JSON.stringify({ reason: "ward unpaired" }),
+        });
+      }
+    } catch {}
+    setWardPair(null);
+    window.location.href = "/guardian";
+  }
   return (
     <section className="border-[3px] border-ink bg-paper p-6 text-center shadow-poster">
       <IShieldCheck className="mx-auto h-14 w-14 text-saffdeep" />
@@ -485,10 +565,7 @@ function WardJoined({ guardianName, wardName }: { guardianName: string; wardName
       </Link>
       <div className="mt-4">
         <button
-          onClick={() => {
-            setWardPair(null);
-            window.location.href = "/guardian";
-          }}
+          onClick={unpairWard}
           className="plate text-inksoft underline underline-offset-2 hover:text-ink"
         >
           {pick(lang, S_GUARDIAN.unpair)[0]}
@@ -502,28 +579,47 @@ function WardJoined({ guardianName, wardName }: { guardianName: string; wardName
 
 function GuardianInner() {
   const params = useSearchParams();
-  const [mode, setMode] = useState<"loading" | "ward" | "guardian-create" | "guardian-inbox">(
-    "loading"
-  );
+  const [mode, setMode] = useState<
+    "loading" | "ward" | "guardian-create" | "guardian-inbox" | "claim-failed"
+  >("loading");
   const [gPair, setGPair] = useState<GuardianPair | null>(null);
   const [ward, setWard] = useState<{ guardian_name: string; ward_name: string } | null>(null);
+  const [claimErr, setClaimErr] = useState<ClaimError>("");
+  const lang = useLang();
 
   useEffect(() => {
-    const linkParam = params.get("link");
-    if (linkParam) {
-      const p = {
-        link_id: linkParam,
-        guardian_name: params.get("g") || "आपका guardian",
-        ward_name: params.get("w") || "",
-        guardian_phone: params.get("p") || undefined,
-      };
-      setWardPair(p);
-      setWard(p);
-      setMode("ward");
+    // H14: the ward QR/link carries only the PAIR CODE — redeem it server-side
+    // (single-use). Nothing in the URL is a credential.
+    const pairParam = params.get("pair");
+    if (pairParam) {
+      const existing = getWardPair();
+      if (existing) {
+        // already claimed on this device (e.g. reload after scanning)
+        setWard(existing);
+        setMode("ward");
+        return;
+      }
+      claimPairCode(pairParam).then((res) => {
+        if (res.ok) {
+          setWardPair(res.pair);
+          setWard(res.pair);
+          setMode("ward");
+        } else {
+          setClaimErr(res.error);
+          setMode("claim-failed");
+        }
+      });
+      return;
+    }
+    if (params.get("link")) {
+      // pre-H14 link format carried the deciding credential in the URL —
+      // those pairings were retired in the security upgrade. Re-pair.
+      setClaimErr("expired");
+      setMode("claim-failed");
       return;
     }
     // stored-role priority: guardian inbox wins (the laptop must never lose its
-    // console to a stray ward pairing on the same browser); explicit ?link= above
+    // console to a stray ward pairing on the same browser); explicit ?pair= above
     // already forces ward mode.
     const existingGuardian = getGuardianPair();
     if (existingGuardian) {
@@ -549,6 +645,32 @@ function GuardianInner() {
         )}
         {mode === "ward" && ward && (
           <WardJoined guardianName={ward.guardian_name} wardName={ward.ward_name} />
+        )}
+        {mode === "claim-failed" && (
+          <>
+            <section className="border-[3px] border-saffdeep bg-paper p-5 shadow-poster-sm">
+              <p className="font-bold text-saffdeep">
+                {pick(
+                  lang,
+                  claimErr === "used"
+                    ? S_GUARDIAN.joinErrUsed
+                    : claimErr === "notfound"
+                      ? S_GUARDIAN.joinErrNotFound
+                      : claimErr === "rate"
+                        ? S_GUARDIAN.joinErrRate
+                        : S_GUARDIAN.joinErrExpired
+                )[0]}
+              </p>
+              <p className="mt-1 text-sm text-inksoft">{pick(lang, S_GUARDIAN.rePairNotice)[0]}</p>
+            </section>
+            <JoinByCode
+              onJoined={(p) => {
+                setWardPair(p);
+                setWard(p);
+                setMode("ward");
+              }}
+            />
+          </>
         )}
         {mode === "guardian-create" && (
           <>

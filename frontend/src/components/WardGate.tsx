@@ -6,6 +6,7 @@
 
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
+import { getWardPair } from "@/lib/guardian";
 import type { GuardianRequest } from "@/lib/types";
 import { S_WARD } from "@/lib/labels";
 import { fmt, pick, useLang } from "@/lib/lang";
@@ -20,7 +21,7 @@ export default function WardGate({
   guardianName: string;
   /** the check's own verdict — clean checks arrive as "noted", so render the
       quiet info line immediately instead of flashing the waiting state */
-  checkVerdict?: string;
+  checkVerdict?: string | null;
 }) {
   const lang = useLang();
   const [req, setReq] = useState<GuardianRequest | null>(null);
@@ -29,8 +30,12 @@ export default function WardGate({
     let stop = false;
     async function tick() {
       try {
+        // H14: the ward's own request status is read with the ward token —
+        // request ids alone read nothing.
+        const token = getWardPair()?.ward_token ?? "";
         const r = await api<GuardianRequest & { error?: string }>(
-          `/api/guardian/requests/${requestId}`
+          `/api/guardian/requests/${requestId}`,
+          { headers: { "X-Ward-Token": token } }
         );
         if (!stop && !r.error) setReq(r);
         return r;

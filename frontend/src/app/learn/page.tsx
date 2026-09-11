@@ -210,7 +210,8 @@ function RoundReveal({
   const check = round.check!;
   const scam = isScamVerdict(check);
   const correct = round.guessScam === scam;
-  const v = VERDICT_UI[check.verdict];
+  // simulator rounds are full fixture texts — always assessed; fall back safe
+  const v = VERDICT_UI[check.verdict ?? "no_known_risk"];
   const vCls =
     v.tone === "danger"
       ? "border-danger text-dangerdeep"

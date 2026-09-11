@@ -75,7 +75,7 @@ export default function VerdictCard({
   const lang = useLang();
 
   // ---- verdict theater staging (hazard notices only; the clear chit stays quiet)
-  const isHazard = check.verdict !== "no_known_risk";
+  const isHazard = check.verdict !== null && check.verdict !== "no_known_risk";
   const staged = theater && isHazard;
   const [revealed, setRevealed] = useState(staged ? 0 : Number.MAX_SAFE_INTEGER);
   const [slammed, setSlammed] = useState(!staged);
@@ -121,6 +121,9 @@ export default function VerdictCard({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [staged, check._id]);
+  // H14: unassessed checks (verdict null) never reach this card — the check
+  // page renders the context/unsupported panel instead. Guard after hooks.
+  if (!check.verdict) return null;
   const v = VERDICT_UI[check.verdict];
   const [vLabel, vLabelSub] = pick(lang, v.label);
   const [vHint] = pick(lang, v.hint);

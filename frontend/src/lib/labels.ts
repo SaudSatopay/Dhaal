@@ -130,6 +130,18 @@ export const S_CHECK = {
   intentJust: { hi: "बस जाँचना है", en: "Just checking" },
   ctxTitle: { hi: "और जानकारी चाहिए", en: "Need more context" },
   ctxAction: { hi: "पूरा message ऊपर paste करें", en: "Paste the full message above" },
+  // H14: unreadable/malformed payment code — distinct from "need context"
+  unsupTitle: { hi: "पढ़ा नहीं जा सका", en: "Could not read this" },
+  unsupAction: { hi: "दुबारा scan करें", en: "Rescan" },
+  // ward whose pairing died (revoked/legacy) — say it, don't fail silently
+  wardUnlinked: {
+    hi: "Guardian से जुड़ाव टूट गया है — /guardian पर जाकर नया code डालें",
+    en: "Guardian pairing is no longer active — enter a fresh code on /guardian",
+  },
+  communityDegraded: {
+    hi: "⚠ community blocklist अभी limited है (network) — यह जाँच ताज़ा community reports के बिना हुई",
+    en: "⚠ community blocklist temporarily limited (network) — this check ran without the latest community reports",
+  },
 } satisfies Record<string, LangText>;
 
 /* ---------------- verdict card ---------------- */
@@ -181,10 +193,12 @@ export const S_WARD = {
     hi: "बड़े खतरे पर परिवार की एक नज़र। कुछ भी भेजने से पहले रुके रहिए।",
     en: "A family eye on big risks. Hold on before sending anything.",
   },
-  blockedTitle: { hi: "{name} ने कहा — यह पैसा मत भेजिए", en: "{name} said — do not send this money" },
+  // H14 honesty: Dhaal cannot stop a payment in another app — the guardian
+  // ADVISES; sending stays in the ward's hands. Never claim enforcement.
+  blockedTitle: { hi: "{name} की सलाह — यह पैसा मत भेजिए", en: "{name} advises — do not send this money" },
   blockedSub: {
-    hi: "कोई पैसा नहीं गया। आपके अपनों की नज़र आप पर है — यही आपकी ढाल है।",
-    en: "Nothing was sent. Your family has your back — that is your shield.",
+    hi: "भेजना आपके हाथ में है — पर आपके अपनों की नज़र आप पर है, यही आपकी ढाल है।",
+    en: "Sending stays in your hands — and your family has your back. That is your shield.",
   },
   allowedTitle: { hi: "{name} ने कहा — ठीक है", en: "{name} said — it’s okay" },
   allowedSub: {
@@ -282,8 +296,8 @@ export const S_GUARDIAN = {
     en: "No requests yet. When {name} checks something risky, it lands here within 3 seconds.",
   },
   reqTitle: { hi: "{name} ने कुछ खतरनाक जाँचा", en: "{name} checked something risky" },
-  block: { hi: "रोक दो · Block", en: "Block" },
-  allow: { hi: "ठीक है · Allow", en: "Allow" },
+  block: { hi: "सलाह भेजो: मत भेजो", en: "Advise: STOP" },
+  allow: { hi: "ठीक है · Allow", en: "Looks OK" },
   yourNote: { hi: "आपका note:", en: "Your note:" },
   notePh: {
     hi: "अपनी बात जोड़ें… जैसे: ठग है, मत भेजो (optional)",
@@ -300,6 +314,27 @@ export const S_GUARDIAN = {
   joinErrNotFound: {
     hi: "यह code नहीं मिला — दोबारा देख कर डालें",
     en: "Code not found — check it and retry",
+  },
+  // H14 pairing lifecycle: codes are single-use and expire in 30 minutes
+  joinErrUsed: {
+    hi: "यह code इस्तेमाल हो चुका — guardian से नया pairing बनवाएँ",
+    en: "This code was already used — ask your guardian to create a fresh pairing",
+  },
+  joinErrExpired: {
+    hi: "code की मियाद खत्म — guardian से नया code लें",
+    en: "Code expired — ask your guardian for a fresh one",
+  },
+  joinErrRate: {
+    hi: "बहुत कोशिशें हो गईं — एक मिनट रुक कर फिर डालें",
+    en: "Too many attempts — wait a minute and retry",
+  },
+  codeTtlHint: {
+    hi: "code 30 मिनट में expire होगा और एक ही बार चलेगा",
+    en: "The code expires in 30 minutes and works exactly once",
+  },
+  rePairNotice: {
+    hi: "सुरक्षा upgrade के बाद पुराना pairing बंद हो गया है — नया pair बनाएँ",
+    en: "The old pairing was retired in a security upgrade — create a fresh pair",
   },
   joinErrConn: { hi: "जुड़ नहीं पाए — connection जाँचें", en: "Could not connect — check connection" },
   joinedTitle: { hi: "ढाल जुड़ गई!", en: "Shield connected!" },
@@ -355,6 +390,8 @@ export const S_RECOVER = {
   amount: { hi: "कितने ₹", en: "Amount ₹" },
   how: { hi: "कैसे गए", en: "How" },
   bank: { hi: "बैंक", en: "Bank" },
+  // H14: the incident date is the USER's — never assumed to be today
+  when: { hi: "कब हुआ", en: "When" },
   buildBtn: { hi: "मेरा kit बनाओ · Build my kit", en: "Build my kit" },
   building: { hi: "बन रहा है…", en: "Building…" },
   say1930: { hi: "1930 पर क्या बोलें", en: "What to say on 1930" },
