@@ -40,13 +40,24 @@ CATEGORIES: dict[str, tuple[int, list]] = {
         "बिजली", "electricity", "bijli", "power cut", "disconnect",
         "बिल बकाया", "bill pending", "meter update", "बत्ती काट",
     ])),
-    "olx_army": (25, _rx([
+    "olx_army": (30, _rx([
         "army", "आर्मी", "crpf", "bsf", "fauji", "olx", "canteen",
         "advance payment", "एडवांस",
     ])),
     "customer_care": (25, _rx([
         "customer care", "कस्टमर केयर", "helpline number", "toll free",
         "refund process", "रिफंड", "complaint number", "care number",
+    ])),
+    "job_scam": (30, _rx([
+        "work from home", "ghar baithe", "घर बैठे", "part time job",
+        "earn rs", "earn ₹", "earn daily", "daily earning", "roz kamao",
+        "रोज़ कमा", "liking videos", "like videos", "youtube video",
+        "telegram task", "limited seats", "instagram follow",
+    ])),
+    "loan_fee": (30, _rx([
+        "loan approve", "loan approved", "pre-approved loan",
+        "pre approved loan", "instant loan", "लोन approve", "लोन मंजूर",
+        "आधार पर लोन", "बिना गारंटी लोन", "file charge", "loan sanction",
     ])),
 }
 
@@ -57,11 +68,8 @@ _CROSS = [
      _rx(["तुरंत", "turant", "immediately", "urgent", "abhi", "अभी",
           "24 घंटे", "24 hours", "24 hour", "2 घंटे", "last warning",
           "अंतिम चेतावनी", "final notice", "जल्दी करें"])),
-    ("credential_request", 30, "Asks for OTP/PIN", "OTP/PIN माँगा जा रहा है",
-     "No bank or official ever asks for OTP, PIN, CVV or passwords.",
-     "कोई बैंक या अधिकारी कभी OTP, PIN, CVV या पासवर्ड नहीं माँगता।",
-     _rx(["otp", "pin", "cvv", "password", "पासवर्ड", "mpin", "upi pin",
-          "card number", "atm card", "expiry date"])),
+    # credential_request lives outside this table — it needs delivery-vs-request
+    # context (H9 sweep miss #1), handled in detect() below.
     ("secrecy_pressure", 20, "Told to keep it secret", "छिपाने का दबाव",
      "'Tell no one' is how scammers cut you off from help.",
      "'किसी को मत बताओ' कहकर ठग आपको मदद से काटते हैं।",
@@ -80,6 +88,19 @@ _CROSS = [
      _rx(["legal action", "कानूनी कार्रवाई", "जुर्माना", "penalty",
           "case दर्ज", "blacklist"])),
 ]
+
+
+# A legit OTP *delivery* ("123456 is your OTP… do not share") must never flag —
+# judges paste these (H9 sweep). A *request* ("apna OTP batao") always must.
+_CRED_WORDS = _rx(["otp", "pin", "cvv", "password", "पासवर्ड", "mpin", "upi pin",
+                   "card number", "atm card", "expiry date"])
+_CRED_DELIVERY = _rx(["is your otp", "is your one time password", "otp for",
+                      "one time password for", "do not share", "don't share",
+                      "never share", "na batayen", "मत बताएं", "न बताएं",
+                      "साझा न करें", "share न करें", "se share na kare"])
+
+_COLLECT_PHRASE = re.compile(r"collect request|collect रिक्वेस्ट", re.I)
+_APPROVE_WORD = re.compile(r"\bapprove|\baccept\b|स्वीकार|मंज़ूर", re.I)
 
 
 def detect(text: str, signals: list) -> list[str]:
@@ -103,5 +124,23 @@ def detect(text: str, signals: list) -> list[str]:
     for sid, weight, t_en, t_hi, d_en, d_hi, patterns in _CROSS:
         if any(p.search(text) for p in patterns):
             signals.append(make_signal(sid, "deterministic", weight, t_en, t_hi, d_en, d_hi))
+
+    if any(p.search(text) for p in _CRED_WORDS) \
+            and not any(p.search(text) for p in _CRED_DELIVERY):
+        signals.append(make_signal(
+            "credential_request", "deterministic", 30,
+            "Asks for OTP/PIN", "OTP/PIN माँगा जा रहा है",
+            "No bank or official ever asks for OTP, PIN, CVV or passwords.",
+            "कोई बैंक या अधिकारी कभी OTP, PIN, CVV या पासवर्ड नहीं माँगता।",
+        ))
+
+    # OLX/army mechanic: "approve my collect request to RECEIVE money"
+    if _COLLECT_PHRASE.search(text) and _APPROVE_WORD.search(text):
+        signals.append(make_signal(
+            "collect_to_receive_bait", "deterministic", 25,
+            "Asked to APPROVE to receive money", "पैसे 'पाने' के लिए approve करने को कहा",
+            "Approving a collect request always sends money OUT — receiving needs no approval.",
+            "Collect request approve करने से पैसे कटते हैं — पैसे पाने के लिए कभी approve नहीं करना पड़ता।",
+        ))
 
     return [m[0] for m in matched]

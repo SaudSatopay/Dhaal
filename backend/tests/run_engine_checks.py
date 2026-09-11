@@ -89,6 +89,27 @@ check("lottery + fee", "Congratulations! KBC lottery winner. Processing fee Rs 5
 check("electricity scam", "बिजली बिल बकाया है, आज रात disconnect हो जाएगा। तुरंत भुगतान करें 9812340000",
       "suspicious", indicators={}, want_signal="script_electricity")
 
+# --- H9 sweep payloads (docs/SWEEP-H9.md) — the four fixed misses ---
+check("H9.1 legit OTP delivery stays clean",
+      "123456 is your OTP for SBI net banking login. Do not share it with anyone. -SBI",
+      "no_known_risk", indicators={}, forbid_signal="credential_request")
+check("H9.1b real OTP request still fires",
+      "SBI account band ho jayega, apna OTP turant batao",
+      "suspicious", indicators={}, want_signal="credential_request")
+check("H9.2 job scam",
+      "Work from home! Earn Rs 5000 daily just liking YouTube videos. Register now t.ly/j0bz limited seats",
+      "danger", indicators={}, want_signal="script_job_scam")
+check("H9.3 loan-fee scam",
+      "आपके आधार पर ₹50,000 का लोन approve हो गया है। Processing fee ₹550 इस UPI पर भेजें: quickloan.help@okaxis",
+      "danger", indicators={}, want_signal="script_loan_fee")
+check("H9.3b free-text VPA fires signal (weak alone, by design)",
+      "Refund ke liye paise bhejo refund.super@okhdfcbank par",
+      "no_known_risk", indicators={}, want_signal="suspicious_vpa")
+check("H9.4 olx army collect bait",
+      "I am army officer posted at Siachen. I want to buy your sofa. I will send "
+      "advance payment through UPI collect request, please approve when it comes.",
+      "suspicious", indicators={}, want_signal="collect_to_receive_bait")
+
 # --- junk never crashes ---
 for junk in ("", "   ", "🙏🙏🙏", "a" * 5000, "upi://", "http://"):
     v, s, sg, c = run_signal_engine(junk, "text", INDICATORS)

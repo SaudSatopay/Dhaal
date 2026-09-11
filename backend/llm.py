@@ -13,7 +13,8 @@ import anthropic
 
 MODEL = os.getenv("CLAUDE_MODEL", "claude-sonnet-5")
 CATEGORIES = {"kyc_expiry", "lottery", "digital_arrest", "fake_collect",
-              "electricity", "olx_army", "customer_care", "other"}
+              "electricity", "olx_army", "customer_care", "job_scam",
+              "loan_fee", "other"}
 
 _client: anthropic.Anthropic | None = None
 

@@ -60,11 +60,15 @@ def detect(text: str, input_type: str, signals: list) -> dict:
                 f"Payee का नाम/ID {str(brand).upper()} जैसा है पर verified merchant नहीं है।",
             ))
 
-        if is_collect and pa and any(w in pa.split("@")[0] for w in SUSPICIOUS_VPA_WORDS):
+    # Bait words in ANY VPA in the input — upi:// payee or free text alike
+    # (H9 sweep: quickloan.help@okaxis pasted in an SMS body must fire too).
+    for vpa in sorted(info["vpas"]):
+        if any(w in vpa.split("@")[0] for w in SUSPICIOUS_VPA_WORDS):
             signals.append(make_signal(
                 "suspicious_vpa", "deterministic", 15,
                 "Bait words in UPI ID", "UPI ID में चारा-शब्द",
-                f"'{pa}' uses words like refund/support/verify to look official.",
-                f"'{pa}' में refund/support/verify जैसे शब्द official दिखने के लिए हैं।",
+                f"'{vpa}' uses words like refund/support/verify to look official.",
+                f"'{vpa}' में refund/support/verify जैसे शब्द official दिखने के लिए हैं।",
             ))
+            break
     return info
