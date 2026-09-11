@@ -84,7 +84,12 @@ export type GuardianRequest = {
   link_id: string;
   check_id: string;
   summary_hi: string;
-  status: "pending" | "allowed" | "blocked";
+  // guardian contract v2 (H11): EVERY ward check creates a request — risky ⇒
+  // "pending" (needs Allow/Block), clean ⇒ "noted" (informational only).
+  // verdict/score optional-guarded: pre-v2 rows in Atlas lack them.
+  verdict?: Verdict;
+  score?: number;
+  status: "pending" | "allowed" | "blocked" | "noted";
   guardian_note: string;
   created_at: string;
 };

@@ -14,9 +14,13 @@ import { ICheck, IHeart, IShield } from "@/components/icons";
 export default function WardGate({
   requestId,
   guardianName,
+  checkVerdict,
 }: {
   requestId: string;
   guardianName: string;
+  /** the check's own verdict — clean checks arrive as "noted", so render the
+      quiet info line immediately instead of flashing the waiting state */
+  checkVerdict?: string;
 }) {
   const lang = useLang();
   const [req, setReq] = useState<GuardianRequest | null>(null);
@@ -50,8 +54,19 @@ export default function WardGate({
     };
   }, [requestId]);
 
-  const status = req?.status ?? "pending";
+  const status = req?.status ?? (checkVerdict === "no_known_risk" ? "noted" : "pending");
   const vars = { name: guardianName };
+
+  // guardian contract v2: clean checks arrive as "noted" — informational only,
+  // no decision to wait for. One quiet line, no drama.
+  if (status === "noted") {
+    return (
+      <p className="flex items-center gap-2 border border-line bg-paper2 px-3 py-2 text-sm text-inksoft">
+        <IShield className="h-4 w-4 shrink-0 text-saffdeep" />
+        {fmt(pick(lang, S_WARD.noted)[0], vars)}
+      </p>
+    );
+  }
 
   if (status === "pending") {
     const [pT] = pick(lang, S_WARD.pendingTitle);

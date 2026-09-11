@@ -118,6 +118,12 @@ export const S_CHECK = {
   errTitle: { hi: "जाँच नहीं हो पाई", en: "Check failed" },
   errHint: { hi: "Internet जाँच कर दोबारा कोशिश करें", en: "Check your connection and retry" },
   scanTitle: { hi: "जाँच हो रही है…", en: "Dhaal is checking…" },
+  micShort: {
+    hi: "बहुत छोटा — दोबारा दबाकर थोड़ा लंबा बोलिए",
+    en: "Too short — tap again and speak a bit longer",
+  },
+  micErrTitle: { hi: "माइक नहीं मिली", en: "Mic unavailable" },
+  micErrPoint: { hi: "↓ नीचे टाइप करके जाँच सकते हैं", en: "↓ type below instead" },
 } satisfies Record<string, LangText>;
 
 /* ---------------- verdict card ---------------- */
@@ -162,6 +168,10 @@ export const S_WARD = {
   allowedSub: {
     hi: "फिर भी रक़म और नाम एक बार खुद जाँच लीजिए।",
     en: "Still double-check the amount and payee once yourself.",
+  },
+  noted: {
+    hi: "{name} की नज़र में है — कोई ज्ञात खतरा नहीं था",
+    en: "Shared with {name} — no known risk found",
   },
 } satisfies Record<string, LangText>;
 
@@ -246,6 +256,12 @@ export const S_GUARDIAN = {
     hi: "अपनी बात जोड़ें… जैसे: ठग है, मत भेजो (optional)",
     en: "Add a note… e.g. it’s a scam, don’t send (optional)",
   },
+  notPaired: {
+    hi: "अभी जुड़े नहीं — guardian का QR scan करें या code डालें",
+    en: "Not paired yet — scan your guardian’s QR or enter the code",
+  },
+  activity: { hi: "गतिविधि", en: "Activity" },
+  activitySub: { hi: "साफ़ जाँचें भी यहाँ दिखती हैं", en: "clean checks land here too" },
   joinTitle: { hi: "आपके अपनों ने code भेजा है?", en: "Got a pair code from family?" },
   joinBtn: { hi: "जुड़ो", en: "Join" },
   joinErrNotFound: {

@@ -6,6 +6,7 @@
 // `lang` field follows the toggle and drives explanation + TTS language.
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import jsQR from "jsqr";
 import { api, apiForm } from "@/lib/api";
 import type { Check, InputType, TranscribeResult } from "@/lib/types";
@@ -132,9 +133,11 @@ export default function CheckPage() {
   const [transcribing, setTranscribing] = useState(false);
   const [transcript, setTranscript] = useState("");
   const [micError, setMicError] = useState(false);
+  const [micShort, setMicShort] = useState(false);
   const recRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const recStartRef = useRef(0); // min-1s recording guard (Saud's field test)
 
   useEffect(() => {
     if (result && resultRef.current) {
@@ -189,6 +192,7 @@ export default function CheckPage() {
   // ---------------- voice flow ----------------
   async function startRecording() {
     setMicError(false);
+    setMicShort(false);
     setTranscript("");
     setResult(null);
     try {
@@ -200,11 +204,18 @@ export default function CheckPage() {
       };
       mr.onstop = async () => {
         stream.getTracks().forEach((t) => t.stop());
+        // min-1s guard: an accidental double-tap produces useless audio — discard
+        // and coach, don't send it to ASR
+        if (Date.now() - recStartRef.current < 1000) {
+          setMicShort(true);
+          return;
+        }
         const blob = new Blob(chunksRef.current, { type: mr.mimeType || "audio/webm" });
         await transcribeAudio(blob);
       };
       recRef.current = mr;
       mr.start();
+      recStartRef.current = Date.now();
       setRecording(true);
       setRecSeconds(0);
       timerRef.current = setInterval(() => setRecSeconds((s) => s + 1), 1000);
@@ -265,10 +276,14 @@ export default function CheckPage() {
 
       <main className="mx-auto max-w-xl p-4 pb-16">
         {wardPair && (
-          <p className="mb-3 flex items-center justify-center gap-2 border-2 border-ink bg-paper2 px-3 py-2 text-center text-sm font-semibold">
+          <Link
+            href="/guardian"
+            className="mb-3 flex items-center justify-center gap-2 border-2 border-ink bg-paper2 px-3 py-2 text-center text-sm font-semibold hover:bg-paper"
+          >
             <IShield className="h-4 w-4 shrink-0 text-saffdeep" />
             {fmt(pick(lang, S_CHECK.wardBanner)[0], { name: wardPair.guardian_name })}
-          </p>
+            <span aria-hidden="true" className="text-inksoft">→</span>
+          </Link>
         )}
 
         {/* Tabs — joined signage segments */}
@@ -415,23 +430,34 @@ export default function CheckPage() {
                   {recording ? <IStop className="h-9 w-9" /> : <IMic className="h-9 w-9" />}
                 </button>
               </span>
-              <div className="mt-2.5 h-5 text-sm text-inksoft">
+              <div className="mt-2.5 min-h-5 text-sm text-inksoft">
                 {recording ? (
-                  <>
+                  <span className="font-semibold text-dangerdeep">
                     {pick(lang, S_CHECK.recListening)[0]}{" "}
-                    <span className="font-mono font-semibold text-ink">{recSeconds}s</span> —{" "}
+                    <span className="font-mono font-semibold">{recSeconds}s</span> —{" "}
                     {pick(lang, S_CHECK.recStopHint)[0]}
-                  </>
+                  </span>
                 ) : transcribing ? (
-                  pick(lang, S_CHECK.transcribing)[0]
+                  <span className="blink font-semibold text-ink">
+                    {pick(lang, S_CHECK.transcribing)[0]}
+                  </span>
                 ) : (
                   `${pick(lang, S_CHECK.tapSpeak)[0]} · ${pick(lang, S_CHECK.tapSpeak)[1]}`
                 )}
               </div>
-              {micError && (
+              {micShort && !recording && (
                 <p className="mt-2 text-sm font-bold text-saffdeep">
-                  {pick(lang, S_CHECK.micError)[0]}
+                  {pick(lang, S_CHECK.micShort)[0]}
                 </p>
+              )}
+              {micError && (
+                <div className="mt-3 border-2 border-ink bg-paper2 p-3 text-left">
+                  <p className="font-bold">{pick(lang, S_CHECK.micErrTitle)[0]}</p>
+                  <p className="mt-0.5 text-sm text-inksoft">{pick(lang, S_CHECK.micError)[0]}</p>
+                  <p className="mt-1.5 text-sm font-bold text-saffdeep">
+                    {pick(lang, S_CHECK.micErrPoint)[0]}
+                  </p>
+                </div>
               )}
             </div>
 
@@ -491,6 +517,7 @@ export default function CheckPage() {
                 key={result.guardian_request_id}
                 requestId={result.guardian_request_id}
                 guardianName={wardPair.guardian_name}
+                checkVerdict={result.verdict}
               />
             </div>
           )}

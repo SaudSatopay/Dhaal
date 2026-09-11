@@ -21,10 +21,36 @@ import {
   type GuardianPair,
   type WardPair,
 } from "@/lib/guardian";
-import { S_GUARDIAN } from "@/lib/labels";
-import { fmt, pick, useLang } from "@/lib/lang";
+import { S_GUARDIAN, VERDICT_UI } from "@/lib/labels";
+import { fmt, pick, useLang, type Lang } from "@/lib/lang";
 import TopBar from "@/components/TopBar";
 import { ICheck, ICross, IShield, IShieldCheck } from "@/components/icons";
+
+// guardian contract v2: every request carries verdict+score (pre-v2 rows may not)
+function VerdictChip({
+  verdict,
+  score,
+  lang,
+}: {
+  verdict?: GuardianRequest["verdict"];
+  score?: number;
+  lang: Lang;
+}) {
+  if (!verdict || !VERDICT_UI[verdict]) return null;
+  const v = VERDICT_UI[verdict];
+  const cls =
+    v.tone === "danger"
+      ? "border-danger text-dangerdeep"
+      : v.tone === "caution"
+        ? "border-caution text-cautiondeep"
+        : "border-clear text-cleardeep";
+  return (
+    <span className={`plate shrink-0 border px-1.5 py-0.5 ${cls}`}>
+      {pick(lang, v.label)[0]}
+      {typeof score === "number" ? ` · ${score}` : ""}
+    </span>
+  );
+}
 
 function QrCanvas({ text }: { text: string }) {
   const ref = useRef<HTMLCanvasElement | null>(null);
@@ -64,7 +90,8 @@ function RequestCard({
       <div className="flex items-start justify-between gap-2">
         <p className="font-bold leading-snug">
           {fmt(pick(lang, S_GUARDIAN.reqTitle)[0], { name: wardName })}
-          <span className="plate mt-0.5 block font-normal text-inksoft">
+          <span className="plate mt-0.5 flex flex-wrap items-center gap-1.5 font-normal text-inksoft">
+            <VerdictChip verdict={req.verdict} score={req.score} lang={lang} />
             {timeAgo(req.created_at)}
           </span>
         </p>
@@ -168,7 +195,9 @@ function GuardianInbox({ pair, onUnpair }: { pair: GuardianPair; onUnpair: () =>
   }
 
   const pending = requests?.filter((r) => r.status === "pending") ?? [];
-  const decided = requests?.filter((r) => r.status !== "pending") ?? [];
+  const decided =
+    requests?.filter((r) => r.status === "allowed" || r.status === "blocked") ?? [];
+  const noted = requests?.filter((r) => r.status === "noted") ?? [];
 
   return (
     <div className="space-y-5">
@@ -245,6 +274,29 @@ function GuardianInbox({ pair, onUnpair }: { pair: GuardianPair; onUnpair: () =>
           </ul>
         )}
       </section>
+
+      {/* v2 activity feed — every clean ward check lands here, quiet, no buttons */}
+      {noted.length > 0 && (
+        <section>
+          <h2 className="font-bold">
+            {pick(lang, S_GUARDIAN.activity)[0]}{" "}
+            <span className="plate ml-1 font-normal text-inksoft">
+              {pick(lang, S_GUARDIAN.activitySub)[0]}
+            </span>
+          </h2>
+          <ul className="mt-2 divide-y divide-line border-y border-line">
+            {noted.slice(0, 12).map((r) => (
+              <li key={r._id} className="flex items-start gap-2.5 py-2.5">
+                <VerdictChip verdict={r.verdict} score={r.score} lang={lang} />
+                <span className="min-w-0 flex-1 truncate text-sm text-inksoft">
+                  {r.summary_hi}
+                </span>
+                <span className="plate shrink-0 text-inksoft">{timeAgo(r.created_at)}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
     </div>
   );
 }
@@ -351,6 +403,11 @@ function JoinByCode({ onJoined }: { onJoined: (p: WardPair) => void }) {
 
   return (
     <section className="mt-5 border-2 border-ink bg-paper p-4">
+      {/* unpaired state must never be silent (Saud's field test) */}
+      <p className="mb-3 flex items-center gap-2 border-2 border-saffdeep bg-paper2 px-3 py-2 text-sm font-bold text-saffdeep">
+        <IShield className="h-4 w-4 shrink-0" />
+        {pick(lang, S_GUARDIAN.notPaired)[0]}
+      </p>
       <p className="font-bold">
         {pick(lang, S_GUARDIAN.joinTitle)[0]}
         <span className="plate mt-0.5 block font-normal text-inksoft">
