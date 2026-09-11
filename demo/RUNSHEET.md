@@ -49,7 +49,7 @@ Say: *"दादी के पैसे, पोते की एक tap — ब�
 
 ## Beat 6 — the flywheel (report once, protect everyone)
 
-Phone A: check `+919876500001` → danger, **"43 लोगों ने रिपोर्ट किया"**. Report it → laptop `/intel` moderation → verify → Phone B: paste the SAME number → **44 reports, instant danger**.
+Phone A: check `+919876500001` → danger, **"86 लोगों ने रिपोर्ट किया"** (count is live from Atlas — say whatever the screen says). Report it → laptop `/intel` moderation → verify → Phone B: paste the SAME number → **count +1, instant danger**.
 Say: *"हर report, हर भारतीय की ढाल मज़बूत करती है। Jaipur में आज जला, Jodhpur में कल नहीं जलेगा।"*
 
 ## Beat 7 — the war map

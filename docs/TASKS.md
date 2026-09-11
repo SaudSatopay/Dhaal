@@ -49,7 +49,8 @@ Claim: `[ ]` → `[WIP-saud]` / `[WIP-parva]` / `[WIP-harsh]`, **push immediatel
 
 ## Blockers (Saud clears these first)
 
-- [ ] **KEYS (human-only — Saud at the keyboard):** `ANTHROPIC_API_KEY` + `SARVAM_API_KEY` + `MONGODB_URI` (Atlas M0). Paste into root `.env` (gitignored) for local, and `vercel env add <NAME> production` inside `backend/` for prod, then tell your session — it redeploys, re-runs `scripts/seed.py` (data becomes durable), and live-verifies the Claude/Atlas/Sarvam paths. Until then: canned explanations, memory store resets per deploy/cold-start.
+- [ ] **KEYS — 2 of 3 remaining (human-only — Saud):** `ANTHROPIC_API_KEY` (console.anthropic.com) + `SARVAM_API_KEY` (sponsor desk / dashboard.sarvam.ai) → root `.env` + `vercel env add <NAME> production` in `backend/`, then redeploy. Until then explanations stay canned (`mocked:true`) and voice ASR/TTS stays fixture-only.
+- [x] ~~MONGODB_URI~~ **ATLAS IS LIVE + DURABLE** (`store:"atlas"` on prod health): M0 cluster, 0.0.0.0/0 active, sample dataset dropped (quota freed), full seed done — flywheel number carries **86 verified reports**, 245 live intel reports feeding trends. ⚠️ **Do NOT re-run `scripts/seed.py` against prod** — it is not idempotent; counts inflate on every run. Local dev (memory store) reseeding is fine.
 
 ## Done
 
