@@ -189,7 +189,12 @@ _CROSS = [
      "Fear of fines, arrest or disconnection is the pressure lever.",
      "जुर्माना, गिरफ़्तारी या कटौती का डर दिखाना ही इनका हथियार है।",
      _rx(["legal action", "कानूनी कार्रवाई", "जुर्माना", "penalty",
-          "case दर्ज", "blacklist"])),
+          "case दर्ज", "blacklist",
+          # bare-menace vocabulary (held-out v3 miss: threat with no ask
+          # scored 0 and got a green card)
+          "अंजाम भुगत", "anjaam bhugat", "anjam bhugat", "भुगतना पड़ेगा",
+          "bhugatna padega", "बुरा होगा", "bura hoga", "देख लेंगे",
+          "dekh lenge", "छोड़ूँगा नहीं", "chhodunga nahi"])),
 ]
 
 # ---- credentials: request vs delivery vs mention (per-sentence) -------------

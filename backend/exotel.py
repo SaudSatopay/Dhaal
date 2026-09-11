@@ -34,11 +34,28 @@ def available() -> bool:
     return bool(sid and key and token)
 
 
+_RECORDING_HOSTS = (".exotel.com", ".exotel.in")  # recordings live here, only here
+
+
+def _recording_host_ok(url: str) -> bool:
+    from urllib.parse import urlparse
+    try:
+        host = (urlparse(url).hostname or "").lower()
+    except ValueError:
+        return False
+    return bool(host) and any(host == h.lstrip(".") or host.endswith(h)
+                              for h in _RECORDING_HOSTS)
+
+
 def fetch_recording(url: str) -> tuple[bytes, str] | None:
-    """Download a call recording (recordings.exotel.com URLs need the API
-    key/token as basic auth). -> (bytes, content_type) or None."""
-    if not url.lower().startswith("https://"):
-        return None  # never fetch a non-TLS or relative recording reference
+    """Download a call recording. H15 hardening (external review): the URL is
+    attacker-influencable webhook input, so (a) https only, (b) the host MUST
+    be Exotel's own recording domain — this is not a generic fetcher and must
+    never become an SSRF primitive, and (c) our basic-auth credentials are
+    attached ONLY to that allow-listed host, never sprayed at arbitrary URLs.
+    -> (bytes, content_type) or None."""
+    if not url.lower().startswith("https://") or not _recording_host_ok(url):
+        return None
     _, key, token, _ = _cfg()
     t0 = time.perf_counter()
     for auth in ((key, token) if key and token else None, None):

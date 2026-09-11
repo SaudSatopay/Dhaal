@@ -184,4 +184,77 @@ ok("ivr recording fetch refuses non-https",
    _orig_fetch_recording("http://recordings.exotel.com/x.mp3") is None
    and _orig_fetch_recording("//evil/x.mp3") is None)
 
+# H15 hardening (external review round 2) ------------------------------------
+# SSRF/credential-spray: only Exotel's own hosts are fetchable
+ok("ivr recording fetch refuses non-exotel hosts",
+   _orig_fetch_recording("https://evil.example.com/rec.mp3") is None
+   and _orig_fetch_recording("https://recordings.exotel.com.evil.io/x.mp3") is None)
+import exotel as _ex  # noqa: E402
+ok("ivr recording host allowlist logic",
+   _ex._recording_host_ok("https://recordings.exotel.com/a/b.mp3")
+   and not _ex._recording_host_ok("https://exotel.com.attacker.dev/x"))
+
+# fresh IVR computation is rate-limited; cached replays are exempt
+main._IVR_WINDOW.clear()
+main._IVR_MAX_PER_MIN = 2
+codes = [c.get(f"/api/ivr/result?CallSid=CA-rate-{i}").status_code for i in range(4)]
+main._IVR_MAX_PER_MIN = 6
+ok("ivr fresh compute rate-limited (429 after burst)", 429 in codes)
+cached = c.get("/api/ivr/result?CallSid=CA-test-1")  # cached from earlier
+ok("ivr cached replay bypasses the limit", cached.status_code == 200)
+
+# WA: missing secret on prod (VERCEL) fails closed
+os.environ["VERCEL"] = "1"
+os.environ["META_APP_SECRET"] = ""
+wa_closed = c.post("/api/wa/webhook", json=wa_event(
+    {"id": "wamid.V1", "from": "919811110009", "type": "text",
+     "text": {"body": "hi"}}))
+os.environ["VERCEL"] = ""
+ok("wa missing secret fails closed on prod", wa_closed.status_code == 403)
+
+# WA: failed send -> redelivery retries ONLY the send (no double engine work)
+SENT.clear()
+_real_send = main.wa_meta.send_text
+main.wa_meta.send_text = lambda to, body: False  # first send fails
+r1 = c.post("/api/wa/webhook", json=wa_event(
+    {"id": "wamid.RETRY1", "from": "919811110004", "type": "text",
+     "text": {"body": FX.KYC_SCAM_TEXT}}))
+main.wa_meta.send_text = lambda to, body: (SENT.append((to, body)) or True)
+r2 = c.post("/api/wa/webhook", json=wa_event(
+    {"id": "wamid.RETRY1", "from": "919811110004", "type": "text",
+     "text": {"body": FX.KYC_SCAM_TEXT}}))
+ok("wa failed send retried on redelivery, send-only",
+   r1.json().get("replied") is False and r2.json().get("resent") is True
+   and len(SENT) == 1 and "खतरा · DANGER" in SENT[0][1])
+r3 = c.post("/api/wa/webhook", json=wa_event(
+    {"id": "wamid.RETRY1", "from": "919811110004", "type": "text",
+     "text": {"body": FX.KYC_SCAM_TEXT}}))
+ok("wa retry never double-sends after success",
+   r3.json().get("deduped") is True and "resent" not in r3.json() and len(SENT) == 1)
+
+# assessment gaps from held-out v3 (post-publication fixes) -------------------
+th = c.post("/api/check", json={"type": "text", "payload": "अंजाम भुगतना पड़ेगा, सोच लेना।"}).json()
+ok("bare threat: asks for the ask, never green",
+   th["assessment"] == "needs_context" and th["verdict"] is None
+   and th["needs_context"]["reason"] == "threat_no_ask")
+acct = c.post("/api/check", json={"type": "text",
+                                  "payload": "खाता संख्या 123456789012, IFSC SBIN0001234"}).json()
+ok("bank account+IFSC alone: identifier ask",
+   acct["assessment"] == "needs_context"
+   and acct["needs_context"]["reason"] == "bare_identifier")
+q1 = c.post("/api/check", json={"type": "text", "payload": "Can you send it now?"}).json()
+q2 = c.post("/api/check", json={"type": "text", "payload": "yeh upi id sahi hai na"}).json()
+ok("referent-less questions ask what 'it' is",
+   q1["assessment"] == "needs_context" and q1["needs_context"]["reason"] == "no_referent"
+   and q2["assessment"] == "needs_context")
+# threats WITH an ask still convict, and rich clean texts stay assessed
+coer = c.post("/api/check", json={"type": "text",
+                                  "payload": "50 हज़ार भेजो नहीं तो अंजाम भुगतना पड़ेगा"}).json()
+ok("threat + money ask still convicts", coer["assessment"] == "assessed"
+   and coer["verdict"] in ("suspicious", "danger"))
+benign_q = c.post("/api/check", json={"type": "text",
+                                      "payload": "Bhai kal match ke tickets book kar liye, tera hissa 850 hua, jab time mile bhej dena. No rush."}).json()
+ok("rich benign text unaffected by new gates",
+   benign_q["assessment"] == "assessed" and benign_q["verdict"] == "no_known_risk")
+
 print(f"\nALL {P} CHANNEL CHECKS PASSED")

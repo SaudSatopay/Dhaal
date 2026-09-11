@@ -189,6 +189,12 @@ def _analysis(facts: dict) -> dict:
 _ONLY_URI_RE = re.compile(r"^(?:\s*upi://\S*\s*)+$", re.I)
 _BARE_PHONE_RE = re.compile(r"\+?[\d\s\-]{8,15}")
 _BARE_VPA_RE = re.compile(r"[a-z0-9.\-_]{2,}@[a-z][a-z0-9]{1,64}", re.I)
+# H15 (held-out v3 misses — post-publication fixes; published scores stand):
+_ACCOUNT_RE = re.compile(r"\b\d{9,18}\b")           # bank a/c number shape
+_IFSC_RE = re.compile(r"\b[A-Z]{4}0[A-Z0-9]{6}\b")  # IFSC shape
+_REFERENT_RE = re.compile(  # "send IT", "yeh sahi hai na" — pronoun, no object
+    r"\b(?:it|this|that|yeh|ye|woh|wo|isko|usko|iska|uska)\b|यह|वह|इसे|उसे|इसको|उसको",
+    re.I)
 
 
 def _assess(payload: str, score: int, facts: dict):
@@ -225,11 +231,40 @@ def _assess(payload: str, score: int, facts: dict):
             "question_hi": "इस UPI ID से किसने, क्या करने को कहा? वह message paste करें — तभी पक्की जाँच होगी।",
             "question_en": "Who asked you to do what with this UPI ID? Paste that message — then a real check is possible.",
         }
-    if len(t.split()) < 4 and not (p and p.get("status") == "valid"):
+    # bank a/c (+IFSC) alone — identifier, not evidence (v3-060)
+    if len(t.split()) <= 8 and _ACCOUNT_RE.search(t) \
+            and (_IFSC_RE.search(t) or ("खाता" in t or "account" in t.lower())):
+        return "needs_context", {
+            "reason": "bare_identifier",
+            "question_hi": "यह खाता किसने, किस लिए भेजा? साथ आया message paste करें — तभी जाँच का मतलब है।",
+            "question_en": "Who sent this account, and for what? Paste the message that came with it — then the check means something.",
+        }
+    # a threat with NO ask cannot be cleared OR convicted — ask for the ask
+    # (v3-059: "अंजाम भुगतना पड़ेगा" scored low and read as clean)
+    pressure = facts.get("pressure", [])
+    if pressure and not facts.get("requested_actions") \
+            and any(k in pressure for k in ("threat_framing", "coercion_extortion")):
+        return "needs_context", {
+            "reason": "threat_no_ask",
+            "question_hi": "यह धमकी है — पर वे आपसे करवाना क्या चाहते हैं? पैसे, OTP, कोई link? जो कहा गया वह paste करें। डर लगे तो 1930 भी है।",
+            "question_en": "This reads as a threat — but what are they asking you to DO? Money, OTP, a link? Paste what they said. If you feel unsafe, 1930 is there too.",
+        }
+    words = len(t.split())
+    if words < 4 and not (p and p.get("status") == "valid"):
         return "needs_context", {
             "reason": "too_short",
             "question_hi": "यह किस बारे में है? जो message/call आया था, वह पूरा paste करें — तब सही जाँच होगी।",
             "question_en": "What is this about? Paste the full message or describe the call — then the check means something.",
+        }
+    # short question about an unnamed "it" — nothing to check yet (v3-061/062)
+    if words <= 7 and _REFERENT_RE.search(t) \
+            and ("?" in t or re.search(r"\b(na|kya|क्या|sahi|सही)\b", t, re.I)) \
+            and not (_BARE_VPA_RE.search(t) or _ACCOUNT_RE.search(t)
+                     or "http" in t.lower() or (p and p.get("status") == "valid")):
+        return "needs_context", {
+            "reason": "no_referent",
+            "question_hi": "किसकी बात हो रही है? वह link/QR/UPI ID या message यहाँ paste करें — तब बताएँगे सही है या नहीं।",
+            "question_en": "Checking WHAT, exactly? Paste that link/QR/UPI ID or message here — then we can actually answer.",
         }
     return "assessed", None
 
@@ -987,7 +1022,11 @@ def wa_webhook_verify(request: Request):
 async def wa_webhook(request: Request):
     raw = await request.body()
     # Meta signs every delivery with the app secret. Secret configured ->
-    # invalid/missing signature is refused; unset (local/tests) -> open.
+    # invalid/missing signature is refused; unset locally -> open for tests.
+    # H15 (external review): on Vercel a MISSING secret fails closed too — an
+    # env regression must never silently disable transport auth in prod.
+    if os.getenv("VERCEL") and not os.getenv("META_APP_SECRET", "").strip():
+        return JSONResponse({"error": "webhook not configured"}, status_code=403)
     if not wa_meta.verify_signature(raw, request.headers.get("x-hub-signature-256", "")):
         return JSONResponse({"error": "invalid signature"}, status_code=403)
     try:
@@ -1007,8 +1046,18 @@ async def wa_webhook(request: Request):
         return {"ok": True, "ignored": "no_id_or_sender"}
 
     # Meta RETRIES on timeouts/non-200 — dedupe by message id so a slow check
-    # never produces a double reply. First write wins.
-    if STORE.get("wa_events", msg_id):
+    # never produces a double reply. First write wins. H15: if the FIRST
+    # attempt computed a reply but the outbound send failed (e.g. the number
+    # was still registering), a redelivery retries JUST the send — never the
+    # engine/LLM work, and never twice on success.
+    prior = STORE.get("wa_events", msg_id)
+    if prior:
+        if prior.get("replied") is False and prior.get("reply_text"):
+            resent = wa_meta.send_text(prior.get("from", sender), prior["reply_text"])
+            if resent:
+                STORE.update("wa_events", msg_id, {"replied": True,
+                                                   "status": "answered_on_retry"})
+            return {"ok": True, "deduped": True, "resent": resent}
         return {"ok": True, "deduped": True}
     STORE.insert("wa_events", {"_id": msg_id, "from": sender,
                                "status": "processing", "created_at": _now()})
@@ -1036,7 +1085,11 @@ async def wa_webhook(request: Request):
         doc_id = doc["_id"]
     sent = wa_meta.send_text(sender, reply)
     STORE.update("wa_events", msg_id,
-                 {"status": "answered", "check_id": doc_id, "replied": sent})
+                 {"status": "answered" if sent else "send_failed",
+                  "check_id": doc_id, "replied": sent,
+                  # kept ONLY when the send failed, so a redelivery can retry
+                  # the send without redoing (or double-charging) the check
+                  "reply_text": None if sent else reply})
     return {"ok": True, "replied": sent}
 
 
@@ -1054,6 +1107,22 @@ async def wa_webhook(request: Request):
 # to its static "call 1930 if worried" branch — the caller never hears dead air.
 
 _IVR_MAX_AUDIO = 4 * 1024 * 1024  # 60s of call audio is ~0.5MB; 4MB is ample
+
+# H15 hardening (external review): /api/ivr/result runs ASR+LLM+TTS — an
+# unauthenticated compute path must not be free to hammer. Same per-instance
+# sliding window as pair-code claims; real calls arrive far slower than this.
+_IVR_WINDOW: deque = deque()
+_IVR_MAX_PER_MIN = 6
+
+
+def _ivr_rate_ok() -> bool:
+    now = time.monotonic()
+    while _IVR_WINDOW and now - _IVR_WINDOW[0] > 60:
+        _IVR_WINDOW.popleft()
+    if len(_IVR_WINDOW) >= _IVR_MAX_PER_MIN:
+        return False
+    _IVR_WINDOW.append(now)
+    return True
 
 
 def _ivr_script(doc: dict) -> tuple[str, str]:
@@ -1126,6 +1195,9 @@ def ivr_result(request: Request):
     if not p["call_sid"]:
         return JSONResponse({"error": "CallSid required"}, status_code=422)
     job = STORE.get("ivr_jobs", p["call_sid"])
+    # rate-limit only fresh computation — cached replays stay free
+    if not (job and job.get("audio_b64")) and not _ivr_rate_ok():
+        return JSONResponse({"error": "busy — retry shortly"}, status_code=429)
     if not job:  # result hit without a prior Passthru — build from own params
         job = {"_id": p["call_sid"], "from": p["from"],
                "recording_url": p["recording_url"], "status": "received",
