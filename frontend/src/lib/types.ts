@@ -46,3 +46,34 @@ export type TranscribeResult = {
   lang: string;
   mocked: boolean;
 };
+
+export type IndicatorType = "phone" | "upi" | "domain" | "script";
+
+export type Report = {
+  _id: string;
+  payload: string;
+  category: ScamCategory;
+  note: string;
+  city: string;
+  status: "pending" | "verified" | "rejected";
+  indicator_type: IndicatorType;
+  created_at: string;
+};
+
+export type Indicator = {
+  _id: string;
+  type: IndicatorType;
+  value: string;
+  report_count: number;
+  first_seen: string;
+  category: ScamCategory;
+};
+
+export type Trends = {
+  total_reports: number;
+  by_category: { category: ScamCategory; count: number }[];
+  by_day: { day: string; count: number }[];
+  top_indicators: Indicator[];
+  cities: { city: string; count: number }[];
+  live_reports?: number;
+};

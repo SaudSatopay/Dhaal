@@ -10,6 +10,7 @@ import type { Check, InputType, TranscribeResult } from "@/lib/types";
 import { EXAMPLES } from "@/lib/fixtures";
 import TopBar from "@/components/TopBar";
 import VerdictCard from "@/components/VerdictCard";
+import ReportButton from "@/components/ReportButton";
 
 type Tab = "paste" | "qr" | "voice";
 
@@ -419,7 +420,18 @@ export default function CheckPage() {
               </p>
             </div>
           )}
-          {result && !busy && <VerdictCard check={result} />}
+          {result && !busy && (
+            <VerdictCard
+              check={result}
+              actions={
+                <ReportButton
+                  key={result._id}
+                  payload={result.input.payload}
+                  defaultCategory={result.scam_category}
+                />
+              }
+            />
+          )}
         </div>
       </main>
     </div>
