@@ -277,3 +277,46 @@ Claim each item on the board ([WIP-harsh], push the marker first). Saud deploys
 after you land — ping him. CLAUDE_MODEL env knob exists; leave it on
 claude-sonnet-5.
 ```
+
+---
+
+# H12 PROMPT — PARVA: the "weeks-of-work" wow pass (final feature window)
+
+```
+Read CLAUDE.md + docs/TASKS.md deltas, git pull --rebase FIRST (Saud pushed mic
+fixes + build stamp into check/page.tsx and next.config). I'm Parva — Product
+lane. Identity check; commits as me, no AI attribution.
+
+MISSION: make Dhaal LOOK like weeks of work at first glance — visible depth,
+living data, choreography. Real data only, no fakery. Priority order, commit
+per feature, stop at whatever the clock allows:
+
+1. SCAM RADAR LANDING (the first impression):
+   Replace the landing hero with a live war-room radar: an India/Rajasthan SVG
+   outline (hand-draw simplified path, ink on paper) with PULSING pings sized
+   by report count per city from GET /api/intel/trends (cities[] has counts).
+   Odometer counters (total verified · live this session · languages · signals
+   run). A thin ticker strip: "अभी verify हुआ: <top indicators rotating>".
+   CSS-only animation, honor prefers-reduced-motion, poster identity intact.
+
+2. VERDICT THEATER (turns the 5s wait into the wow):
+   On /check submit, show the engine "scanning" — a staged sequence of the
+   REAL signal rows revealing one by one (150ms stagger, hazard sweep over
+   each), score counting up, THEN the stamp-slam verdict. Data is the actual
+   response — choreographed reveal, zero invention. The checking state lists
+   detector names scrolling (collect-parser · domains · scripts · blocklist…).
+
+3. LIVE THREAT TICKER in TopBar (all pages): rotating line from trends top
+   indicators — "⚠ +91-98xxx… · 129 reports · digital arrest". 20 lines of
+   code, massive alive-ness.
+
+4. (stretch) /learn — "ठग को पहचानो" simulator: 5 rounds, real fixture
+   messages (mix scam/legit from lib/fixtures), user guesses, Dhaal reveals
+   verdict + signals, score at end + "अपना inbox जाँचो" CTA. Pure frontend +
+   /api/check calls.
+
+RULES: zero API/contract changes · poster identity (no new colors) · mobile-
+first · npm run build green before every push · walk beats 1-3 after each
+feature · freeze discipline: if midnight hits, finish the commit you're on,
+nothing new after.
+```
