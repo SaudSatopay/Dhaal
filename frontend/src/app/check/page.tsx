@@ -167,6 +167,14 @@ export default function CheckPage() {
   const watchdogRef = useRef<ReturnType<typeof setTimeout> | null>(null); // 20s auto-stop
   const [micRetry, setMicRetry] = useState(false); // ASR fell back — don't show fixture text
   const [micRequesting, setMicRequesting] = useState(false); // permission prompt in flight
+  // H17 second engine: the browser's OWN speech recognition (Apple on iOS,
+  // Google in Chrome/Edge — hi-IN capable, no keys, no upload). Saarika stays
+  // primary; ANY failure in that path flips this session to the built-in
+  // engine so the mic never dead-ends.
+  const [webListening, setWebListening] = useState(false);
+  const [engineNote, setEngineNote] = useState(false); // "second engine" line
+  const srRef = useRef<{ stop: () => void } | null>(null);
+  const preferSRRef = useRef(false); // once Saarika path failed, go straight to SR
 
   useEffect(() => {
     if (result && resultRef.current) {
@@ -284,8 +292,109 @@ export default function CheckPage() {
     return "webm";
   }
 
+  // lib.dom has no SpeechRecognition typings — the minimal shape we use:
+  type SRAlternative = { transcript: string };
+  type SRResult = { isFinal: boolean; 0: SRAlternative };
+  type SREvent = { resultIndex: number; results: { length: number; [i: number]: SRResult } };
+  type SRInstance = {
+    lang: string;
+    interimResults: boolean;
+    continuous: boolean;
+    onresult: ((e: SREvent) => void) | null;
+    onerror: (() => void) | null;
+    onend: (() => void) | null;
+    start: () => void;
+    stop: () => void;
+  };
+
+  function srCtor(): (new () => SRInstance) | null {
+    if (typeof window === "undefined") return null;
+    const w = window as unknown as {
+      SpeechRecognition?: new () => SRInstance;
+      webkitSpeechRecognition?: new () => SRInstance;
+    };
+    return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null;
+  }
+
+  // Built-in browser ASR: live mic, one utterance, transcript straight into
+  // the box. Runs when the Saarika upload path has failed (or is preferred
+  // after a failure this session).
+  function startWebSpeech() {
+    const SR = srCtor();
+    if (!SR) {
+      setMicError(true);
+      return;
+    }
+    setMicError(false);
+    setMicShort(false);
+    setMicRetry(false);
+    setTranscript("");
+    setResult(null);
+    setEngineNote(true);
+    let finalText = "";
+    let gotAnything = false;
+    const rec = new SR();
+    rec.lang = lang === "hi" ? "hi-IN" : "en-IN";
+    rec.interimResults = true;
+    rec.continuous = false;
+    rec.onresult = (e: SREvent) => {
+      let interim = "";
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        const r = e.results[i];
+        if (r.isFinal) finalText += r[0].transcript;
+        else interim += r[0].transcript;
+      }
+      gotAnything = gotAnything || !!(finalText || interim);
+      setTranscript((finalText + " " + interim).trim());
+    };
+    rec.onerror = () => {
+      setWebListening(false);
+      srRef.current = null;
+      setMicRetry(true); // same coaching: speak again or type
+    };
+    rec.onend = () => {
+      setWebListening(false);
+      srRef.current = null;
+      setTranscript((finalText || "").trim() || "");
+      if (!gotAnything) setMicShort(true);
+    };
+    srRef.current = { stop: () => rec.stop() };
+    setWebListening(true);
+    try {
+      rec.start();
+    } catch {
+      setWebListening(false);
+      srRef.current = null;
+      setMicError(true);
+    }
+  }
+
+  function stopWebSpeech() {
+    try {
+      srRef.current?.stop();
+    } catch {
+      /* already stopped */
+    }
+  }
+
+  // any failure of the upload path → remember, and hand THIS attempt to the
+  // built-in engine when the browser has one
+  function saarikaPathFailed() {
+    const SR = srCtor();
+    if (SR) {
+      preferSRRef.current = true;
+      startWebSpeech();
+      return true;
+    }
+    return false;
+  }
+
   async function startRecording() {
     if (recording) return; // double-tap on a slow phone must not double-start
+    if (preferSRRef.current && srCtor()) {
+      startWebSpeech();
+      return;
+    }
     setMicError(false);
     setMicShort(false);
     setMicRetry(false);
@@ -343,8 +452,10 @@ export default function CheckPage() {
       watchdogRef.current = setTimeout(() => stopRecording(), 20000);
     } catch {
       setMicRequesting(false);
-      setMicError(true);
       setRecording(false);
+      // getUserMedia failed (webview/permission) — the built-in engine runs
+      // its own permission flow, so give it the attempt before giving up
+      if (!saarikaPathFailed()) setMicError(true);
     }
   }
 
@@ -381,17 +492,20 @@ export default function CheckPage() {
         // ASR fell back to the demo fixture — showing someone else's words as
         // "your voice" is worse than asking again (H11 field bug).
         setTranscript("");
-        setMicRetry(true);
+        setTranscribing(false);
+        if (!saarikaPathFailed()) setMicRetry(true);
         return;
       }
       setTranscript(res.transcript);
     } catch (e) {
       // H17: ASR-unavailable (503 no_transcript) is an honest, recoverable
-      // state — same coaching flow as a mocked fallback: speak again or type.
+      // state — hand the attempt to the browser's own engine when it has one;
+      // otherwise the same coaching flow: speak again or type.
+      setTranscribing(false);
       if (e instanceof ApiError && e.status === 503) {
         setTranscript("");
-        setMicRetry(true);
-      } else {
+        if (!saarikaPathFailed()) setMicRetry(true);
+      } else if (!saarikaPathFailed()) {
         setError(e instanceof Error ? e.message : String(e));
       }
     } finally {
@@ -572,18 +686,18 @@ export default function CheckPage() {
                 </span>
               </p>
               <span className="relative mt-4 inline-block">
-                {recording && (
+                {(recording || webListening) && (
                   <span className="pulse-ring absolute inset-0 rounded-full border-2 border-danger" aria-hidden="true" />
                 )}
                 <button
-                  onClick={recording ? stopRecording : startRecording}
+                  onClick={webListening ? stopWebSpeech : recording ? stopRecording : startRecording}
                   disabled={transcribing || micRequesting}
                   className={`flex h-24 w-24 items-center justify-center rounded-full border-[3px] border-ink transition-colors ${
-                    recording ? "bg-danger text-paper" : "bg-saffron text-ink shadow-poster-sm"
+                    recording || webListening ? "bg-danger text-paper" : "bg-saffron text-ink shadow-poster-sm"
                   } disabled:opacity-40`}
-                  aria-label={recording ? "stop recording" : "start recording"}
+                  aria-label={recording || webListening ? "stop recording" : "start recording"}
                 >
-                  {recording ? <IStop className="h-9 w-9" /> : <IMic className="h-9 w-9" />}
+                  {recording || webListening ? <IStop className="h-9 w-9" /> : <IMic className="h-9 w-9" />}
                 </button>
               </span>
               <div className="mt-2.5 min-h-5 text-sm text-inksoft">
@@ -592,6 +706,12 @@ export default function CheckPage() {
                     {lang === "hi"
                       ? "माइक की permission माँग रहे हैं… (popup देखें)"
                       : "Requesting mic permission… (watch for the popup)"}
+                  </span>
+                ) : webListening ? (
+                  <span className="font-semibold text-dangerdeep">
+                    {lang === "hi"
+                      ? "सुन रहे हैं — बोलिए… (रुकने पर अपने-आप लिख जाएगा)"
+                      : "Listening — speak now… (it types itself when you pause)"}
                   </span>
                 ) : recording ? (
                   <span className="font-semibold text-dangerdeep">
@@ -607,6 +727,11 @@ export default function CheckPage() {
                   `${pick(lang, S_CHECK.tapSpeak)[0]} · ${pick(lang, S_CHECK.tapSpeak)[1]}`
                 )}
               </div>
+              {engineNote && (webListening || micRetry) && (
+                <p className="plate mt-1.5 text-inksoft">
+                  {lang === "hi" ? "दूसरा ENGINE: इसी PHONE की आवाज़-पहचान" : "SECOND ENGINE: THIS PHONE'S OWN SPEECH RECOGNITION"}
+                </p>
+              )}
               {micShort && !recording && (
                 <p className="mt-2 text-sm font-bold text-saffdeep">
                   {pick(lang, S_CHECK.micShort)[0]}
