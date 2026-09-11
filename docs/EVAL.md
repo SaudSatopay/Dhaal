@@ -1,4 +1,4 @@
-# Engine evaluation — honest edition (v2, after external review)
+# Engine evaluation — honest edition (v3, at rules freeze)
 
 Three kinds of evidence, kept separate on purpose. Development results show responsiveness to failure; the regression suite shows nothing already fixed can silently return; **only the held-out battery measures generalization** — its rules were frozen before the inputs were written, it ran exactly once against production, and its misses are published unedited.
 
@@ -17,9 +17,36 @@ These numbers demonstrate iteration speed, not field accuracy — once fixed and
 
 ## 2 · Regression suite (runs on every push)
 
-**31 engine checks + 26 API contract checks green.** Includes every demo beat, every battery payload above, moderation-gate 401/200, verification idempotency AND reversal, guardian decision `link_id` auth, and the live Sarvam round trip locally (TTS speaks → own audio back through ASR).
+**35 engine checks + 32 API contract checks green.** Includes every demo beat, every battery payload above, moderation-gate 401/200, verification idempotency AND reversal, guardian decision `link_id` auth, intent-mismatch both ways on the same QR, parsed-`upi://` needs-context exemption, and the live Sarvam round trip locally (TTS speaks → own audio back through ASR).
 
-## 3 · Fresh held-out battery (frozen rules · single run vs PROD · unedited)
+## 3 · Held-out battery v2 — 60 cases (rules FROZEN at `aa7f715` · single run vs PROD · unedited)
+
+60 new cases authored after the freeze, from scam typology (1930/RBI/news categories) — including deliberately hard negatives. Grading was pre-declared in the runner (`backend/tests/run_heldout_v2.py`); the battery ran exactly once; raw run in `docs/heldout_v2.json`. Same-author caveat as v1: cases are written by the team, post-freeze — independent, not adversarial third-party.
+
+| Slice | Result | Reading |
+|---|---|---|
+| **Overall** | **51/60** | |
+| Scam recall (should flag) | **24/30** | misses below, all sub-threshold, none demo-path |
+| Benign precision (must stay clean) | **21/24** | the 3 FPs are exactly the engineered hard negatives |
+| Insufficient info (must ask, never clear) | **6/6** | bare numbers/VPAs/fragments all got the context ask |
+
+All 9 misses, unedited:
+
+| Case | Expected | Got | Gap it names |
+|---|---|---|---|
+| TRAI "SIM deactivated in 2 hrs, pay verification fee" | flag | clean 20 | telecom-regulator family absent |
+| Victim-voiced: "police on video call, brother arrested, send 40k" (hi) | flag | clean 15 | third-person family-emergency coercion |
+| WhatsApp Gold: forward to 10 groups + enter code (`.vip`) | flag | clean 20 | chain-forward family absent |
+| Card points expire today → download `points-redeem.apk` | flag | clean 0 | **`.apk` sideload signal absent entirely** |
+| `swiggy-redeliver.xyz` reschedule in 6 hrs | flag | clean 20 | brand-token + TLD didn't combine to lookalike |
+| "Son in accident, send 20000, don't call, he is in ICU" | flag | clean 15 | family-emergency money family |
+| Student describing a cyber-safety LECTURE about digital arrest | clean | **susp 35** | no reported-speech awareness |
+| "Show the delivery boy the OTP from the message" (hi) | clean | **susp 30** | legit share-OTP-with-agent flows |
+| "Tell the Ola driver OTP 4412" (hi) | clean | **susp 30** | same — ride/delivery OTPs are MEANT to be shared |
+
+**Read of the misses:** the 6 scam misses are five *missing families* (telecom-regulator, family-emergency ×2, chain-forward, apk-sideload) plus one combination bug — not random noise; each is a nameable rule the community corpus would surface. The 3 false positives are the exact hard negatives we wrote to find the precision boundary: the credential family cannot yet tell "give me your OTP" from "show the rider your OTP", and pattern-matching has no reported-speech awareness. **Per freeze discipline, none of these are fixed tonight** — they are the next battery's development set, and this score stands as published.
+
+## 3a · Held-out battery v1 — 10 cases (historical)
 
 10 new cases written blind after all H12 fixes. **Result: 5/10 — all 5 benign cases clean (0 false positives), 5 scam misses.** Raw run in `docs/heldout_h12.json`.
 
@@ -46,4 +73,4 @@ These numbers demonstrate iteration speed, not field accuracy — once fixed and
 
 ## Known limits (say these; don't hide them)
 
-Keyword-family detection — paraphrase coverage grows with the community corpus, not the rulebook · threats without a payment ask stay under threshold by design (precision trade) · lookalike coverage = Indian banks/PSPs/govt + major global consumer brands, not the whole internet · moderation is one shared key tonight (roadmap: per-moderator accounts, auto-verify thresholds) · seeded rows are labelled "synthetic demo" in the UI.
+Keyword-family detection — paraphrase coverage grows with the community corpus, not the rulebook · threats without a payment ask stay under threshold by design (precision trade) · lookalike coverage = Indian banks/PSPs/govt + major global consumer brands, not the whole internet · **no reported-speech awareness** — describing a scam can score like receiving one (v2 FP) · **credential family can't yet separate "give me your OTP" from legit share-OTP-with-agent delivery/ride flows** (v2 FPs) · five scam families named-and-missing per v2 (telecom-regulator, family-emergency, chain-forward, apk-sideload, brand-subdomain combos) · moderation is one shared key tonight (roadmap: per-moderator accounts, auto-verify thresholds) · seeded rows are labelled "synthetic demo" in the UI.

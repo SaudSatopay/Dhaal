@@ -1,0 +1,916 @@
+{
+ "summary": {
+  "battery": "heldout_v2",
+  "run_at_ist": "2026-09-11",
+  "target": "https://dhaal-api.vercel.app/api/check",
+  "frozen_at_commit": "aa7f715",
+  "runs": 1,
+  "total": "51/60",
+  "scam": "24/30",
+  "benign_clean": "21/24",
+  "insufficient": "6/6",
+  "seconds": 329
+ },
+ "cases": [
+  {
+   "id": "s01",
+   "expect": "flag",
+   "type": "text",
+   "expected_intent": null,
+   "payload": "मैं CBI officer बोल रहा हूँ। आपके आधार से money laundering हुई है। गिरफ़्तारी से बचना है तो 50,000 RTGS करें, वरना आज शाम टीम आएगी।",
+   "verdict": "danger",
+   "score": 65,
+   "signals": [
+    "script_digital_arrest",
+    "coercion_extortion",
+    "llm_pattern_note"
+   ],
+   "needs_context": null,
+   "error": null,
+   "pass": true
+  },
+  {
+   "id": "s02",
+   "expect": "flag",
+   "type": "text",
+   "expected_intent": null,
+   "payload": "FedEx parcel me drugs mile hain aapke naam par. Mumbai police cyber cell ko call transfer kar raha hoon. Case band karne ke liye security deposit 25000 bhejna hoga, skype par aao.",
+   "verdict": "suspicious",
+   "score": 55,
+   "signals": [
+    "script_digital_arrest",
+    "fee_demand",
+    "llm_pattern_note"
+   ],
+   "needs_context": null,
+   "error": null,
+   "pass": true
+  },
+  {
+   "id": "s03",
+   "expect": "flag",
+   "type": "text",
+   "expected_intent": null,
+   "payload": "This is TRAI. Your SIM will be deactivated in 2 hours due to illegal activity. Press 1 and pay the verification fee to keep your number active.",
+   "verdict": "no_known_risk",
+   "score": 20,
+   "signals": [
+    "fee_demand"
+   ],
+   "needs_context": null,
+   "error": null,
+   "pass": false
+  },
+  {
+   "id": "s04",
+   "expect": "flag",
+   "type": "text",
+   "expected_intent": null,
+   "payload": "पापा को video call पर पुलिस वर्दी वाले ने कहा कि भाई पकड़ा गया है, अभी 40 हज़ार भेजो नहीं तो FIR होगी। पैसे भेज दें क्या?",
+   "verdict": "no_known_risk",
+   "score": 15,
+   "signals": [
+    "urgency_framing"
+   ],
+   "needs_context": null,
+   "error": null,
+   "pass": false
+  },
+  {
+   "id": "s05",
+   "expect": "flag",
+   "type": "text",
+   "expected_intent": null,
+   "payload": "Aapka bijli connection aaj raat 9:30 baje disconnect ho jayega. Turant electricity officer ko is number par call karke recharge karein.",
+   "verdict": "suspicious",
+   "score": 40,
+   "signals": [
+    "script_electricity",
+    "urgency_framing",
+    "llm_pattern_note"
+   ],
+   "needs_context": null,
+   "error": null,
+   "pass": true
+  },
+  {
+   "id": "s06",
+   "expect": "flag",
+   "type": "text",
+   "expected_intent": null,
+   "payload": "Dear customer your PNB account has been suspended. Update PAN card immediately click http://pnb-kyc-verify.in-login.top",
+   "verdict": "danger",
+   "score": 100,
+   "signals": [
+    "lookalike_domain",
+    "script_kyc_expiry",
+    "suspicious_tld",
+    "urgency_framing",
+    "llm_pattern_note"
+   ],
+   "needs_context": null,
+   "error": null,
+   "pass": true
+  },
+  {
+   "id": "s07",
+   "expect": "flag",
+   "type": "text",
+   "expected_intent": null,
+   "payload": "प्रिय ग्राहक, आपका Paytm wallet 24 घंटे में बंद हो जाएगा। KYC के लिए इस नंबर पर तुरंत संपर्क करें।",
+   "verdict": "suspicious",
+   "score": 40,
+   "signals": [
+    "script_kyc_expiry",
+    "urgency_framing",
+    "llm_pattern_note"
+   ],
+   "needs_context": null,
+   "error": null,
+   "pass": true
+  },
+  {
+   "id": "s08",
+   "expect": "flag",
+   "type": "text",
+   "expected_intent": null,
+   "payload": "Your electricity bill is overdue. Pay now to avoid disconnection tonight: bit.ly/3xEleBill",
+   "verdict": "suspicious",
+   "score": 40,
+   "signals": [
+    "script_electricity",
+    "url_shortener",
+    "llm_pattern_note"
+   ],
+   "needs_context": null,
+   "error": null,
+   "pass": true
+  },
+  {
+   "id": "s09",
+   "expect": "flag",
+   "type": "text",
+   "expected_intent": null,
+   "payload": "SBI YONO account temporary block hua hai. Reactivate karne ke liye apna netbanking password aur ATM pin verify karein is link par: sbi-yono.online",
+   "verdict": "danger",
+   "score": 100,
+   "signals": [
+    "lookalike_domain",
+    "credential_request",
+    "script_kyc_expiry",
+    "suspicious_tld",
+    "llm_pattern_note"
+   ],
+   "needs_context": null,
+   "error": null,
+   "pass": true
+  },
+  {
+   "id": "s10",
+   "expect": "flag",
+   "type": "text",
+   "expected_intent": null,
+   "payload": "Income Tax refund of Rs 15,490 approved. Verify your bank account at incometax-refund.co.in to receive credit today.",
+   "verdict": "suspicious",
+   "score": 40,
+   "signals": [
+    "lookalike_domain",
+    "llm_pattern_note"
+   ],
+   "needs_context": null,
+   "error": null,
+   "pass": true
+  },
+  {
+   "id": "s24",
+   "expect": "flag",
+   "type": "text",
+   "expected_intent": null,
+   "payload": "Dear user your Netflix subscription failed. Update payment at netflix-billing-update.com to avoid losing your account.",
+   "verdict": "suspicious",
+   "score": 40,
+   "signals": [
+    "lookalike_domain",
+    "llm_pattern_note"
+   ],
+   "needs_context": null,
+   "error": null,
+   "pass": true
+  },
+  {
+   "id": "s11",
+   "expect": "flag",
+   "type": "qr",
+   "expected_intent": "receive",
+   "payload": "upi://pay?pa=refund.olx7@okicici&pn=OLX%20Refund&am=9500",
+   "verdict": "danger",
+   "score": 85,
+   "signals": [
+    "intent_mismatch",
+    "payee_impersonation",
+    "suspicious_vpa",
+    "llm_pattern_note"
+   ],
+   "needs_context": null,
+   "error": null,
+   "pass": true
+  },
+  {
+   "id": "s12",
+   "expect": "flag",
+   "type": "text",
+   "expected_intent": null,
+   "payload": "Paytm ne aapko ₹5,000 bheja hai. Amount receive karne ke liye yeh QR scan karein aur apna UPI PIN daalein.",
+   "verdict": "suspicious",
+   "score": 30,
+   "signals": [
+    "credential_request",
+    "llm_pattern_note"
+   ],
+   "needs_context": null,
+   "error": null,
+   "pass": true
+  },
+  {
+   "id": "s13",
+   "expect": "flag",
+   "type": "qr",
+   "expected_intent": null,
+   "payload": "upi://pay?pa=kbcwinner2026@oksbi&pn=KBC%20Lucky%20Draw&am=4999",
+   "verdict": "suspicious",
+   "score": 45,
+   "signals": [
+    "script_lottery",
+    "suspicious_vpa",
+    "llm_pattern_note"
+   ],
+   "needs_context": null,
+   "error": null,
+   "pass": true
+  },
+  {
+   "id": "s14",
+   "expect": "flag",
+   "type": "text",
+   "expected_intent": null,
+   "payload": "Sir main aapki gaadi advance booking karna chahta hoon, main aapko abhi 15000 ki collect request bhejta hoon, aap approve kar dena, paisa aapke account me aa jayega.",
+   "verdict": "suspicious",
+   "score": 40,
+   "signals": [
+    "collect_to_receive_bait",
+    "urgency_framing",
+    "llm_pattern_note"
+   ],
+   "needs_context": null,
+   "error": null,
+   "pass": true
+  },
+  {
+   "id": "s15",
+   "expect": "flag",
+   "type": "text",
+   "expected_intent": null,
+   "payload": "Your SBI OTP is 445211. Share this code with our executive to complete your cashback claim.",
+   "verdict": "suspicious",
+   "score": 30,
+   "signals": [
+    "credential_request",
+    "llm_pattern_note"
+   ],
+   "needs_context": null,
+   "error": null,
+   "pass": true
+  },
+  {
+   "id": "s16",
+   "expect": "flag",
+   "type": "text",
+   "expected_intent": null,
+   "payload": "बैंक से बोल रहे हैं, आपका debit card block हुआ है। unblock के लिए card number और CVV बताइए।",
+   "verdict": "suspicious",
+   "score": 30,
+   "signals": [
+    "credential_request",
+    "llm_pattern_note"
+   ],
+   "needs_context": null,
+   "error": null,
+   "pass": true
+  },
+  {
+   "id": "s17",
+   "expect": "flag",
+   "type": "text",
+   "expected_intent": null,
+   "payload": "Anydesk download karke 9-digit code bata dijiye, hum aapka KYC ghar baithe kar denge.",
+   "verdict": "suspicious",
+   "score": 55,
+   "signals": [
+    "script_job_scam",
+    "script_kyc_expiry",
+    "llm_pattern_note"
+   ],
+   "needs_context": null,
+   "error": null,
+   "pass": true
+  },
+  {
+   "id": "s18",
+   "expect": "flag",
+   "type": "text",
+   "expected_intent": null,
+   "payload": "To activate WhatsApp Gold forward this message to 10 groups and enter the verification code we sent you here: wa-gold.vip",
+   "verdict": "no_known_risk",
+   "score": 20,
+   "signals": [
+    "suspicious_tld"
+   ],
+   "needs_context": null,
+   "error": null,
+   "pass": false
+  },
+  {
+   "id": "s19",
+   "expect": "flag",
+   "type": "text",
+   "expected_intent": null,
+   "payload": "Congratulations! Your number won ₹25,00,000 in Jio Lucky Draw. To claim deposit processing fee ₹6,999 on gpay number 9811223344.",
+   "verdict": "suspicious",
+   "score": 50,
+   "signals": [
+    "script_lottery",
+    "fee_demand",
+    "llm_pattern_note"
+   ],
+   "needs_context": null,
+   "error": null,
+   "pass": true
+  },
+  {
+   "id": "s20",
+   "expect": "flag",
+   "type": "text",
+   "expected_intent": null,
+   "payload": "Amazon पर part time job — रोज़ 2000-5000 कमाएँ। पहले 3 task free, फिर registration ₹500। अभी telegram पर join करें।",
+   "verdict": "suspicious",
+   "score": 45,
+   "signals": [
+    "script_job_scam",
+    "urgency_framing",
+    "llm_pattern_note"
+   ],
+   "needs_context": null,
+   "error": null,
+   "pass": true
+  },
+  {
+   "id": "s21",
+   "expect": "flag",
+   "type": "text",
+   "expected_intent": null,
+   "payload": "Aapka loan 2 lakh approve ho gaya hai bina document ke. File charge sirf 1999 pehle jama karein, uske baad amount transfer hoga.",
+   "verdict": "suspicious",
+   "score": 30,
+   "signals": [
+    "script_loan_fee",
+    "llm_pattern_note"
+   ],
+   "needs_context": null,
+   "error": null,
+   "pass": true
+  },
+  {
+   "id": "s22",
+   "expect": "flag",
+   "type": "text",
+   "expected_intent": null,
+   "payload": "Flipkart order cancelled, refund initiated. To receive ₹3,499 refund scan the QR and enter UPI PIN when prompted.",
+   "verdict": "suspicious",
+   "score": 30,
+   "signals": [
+    "credential_request",
+    "llm_pattern_note"
+   ],
+   "needs_context": null,
+   "error": null,
+   "pass": true
+  },
+  {
+   "id": "s23",
+   "expect": "flag",
+   "type": "text",
+   "expected_intent": null,
+   "payload": "क्रेडिट कार्ड के points आज expire हो रहे हैं! points को cash में बदलने के लिए app download करें: points-redeem.apk",
+   "verdict": "no_known_risk",
+   "score": 0,
+   "signals": [],
+   "needs_context": null,
+   "error": null,
+   "pass": false
+  },
+  {
+   "id": "s25",
+   "expect": "flag",
+   "type": "text",
+   "expected_intent": null,
+   "payload": "hdfc.support.care@ybl ko 1 rupya bhejke account verify karo, phir pura refund milega.",
+   "verdict": "danger",
+   "score": 100,
+   "signals": [
+    "lookalike_domain",
+    "payee_impersonation",
+    "suspicious_tld",
+    "suspicious_vpa",
+    "llm_pattern_note"
+   ],
+   "needs_context": null,
+   "error": null,
+   "pass": true
+  },
+  {
+   "id": "s26",
+   "expect": "flag",
+   "type": "text",
+   "expected_intent": null,
+   "payload": "Your Swiggy order #8812 could not be delivered. Reschedule at swiggy-redeliver.xyz within 6 hours or order stands cancelled.",
+   "verdict": "no_known_risk",
+   "score": 20,
+   "signals": [
+    "suspicious_tld"
+   ],
+   "needs_context": null,
+   "error": null,
+   "pass": false
+  },
+  {
+   "id": "s27",
+   "expect": "flag",
+   "type": "text",
+   "expected_intent": null,
+   "payload": "आपकी बेटी का admission form incomplete है। fine ₹1,150 आज ही भरें वरना seat cancel हो जाएगी: muj-admissions.site",
+   "verdict": "suspicious",
+   "score": 50,
+   "signals": [
+    "coercion_extortion",
+    "suspicious_tld",
+    "llm_pattern_note"
+   ],
+   "needs_context": null,
+   "error": null,
+   "pass": true
+  },
+  {
+   "id": "s28",
+   "expect": "flag",
+   "type": "qr",
+   "expected_intent": null,
+   "payload": "upi://pay?pa=airtel-recharge@okaxis&pn=Airtel%20Official",
+   "verdict": "suspicious",
+   "score": 30,
+   "signals": [
+    "payee_impersonation",
+    "llm_pattern_note"
+   ],
+   "needs_context": null,
+   "error": null,
+   "pass": true
+  },
+  {
+   "id": "s29",
+   "expect": "flag",
+   "type": "voice_transcript",
+   "expected_intent": null,
+   "payload": "haan sir main customer care se bol raha hoon aapke refund ke liye google pay kholiye aur jo request aayi hai usme pin daal dijiye bas refund credit ho jayega",
+   "verdict": "suspicious",
+   "score": 55,
+   "signals": [
+    "credential_request",
+    "script_customer_care",
+    "llm_pattern_note"
+   ],
+   "needs_context": null,
+   "error": null,
+   "pass": true
+  },
+  {
+   "id": "s30",
+   "expect": "flag",
+   "type": "text",
+   "expected_intent": null,
+   "payload": "URGENT: Your son met with an accident, admitted in hospital. Send 20000 immediately for operation on this GPay number. Don't call, he is in ICU.",
+   "verdict": "no_known_risk",
+   "score": 15,
+   "signals": [
+    "urgency_framing"
+   ],
+   "needs_context": null,
+   "error": null,
+   "pass": false
+  },
+  {
+   "id": "b01",
+   "expect": "clean",
+   "type": "text",
+   "expected_intent": null,
+   "payload": "Dear Customer, OTP for txn of INR 2,500.00 at Amazon Pay is 887213. Valid for 10 mins. DO NOT share with anyone. -HDFC Bank",
+   "verdict": "no_known_risk",
+   "score": 0,
+   "signals": [],
+   "needs_context": null,
+   "error": null,
+   "pass": true
+  },
+  {
+   "id": "b02",
+   "expect": "clean",
+   "type": "text",
+   "expected_intent": null,
+   "payload": "माँ ने कहा है शाम को 2000 भेज देना दूध वाले के लिए, PhonePe पर ही भेजना।",
+   "verdict": "no_known_risk",
+   "score": 0,
+   "signals": [],
+   "needs_context": null,
+   "error": null,
+   "pass": true
+  },
+  {
+   "id": "b03",
+   "expect": "clean",
+   "type": "text",
+   "expected_intent": null,
+   "payload": "Your a/c XX4432 credited INR 15,000 on 11-Sep-26 by a/c linked to mobile 98XXXXXX10 (IMPS Ref 551209). -SBI",
+   "verdict": "no_known_risk",
+   "score": 0,
+   "signals": [],
+   "needs_context": null,
+   "error": null,
+   "pass": true
+  },
+  {
+   "id": "b04",
+   "expect": "clean",
+   "type": "qr",
+   "expected_intent": "pay",
+   "payload": "upi://pay?pa=zomato@paytm&pn=Zomato&am=349",
+   "verdict": "no_known_risk",
+   "score": 0,
+   "signals": [],
+   "needs_context": null,
+   "error": null,
+   "pass": true
+  },
+  {
+   "id": "b05",
+   "expect": "clean",
+   "type": "text",
+   "expected_intent": null,
+   "payload": "Aaj college me cyber safety lecture tha, professor ne bataya ki digital arrest wale CBI bolke darate hain aur paise mangte hain. Crazy stuff yaar.",
+   "verdict": "suspicious",
+   "score": 35,
+   "signals": [
+    "script_digital_arrest",
+    "llm_pattern_note"
+   ],
+   "needs_context": null,
+   "error": null,
+   "pass": false
+  },
+  {
+   "id": "b06",
+   "expect": "clean",
+   "type": "text",
+   "expected_intent": null,
+   "payload": "बिजली का बिल आ गया है 1,240 का, due date 20 सितम्बर है। BBPS से भर दूँगा weekend पर।",
+   "verdict": "no_known_risk",
+   "score": 25,
+   "signals": [
+    "script_electricity"
+   ],
+   "needs_context": null,
+   "error": null,
+   "pass": true
+  },
+  {
+   "id": "b07",
+   "expect": "clean",
+   "type": "text",
+   "expected_intent": null,
+   "payload": "Your Swiggy order is out for delivery. Rider Ramesh will reach in 12 mins. Enjoy your meal!",
+   "verdict": "no_known_risk",
+   "score": 0,
+   "signals": [],
+   "needs_context": null,
+   "error": null,
+   "pass": true
+  },
+  {
+   "id": "b08",
+   "expect": "clean",
+   "type": "text",
+   "expected_intent": null,
+   "payload": "Rent reminder: please transfer ₹18,000 to landlord@okhdfcbank by the 5th. Same as every month.",
+   "verdict": "no_known_risk",
+   "score": 0,
+   "signals": [],
+   "needs_context": null,
+   "error": null,
+   "pass": true
+  },
+  {
+   "id": "b09",
+   "expect": "clean",
+   "type": "text",
+   "expected_intent": null,
+   "payload": "Bhai kal match ke tickets book kar liye, tera hissa 850 hua, jab time mile bhej dena. No rush.",
+   "verdict": "no_known_risk",
+   "score": 0,
+   "signals": [],
+   "needs_context": null,
+   "error": null,
+   "pass": true
+  },
+  {
+   "id": "b10",
+   "expect": "clean",
+   "type": "text",
+   "expected_intent": null,
+   "payload": "Dear customer, your Jio recharge of Rs 299 is successful. Validity 28 days. Thank you.",
+   "verdict": "no_known_risk",
+   "score": 0,
+   "signals": [],
+   "needs_context": null,
+   "error": null,
+   "pass": true
+  },
+  {
+   "id": "b11",
+   "expect": "clean",
+   "type": "text",
+   "expected_intent": null,
+   "payload": "आपका पार्सल आज शाम 6 बजे तक पहुँचेगा। delivery boy को message वाला OTP दिखा दें।",
+   "verdict": "suspicious",
+   "score": 30,
+   "signals": [
+    "credential_request",
+    "llm_pattern_note"
+   ],
+   "needs_context": null,
+   "error": null,
+   "pass": false
+  },
+  {
+   "id": "b12",
+   "expect": "clean",
+   "type": "text",
+   "expected_intent": null,
+   "payload": "Team dinner split: everyone pays 460 to Rahul, UPI rahul.sharma22@oksbi. I'll collect cash from the interns.",
+   "verdict": "no_known_risk",
+   "score": 0,
+   "signals": [],
+   "needs_context": null,
+   "error": null,
+   "pass": true
+  },
+  {
+   "id": "b13",
+   "expect": "clean",
+   "type": "text",
+   "expected_intent": null,
+   "payload": "SBI: आपके खाते से 550 debit हुआ ATM WD। यदि यह आपने नहीं किया तो तुरंत 1930 पर कॉल करें।",
+   "verdict": "no_known_risk",
+   "score": 15,
+   "signals": [
+    "urgency_framing",
+    "llm_pattern_note"
+   ],
+   "needs_context": null,
+   "error": null,
+   "pass": true
+  },
+  {
+   "id": "b14",
+   "expect": "clean",
+   "type": "text",
+   "expected_intent": null,
+   "payload": "Netflix: Your plan payment of ₹199 was successful. Next billing date 11 Oct 2026.",
+   "verdict": "no_known_risk",
+   "score": 0,
+   "signals": [],
+   "needs_context": null,
+   "error": null,
+   "pass": true
+  },
+  {
+   "id": "b15",
+   "expect": "clean",
+   "type": "text",
+   "expected_intent": null,
+   "payload": "Yaar mera KYC pending tha isliye main khud branch gaya tha, ho gaya ab. Tension nahi.",
+   "verdict": "no_known_risk",
+   "score": 25,
+   "signals": [
+    "script_kyc_expiry"
+   ],
+   "needs_context": null,
+   "error": null,
+   "pass": true
+  },
+  {
+   "id": "b16",
+   "expect": "clean",
+   "type": "text",
+   "expected_intent": null,
+   "payload": "Reminder: Society maintenance ₹2,100 due by 15th. Pay at the office or the society QR near the lift. — Secretary",
+   "verdict": "no_known_risk",
+   "score": 0,
+   "signals": [],
+   "needs_context": null,
+   "error": null,
+   "pass": true
+  },
+  {
+   "id": "b17",
+   "expect": "clean",
+   "type": "text",
+   "expected_intent": null,
+   "payload": "Ola driver 2 min में पहुँच रहा है। OTP 4412 driver को बताएँ।",
+   "verdict": "suspicious",
+   "score": 30,
+   "signals": [
+    "credential_request"
+   ],
+   "needs_context": null,
+   "error": null,
+   "pass": false
+  },
+  {
+   "id": "b18",
+   "expect": "clean",
+   "type": "text",
+   "expected_intent": null,
+   "payload": "Credited: INR 899.00 refund from Flipkart for order OD1123 to your original payment method. No action needed.",
+   "verdict": "no_known_risk",
+   "score": 0,
+   "signals": [],
+   "needs_context": null,
+   "error": null,
+   "pass": true
+  },
+  {
+   "id": "b19",
+   "expect": "clean",
+   "type": "text",
+   "expected_intent": null,
+   "payload": "Police verification passport ke liye kal aayegi ghar pe, documents ready rakhna.",
+   "verdict": "no_known_risk",
+   "score": 0,
+   "signals": [],
+   "needs_context": null,
+   "error": null,
+   "pass": true
+  },
+  {
+   "id": "b20",
+   "expect": "clean",
+   "type": "qr",
+   "expected_intent": "pay",
+   "payload": "upi://pay?pa=9812345678@ybl&pn=Sunita%20Devi",
+   "verdict": "no_known_risk",
+   "score": 0,
+   "signals": [],
+   "needs_context": null,
+   "error": null,
+   "pass": true
+  },
+  {
+   "id": "b21",
+   "expect": "clean",
+   "type": "text",
+   "expected_intent": null,
+   "payload": "Big Billion Days: Up to 80% off on electronics. Sale ends tonight. Shop now on the Flipkart app!",
+   "verdict": "no_known_risk",
+   "score": 0,
+   "signals": [],
+   "needs_context": null,
+   "error": null,
+   "pass": true
+  },
+  {
+   "id": "b22",
+   "expect": "clean",
+   "type": "text",
+   "expected_intent": null,
+   "payload": "नानी की दवाई के 1,500 भेज दिए हैं तेरे PhonePe पर, मिल गए?",
+   "verdict": "no_known_risk",
+   "score": 0,
+   "signals": [],
+   "needs_context": null,
+   "error": null,
+   "pass": true
+  },
+  {
+   "id": "b23",
+   "expect": "clean",
+   "type": "text",
+   "expected_intent": null,
+   "payload": "Your DTH recharge will expire tomorrow. Recharge with the Rs 350 plan to continue services. -TataPlay",
+   "verdict": "no_known_risk",
+   "score": 0,
+   "signals": [],
+   "needs_context": null,
+   "error": null,
+   "pass": true
+  },
+  {
+   "id": "b24",
+   "expect": "clean",
+   "type": "text",
+   "expected_intent": null,
+   "payload": "Interview scheduled Friday 11 AM at our Andheri office. Carry resume and ID proof. — HR, Infosys",
+   "verdict": "no_known_risk",
+   "score": 0,
+   "signals": [],
+   "needs_context": null,
+   "error": null,
+   "pass": true
+  },
+  {
+   "id": "c01",
+   "expect": "context",
+   "type": "text",
+   "expected_intent": null,
+   "payload": "9812345678",
+   "verdict": "no_known_risk",
+   "score": 0,
+   "signals": [],
+   "needs_context": "bare_identifier",
+   "error": null,
+   "pass": true
+  },
+  {
+   "id": "c02",
+   "expect": "context",
+   "type": "text",
+   "expected_intent": null,
+   "payload": "sunita.devi55@ybl",
+   "verdict": "no_known_risk",
+   "score": 0,
+   "signals": [],
+   "needs_context": "bare_identifier",
+   "error": null,
+   "pass": true
+  },
+  {
+   "id": "c03",
+   "expect": "context",
+   "type": "text",
+   "expected_intent": null,
+   "payload": "kal bhej dena",
+   "verdict": "no_known_risk",
+   "score": 0,
+   "signals": [],
+   "needs_context": "too_short",
+   "error": null,
+   "pass": true
+  },
+  {
+   "id": "c04",
+   "expect": "context",
+   "type": "text",
+   "expected_intent": null,
+   "payload": "is this safe?",
+   "verdict": "no_known_risk",
+   "score": 0,
+   "signals": [],
+   "needs_context": "too_short",
+   "error": null,
+   "pass": true
+  },
+  {
+   "id": "c05",
+   "expect": "context",
+   "type": "text",
+   "expected_intent": null,
+   "payload": "+91 99887 76655",
+   "verdict": "no_known_risk",
+   "score": 0,
+   "signals": [],
+   "needs_context": "bare_identifier",
+   "error": null,
+   "pass": true
+  },
+  {
+   "id": "c06",
+   "expect": "context",
+   "type": "text",
+   "expected_intent": null,
+   "payload": "scan karu?",
+   "verdict": "no_known_risk",
+   "score": 0,
+   "signals": [],
+   "needs_context": "too_short",
+   "error": null,
+   "pass": true
+  }
+ ]
+}

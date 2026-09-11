@@ -34,7 +34,8 @@ Claim: `[ ]` → `[WIP-saud]` / `[WIP-parva]` / `[WIP-harsh]`, **push immediatel
 - [x] **P0 H3–H5** Fixtures + seeds DONE: `backend/data/brands.py` (brand domains, UPI PSP suffixes, shorteners, TLDs — **Harsh: import, don't recreate**) · `demo/qr_collect_15000.png` + `demo/qr_legit_pay.png` · `demo/RUNSHEET.md` (8 beats, exact paste strings, failure drill) · `scripts/seed.py` tested against live API (43× flywheel + weighted intel reports, all verified; **re-run once after Atlas lands**).
 - [ ] **Hourly** Golden-path QA walk; breakages → Blockers; unblocking Parva/Harsh beats own tasks.
 - [ ] **P1 H8** Judge-mode dry run on venue network; decide live-vs-mock default per external call; rehearse "judge's own inbox" beat + fixture fallback.
-- [ ] **H12–H15** Backup demo video · freeze enforcement · README rewrite.
+- [ ] **H12–H15** Backup demo video · ~~freeze enforcement~~ **freeze DECLARED at `aa7f715`** (engine/scoring closed; fixes from held-out v2 misses wait for judging unless demo-blocking) · README rewrite done earlier.
+- [x] **H13** WhatsApp bot: `/api/whatsapp` webhook built, deployed, answering (TwiML verified via curl incl. verdict + signals + 1930 line). **Twilio sandbox inbound is PARKED** — trial tier blocks custom webhook config (Saud's call: "hold on"). Demo fallback: WhatsApp strip on landing + `demo/wa_card.png` + live curl if asked.
 - [ ] **H15+** Submission package + QR cards · rehearsal timekeeping · submit 30 min early.
 
 ## Requests (cross-lane asks — add, push, ping in person)
@@ -61,8 +62,8 @@ Claim: `[ ]` → `[WIP-saud]` / `[WIP-parva]` / `[WIP-harsh]`, **push immediatel
 
 - [ ] FOR saud, FROM parva — **WOW-PASS DEPLOY**: 5 features on main, build green, beats 1–3 re-walked — scam-radar landing (live Rajasthan pings from trends), verdict theater (staged real-signal reveal + score count-up + stamp slam), masthead threat ticker on every page, /intel war desk rebuilt into the poster identity, /learn ठग-पहचानो simulator (engine as referee). Zero contract changes. `vercel --prod --yes` in `frontend/`.
 
-- [ ] FOR saud, FROM parva — **FINAL DEPLOY (freeze)**: intent-mismatch UI complete — QR/UPI intent chips, mismatch hero (beat 2b money-shot), what-they-want analysis panel, needs-context amber state, guardian trusted-call button, WhatsApp strip. Walked: same legit QR pay=clear vs receive=suspicious-40+hero, bare number→amber, tel: button. Two demo QRs now also served at /demo/*.png on the site. `vercel --prod --yes` in `frontend/` — then rules FREEZE.
-- [ ] FOR harsh, FROM parva — needs_context over-fires on parsed upi:// URIs (one token → `len(split())<4` gate): legit pay-QR + pay-intent returned needs_context instead of the clean verdict. UI now exempts `upi://` payloads from the amber panel (verdict renders normally), but the WhatsApp bot path appends the follow-up question from the same field — exclude parsed upi:// server-side when you're allowed to touch code again. NOT demo-blocking.
+- [x] FOR saud, FROM parva — **FINAL DEPLOY (freeze)** — DONE + verified live in browser: intent chips render on pasted UPI, same `ramlal@okaxis` QR walked BOTH ways on prod (PAY → clean green · RECEIVE → suspicious 40 + INTENT MISMATCH hero + what-they-want panel), bare number → amber context ask. **RULES ARE NOW FROZEN at `aa7f715`** — held-out battery v2 (60 fresh cases) running against prod.
+- [x] FOR harsh, FROM parva — needs_context over-fires on parsed upi:// URIs — FIXED server-side by Saud pre-freeze (`main.py`: `upi://` payloads exempt from the too-short gate; regression check added, 32 API checks green, deployed + verified on prod: clean upi QR → `needs_context: null`, bare number still asks). Parva's UI band-aid stays as belt-and-braces.
 
 ## Blockers (Saud clears these first)
 
