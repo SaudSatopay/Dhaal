@@ -112,7 +112,7 @@ ok("guardian request auto-created", bool(grid))
 inbox = c.get(f"/api/guardian/requests?link_id={gl['_id']}").json()["requests"]
 ok("guardian inbox", any(x["_id"] == grid and x["status"] == "pending" for x in inbox))
 dec = c.post(f"/api/guardian/requests/{grid}/decision",
-             json={"decision": "blocked", "note": "beta, mat bhejo"}).json()
+             json={"decision": "blocked", "note": "beta, mat bhejo", "link_id": gl["_id"]}).json()
 ward = c.get(f"/api/guardian/requests/{grid}").json()
 ok("guardian decision persists", dec["status"] == "blocked"
    and ward["status"] == "blocked" and ward["guardian_note"] == "beta, mat bhejo")
@@ -155,5 +155,23 @@ spk = c.post("/api/check", json={"type": "text", "payload": FX.KYC_SCAM_TEXT,
                                  "speak": True}).json()
 ok("speak offline yields null audio", spk["verdict"] == "danger"
    and spk["tts_audio_b64"] is None)
+
+# --- H12 external review: decision auth + verification reversal ---
+gr_noauth = c.post(f"/api/guardian/requests/{ward['_id']}/decision",
+                   json={"decision": "allowed", "note": "", "link_id": "gl_wrong"})
+ok("guardian decision rejects wrong link_id", gr_noauth.status_code == 403)
+
+rev = c.post("/api/reports", json={"payload": "+919999888771", "category": "digital_arrest",
+                                   "note": "", "city": "Jaipur"}).json()
+os.environ["MOD_KEY"] = ""
+c.post(f"/api/reports/{rev['_id']}/verify", json={"action": "verify"})
+c.post(f"/api/reports/{rev['_id']}/verify", json={"action": "verify"})  # idempotent
+chk_a = c.post("/api/check", json={"type": "text", "payload": "+919999888771"}).json()
+one_hit = [s for s in chk_a["signals"] if s["id"] == "community_blocklist"]
+ok("verified once despite double-verify", bool(one_hit) and "1" in one_hit[0]["title_en"])
+c.post(f"/api/reports/{rev['_id']}/verify", json={"action": "reject"})  # withdraw
+chk_b = c.post("/api/check", json={"type": "text", "payload": "+919999888771"}).json()
+ok("rejecting a verified report withdraws it",
+   not any(s["id"] == "community_blocklist" for s in chk_b["signals"]))
 
 print(f"\nALL {P} API CHECKS PASSED (store={h['store']})")

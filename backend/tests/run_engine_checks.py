@@ -84,8 +84,9 @@ check("brand token domain", "offer: hdfc-rewards.top/claim",
       "danger", indicators={}, want_signal="lookalike_domain")
 
 # --- script patterns ---
+# H12: advance_fee_refund now stacks on lottery+fee — danger is the truer verdict
 check("lottery + fee", "Congratulations! KBC lottery winner. Processing fee Rs 5000 bhejein",
-      "suspicious", indicators={}, want_signal="script_lottery")
+      "danger", indicators={}, want_signal="script_lottery")
 check("electricity scam", "बिजली बिल बकाया है, आज रात disconnect हो जाएगा। तुरंत भुगतान करें 9812340000",
       "suspicious", indicators={}, want_signal="script_electricity")
 
@@ -102,9 +103,11 @@ check("H9.2 job scam",
 check("H9.3 loan-fee scam",
       "आपके आधार पर ₹50,000 का लोन approve हो गया है। Processing fee ₹550 इस UPI पर भेजें: quickloan.help@okaxis",
       "danger", indicators={}, want_signal="script_loan_fee")
-check("H9.3b free-text VPA fires signal (weak alone, by design)",
+# H12 (external review): this used to stay under threshold "by design" — the
+# pay-to-receive-refund mechanic now has its own signal and correctly flags.
+check("H9.3b/H12 refund-advance bait flags",
       "Refund ke liye paise bhejo refund.super@okhdfcbank par",
-      "no_known_risk", indicators={}, want_signal="suspicious_vpa")
+      "suspicious", indicators={}, want_signal="advance_fee_refund")
 check("H9.4 olx army collect bait",
       "I am army officer posted at Siachen. I want to buy your sofa. I will send "
       "advance payment through UPI collect request, please approve when it comes.",
@@ -114,6 +117,25 @@ check("H9.4 olx army collect bait",
 for junk in ("", "   ", "🙏🙏🙏", "a" * 5000, "upi://", "http://"):
     v, s, sg, c = run_signal_engine(junk, "text", INDICATORS)
     assert v in ("danger", "suspicious", "no_known_risk"), junk
+
+# --- H12 external-review battery (all five reproduced, then fixed) ---
+check("H12.1 benign parcel notice clean",
+      "Your parcel will be delivered tomorrow.", "no_known_risk",
+      indicators={}, forbid_signal="script_digital_arrest")
+check("H12.2 benign police/army sentence clean",
+      "The police station is next to the army canteen.", "no_known_risk",
+      indicators={})
+check("H12.3 OTP request bypass flags",
+      "Please send me your OTP. Do not share it with anyone else.",
+      "suspicious", indicators={}, want_signal="credential_request")
+check("H12.3b OTP awareness SMS stays clean",
+      "Never share your OTP with anyone. Bank kabhi OTP nahi maangta. -SBI",
+      "no_known_risk", indicators={}, forbid_signal="credential_request")
+check("H12.4 ordinary mode=01 pay QR clean (NPCI: mode=01 = QR-initiated, not collect)",
+      "upi://pay?pa=merchant123@ybl&pn=Kirana%20Store&am=250&mode=01",
+      "no_known_risk", itype="qr_text", indicators={},
+      forbid_signal="upi_collect_request")
+
 print("ok  junk inputs survive")
 PASS += 1
 

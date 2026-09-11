@@ -199,7 +199,7 @@ export const S_HOME = {
   sRecoverSub: { hi: "ठगी हो गई? Recovery kit", en: "Just got scammed? Recovery kit" },
   radarTitle: { hi: "धोखों का LIVE RADAR", en: "Live scam radar" },
   radarSub: { hi: "Rajasthan — हर बिंदु = verified reports", en: "Rajasthan — every dot = verified reports" },
-  verifiedNow: { hi: "अभी verify हुआ", en: "Just verified" },
+  verifiedNow: { hi: "ज्ञात ठग", en: "Known scams" },
   statLive: { hi: "इस session में", en: "live this session" },
   statLangs: { hi: "भाषाएँ", en: "languages" },
   statFamilies: { hi: "signal families", en: "signal families" },

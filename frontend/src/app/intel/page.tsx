@@ -164,11 +164,11 @@ function TrendsBoard({ trends }: { trends: Trends }) {
         </div>
         {typeof trends.live_reports === "number" && trends.live_reports > 0 && (
           <div className="plate mt-2 text-saffron">
-            +{trends.live_reports} VERIFIED LIVE THIS SESSION
+            +{trends.live_reports} STORED VERIFIED REPORTS
           </div>
         )}
-        <div className="mt-1 font-mono text-[10px] tracking-wide text-paper/60">
-          DATA: SEEDED PILOT WEEK + TONIGHT&apos;S LIVE REPORTS
+        <div className="mt-1 font-mono text-[11px] font-semibold tracking-wide text-paper/70">
+          DATA: SYNTHETIC DEMO + THIS EVENING&apos;S LIVE REPORTS
         </div>
         {/* stamp ring, war-desk seal */}
         <div

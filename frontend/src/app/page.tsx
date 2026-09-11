@@ -223,10 +223,10 @@ export default function Home() {
                     </span>
                   </div>
                 </div>
-                <p className="mt-1.5 font-mono text-[10px] tracking-wide text-inksoft/80">
+                <p className="mt-1.5 font-mono text-[11px] font-semibold tracking-wide text-inksoft">
                   {lang === "hi"
-                    ? "डेटा: seeded pilot-सप्ताह + आज की live रिपोर्टें"
-                    : "data: seeded pilot week + tonight's live reports"}
+                    ? "डेटा: synthetic demo + आज शाम की live रिपोर्टें"
+                    : "data: synthetic demo + this evening's live reports"}
                 </p>
               </>
             ) : (

@@ -24,10 +24,12 @@ def detect(text: str, input_type: str, signals: list) -> dict:
             info["vpas"].add(pa)
 
         # UPI deep-link mechanics: collect = approving PULLS money out.
+        # H12 fix (external review, NPCI linking spec): mode=01 means
+        # "QR-initiated" — ordinary merchant static QRs carry it. It does NOT
+        # indicate collect; only the collect authority/path does.
         is_collect = (
             "collect" in parsed.netloc.lower()
             or "collect" in parsed.path.lower()
-            or qs.get("mode") == "01"
         )
         if is_collect:
             info["is_collect"] = True

@@ -202,10 +202,18 @@ def get_request(rid: str):
 class DecisionIn(BaseModel):
     decision: str  # allowed | blocked
     note: str = ""
+    link_id: str = ""  # H12: decision must come from the paired guardian
 
 
 @app.post("/api/guardian/requests/{rid}/decision")
 def decide(rid: str, body: DecisionIn):
+    gr = STORE.get("guardian_requests", rid)
+    if not gr:
+        return {"error": "request not found"}
+    # H12 review: knowing a request id must not be enough to decide for a
+    # family — the caller must hold the pairing's link_id (capability check).
+    if body.link_id != gr.get("link_id"):
+        return JSONResponse({"error": "link_id mismatch"}, status_code=403)
     status = "allowed" if body.decision == "allowed" else "blocked"
     r = STORE.update("guardian_requests", rid, {"status": status, "guardian_note": body.note})
     return r or {"error": "request not found"}
@@ -245,7 +253,11 @@ def create_report(body: ReportIn):
 # unset (local dev/tests) they stay open.
 def _mod_ok(request: Request) -> bool:
     key = os.getenv("MOD_KEY", "").strip()
-    return (not key) or request.headers.get("x-mod-key", "") == key
+    if not key:
+        # fail closed in production (H12 review): a missing key must never
+        # silently open moderation. Local dev (no VERCEL env) stays open.
+        return not os.getenv("VERCEL")
+    return request.headers.get("x-mod-key", "") == key
 
 
 @app.get("/api/reports")
@@ -267,16 +279,20 @@ def verify_report(rid: str, body: VerifyIn, request: Request):
     r = STORE.get("reports", rid)
     if not r:
         return {"error": "report not found"}
-    if r.get("status") == "verified":
-        return r  # idempotent: re-verifying must not re-increment the blocklist
     status = "verified" if body.action == "verify" else "rejected"
+    if r.get("status") == status:
+        return r  # idempotent: repeating the same decision changes nothing
+    value = r["payload"].strip()
+    if r["indicator_type"] == "domain":
+        value = first_host(value) or value
+    was_verified = r.get("status") == "verified"
     r = STORE.update("reports", rid, {"status": status}) or r
     if status == "verified":
-        # extract the indicator value: phone/upi/domain inside payload, else script text
-        value = r["payload"].strip()
-        if r["indicator_type"] == "domain":
-            value = first_host(value) or value
         STORE.upsert_indicator(value, r["indicator_type"], r["category"])
+    elif was_verified:
+        # H12 review: a mistaken verification must be reversible — rejecting a
+        # verified report withdraws its blocklist contribution.
+        STORE.decrement_indicator(value)
     return r
 
 

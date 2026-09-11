@@ -67,6 +67,15 @@ class MemoryStore:
         self.data["indicators"][doc["_id"]] = doc
         return dict(doc)
 
+    def decrement_indicator(self, value: str) -> None:
+        # withdraw one verification (H12); remove the indicator at zero
+        for k, d in list(self.data["indicators"].items()):
+            if d["value"] == value:
+                d["report_count"] -= 1
+                if d["report_count"] <= 0:
+                    del self.data["indicators"][k]
+                return
+
     def active_name(self) -> str:
         return self.name
 
@@ -112,6 +121,15 @@ class MongoStore:
             upsert=True, return_document=ReturnDocument.AFTER,
         )
 
+    def decrement_indicator(self, value: str) -> None:
+        # withdraw one verification (H12); remove the indicator at zero
+        doc = self.db.indicators.find_one_and_update(
+            {"value": value}, {"$inc": {"report_count": -1}},
+            return_document=ReturnDocument.AFTER,
+        )
+        if doc and doc.get("report_count", 0) <= 0:
+            self.db.indicators.delete_one({"_id": doc["_id"]})
+
     def active_name(self) -> str:
         try:
             self.client.admin.command("ping")
@@ -123,7 +141,8 @@ class MongoStore:
 class FailoverStore:
     """Try Atlas, fall back to memory per call — the demo never 500s on wifi."""
 
-    _METHODS = ("insert", "get", "list", "update", "indicators_map", "upsert_indicator")
+    _METHODS = ("insert", "get", "list", "update", "indicators_map",
+                "upsert_indicator", "decrement_indicator")
 
     def __init__(self, primary: MongoStore, shadow: MemoryStore):
         self.primary, self.shadow = primary, shadow

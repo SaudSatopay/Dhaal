@@ -1,17 +1,49 @@
-# Engine evaluation — blind batteries (H9–H12, all reproducible)
+# Engine evaluation — honest edition (v2, after external review)
 
-Method: every battery was written blind against the engine (inputs the patterns were not tuned on), run against the LIVE deployment, misses fixed, and the payloads folded into `backend/tests/run_engine_checks.py` so they can never regress. Judges can re-run everything: `cd backend && python tests/run_engine_checks.py`.
+Three kinds of evidence, kept separate on purpose. Development results show responsiveness to failure; the regression suite shows nothing already fixed can silently return; **only the held-out battery measures generalization** — its rules were frozen before the inputs were written, it ran exactly once against production, and its misses are published unedited.
 
-| Battery | Cases | First pass | After fixes | What the misses taught |
-|---|---|---|---|---|
-| H9 adversarial sweep (unseen scam + legit + edge) | 17 | 13/17 | **17/17** | OTP-delivery false positive; job-scam & loan-fee families missing; olx threshold |
-| H11 coercion (victim-voiced descriptions) | 7 | 3/7 → | **7/7** | descriptions of a threat ("I was told to pay or be arrested") need their own family |
-| H11 VPA impersonation (bare pasted VPAs) | 5 | 1/5 → | **5/5** | brand-in-VPA check only ran on QR payloads |
-| H12 QR/UPI variant battery (case, mode=01, missing fields) | 7 | **7/7** | 7/7 | collect parsing robust across variants |
-| False-positive controls (real bank OTP/debit/late-fee SMS, friend asks, legit VPAs/QRs) | 12 across batteries | — | **12/12 clean** | honest-language promise holds: legit traffic scores 0 |
+Reproduce everything: `cd backend && python tests/run_engine_checks.py && python tests/run_api_checks.py` (all published payloads are cases).
 
-Regression state: **26 engine checks + 23 API contract checks green** on every push; live smoke includes a Sarvam round trip (TTS speaks a warning → its own audio back through ASR).
+## 1 · Development batteries (found → fixed → became regression; NOT accuracy claims)
 
-Field testing: ~2 hours of unscripted use by the team on real phones (iPhone Safari + Android Chrome) surfaced and fixed: iOS mic container mismatch, hung-permission UI freeze, guardian pairing visibility, fixture-transcript leak on ASR fallback, duplicate signal stacking.
+| Battery | First run | After fixes | What it taught |
+|---|---|---|---|
+| H9 adversarial sweep (17 unseen) | 13/17 | fixed | OTP-delivery FP; job/loan families missing; olx threshold |
+| H11 coercion, victim-voiced (7) | 3/7 | fixed | threat *descriptions* need their own family |
+| H11 bare-VPA impersonation (5) | 1/5 | fixed | brand-in-VPA only ran on QR payloads |
+| H12 external review (5 independent cases) | 0/5 | fixed | ambient single words convicted; "do not share" neutralized requests; `mode=01` misread as collect (NPCI: QR-initiated); refund-advance under threshold; duplicate signal stacking |
 
-Known limits (say these, don't hide them): script patterns are keyword-based (paraphrase coverage grows with the community corpus) · seeded pilot data is labelled as such in-app · moderation is key-gated single-moderator tonight (auto-verify thresholds on the roadmap).
+These numbers demonstrate iteration speed, not field accuracy — once fixed and folded into regression, the cases stop being independent evidence.
+
+## 2 · Regression suite (runs on every push)
+
+**31 engine checks + 26 API contract checks green.** Includes every demo beat, every battery payload above, moderation-gate 401/200, verification idempotency AND reversal, guardian decision `link_id` auth, and the live Sarvam round trip locally (TTS speaks → own audio back through ASR).
+
+## 3 · Fresh held-out battery (frozen rules · single run vs PROD · unedited)
+
+10 new cases written blind after all H12 fixes. **Result: 5/10 — all 5 benign cases clean (0 false positives), 5 scam misses.** Raw run in `docs/heldout_h12.json`.
+
+| Case | Expected | Got | |
+|---|---|---|---|
+| Court warrant + "settle ₹20,000 warna jail" | flag | **danger 65** | ok |
+| Fake meter-KYC + cut tonight + link | flag | **danger 70** | ok |
+| Traffic-challan threat, no money ask | flag | no_known_risk 0 | **miss** |
+| `netfl1x-renew.com` payment update | flag | no_known_risk 0 | **miss** |
+| "Meeting moved to courthouse cafeteria" | clean | clean 0 | ok |
+| Cashback needing ₹10 "pehle bhejein" | flag | no_known_risk 0 | **miss** |
+| "Dad's parcel arrived, customs duty paid" | clean | clean 0 | ok |
+| "बेटा police case में, छुड़ाने के लिए 30 हज़ार भेजो" | flag | no_known_risk 15 | **miss** |
+| Zomato refund initiated notice | clean | clean 0 | ok |
+| Prize winner, "pay delivery charge to receive" | flag | no_known_risk 0 | **miss** |
+
+**Post-battery:** 4 of the 5 misses were mechanical gaps (polite verb form *bhejein*, receive-prize bait shape, global-brand lookalikes beyond banks, one coercion form) — fixed, verified, regression-added, deployed. The score above is NOT revised; the next battery will again be fresh. The challan case (threat without a money ask) remains an open design tension: flagging threats with no payment mechanic risks the false positives we just eliminated.
+
+## Corrections to v1 claims (per external review)
+
+- "17/17 after fixes" was a regression result presented too strongly — reclassified under §1.
+- "QR variants 7/7, parsing robust" was wrong in the worst way: the tests encoded the same `mode=01` misunderstanding as the code. Both fixed together.
+- "Legit traffic scores 0" → precisely: all **15 published benign controls verdict clean**; sub-threshold signal mentions can occur (e.g., "Maine SBI branch jaakar KYC karwa liya" carries one 25-weight token, verdict clean).
+
+## Known limits (say these; don't hide them)
+
+Keyword-family detection — paraphrase coverage grows with the community corpus, not the rulebook · threats without a payment ask stay under threshold by design (precision trade) · lookalike coverage = Indian banks/PSPs/govt + major global consumer brands, not the whole internet · moderation is one shared key tonight (roadmap: per-moderator accounts, auto-verify thresholds) · seeded rows are labelled "synthetic demo" in the UI.

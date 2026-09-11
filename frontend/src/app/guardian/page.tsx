@@ -186,7 +186,7 @@ function GuardianInbox({ pair, onUnpair }: { pair: GuardianPair; onUnpair: () =>
     try {
       await api(`/api/guardian/requests/${id}/decision`, {
         method: "POST",
-        body: JSON.stringify({ decision, note }),
+        body: JSON.stringify({ decision, note, link_id: pair.link_id }),
       });
       await load();
     } finally {
