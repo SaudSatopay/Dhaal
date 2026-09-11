@@ -151,7 +151,7 @@ body {
     position: absolute;
     inset: 0;
     background: linear-gradient(100deg, transparent 20%, rgba(232, 161, 59, 0.35) 50%, transparent 80%);
-    animation: sweep-x 500ms ease-out 1;
+    animation: sweep-x 500ms ease-out 1 forwards;
     pointer-events: none;
   }
 }

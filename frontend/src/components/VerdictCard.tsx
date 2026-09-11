@@ -39,7 +39,7 @@ function SignalRow({ s, lang }: { s: Signal; lang: Lang }) {
   const title = lang === "en" ? [s.title_en, s.title_hi] : [s.title_hi, s.title_en];
   const detail = lang === "en" ? [s.detail_en, s.detail_hi] : [s.detail_hi, s.detail_en];
   return (
-    <li className="py-3">
+    <div className="py-3">
       <div className="flex items-start justify-between gap-3">
         <span className="font-semibold leading-snug">{title[0]}</span>
         <span className="shrink-0 border-2 border-ink px-1.5 font-mono text-sm font-semibold tabular-nums">
@@ -55,7 +55,7 @@ function SignalRow({ s, lang }: { s: Signal; lang: Lang }) {
       <span className={`plate mt-2 inline-block border px-1.5 py-0.5 ${src.cls}`}>
         {srcP} · {srcS}
       </span>
-    </li>
+    </div>
   );
 }
 
@@ -63,12 +63,59 @@ export default function VerdictCard({
   check,
   actions,
   autoSpeak = false,
+  theater = false,
 }: {
   check: Check;
   actions?: React.ReactNode; // e.g. the Report button (wired in the intel task)
   autoSpeak?: boolean; // voice-path beat 4: Dhaal speaks the warning back unprompted
+  /** choreographed reveal of the REAL response: signals stagger in, score counts
+      up, then the verdict stamp-slams. Zero invention — pure presentation order. */
+  theater?: boolean;
 }) {
   const lang = useLang();
+
+  // ---- verdict theater staging (hazard notices only; the clear chit stays quiet)
+  const isHazard = check.verdict !== "no_known_risk";
+  const staged = theater && isHazard;
+  const [revealed, setRevealed] = useState(staged ? 0 : Number.MAX_SAFE_INTEGER);
+  const [slammed, setSlammed] = useState(!staged);
+  const [shownScore, setShownScore] = useState(staged ? 0 : check.score);
+
+  useEffect(() => {
+    if (!staged) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setRevealed(Number.MAX_SAFE_INTEGER);
+      setSlammed(true);
+      setShownScore(check.score);
+      return;
+    }
+    setRevealed(0);
+    setSlammed(false);
+    setShownScore(0);
+    const n = check.signals.length;
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    for (let i = 1; i <= n; i++) {
+      timers.push(setTimeout(() => setRevealed(i), 200 + i * 150));
+    }
+    const total = 200 + n * 150 + 300;
+    timers.push(setTimeout(() => setSlammed(true), total));
+    let s = 0;
+    const step = Math.max(1, check.score / Math.max(1, total / 40));
+    const si = setInterval(() => {
+      s += step;
+      if (s >= check.score) {
+        setShownScore(check.score);
+        clearInterval(si);
+      } else {
+        setShownScore(Math.round(s));
+      }
+    }, 40);
+    return () => {
+      timers.forEach(clearTimeout);
+      clearInterval(si);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [staged, check._id]);
   const v = VERDICT_UI[check.verdict];
   const [vLabel, vLabelSub] = pick(lang, v.label);
   const [vHint] = pick(lang, v.hint);
@@ -150,7 +197,9 @@ export default function VerdictCard({
           <div className="border-t border-line px-4 pb-3">
             <ul className="divide-y divide-line">
               {check.signals.map((s) => (
-                <SignalRow key={s.id} s={s} lang={lang} />
+                <li key={s.id}>
+                  <SignalRow s={s} lang={lang} />
+                </li>
               ))}
             </ul>
           </div>
@@ -168,33 +217,42 @@ export default function VerdictCard({
   const [sealWord] = pick(lang, S_VERDICT.sealReports);
 
   return (
-    <section aria-live="polite" className="stamp-in border-[3px] border-ink bg-paper shadow-poster">
+    <section
+      aria-live="polite"
+      className={`border-[3px] border-ink bg-paper shadow-poster ${staged ? "chit-in" : "stamp-in"}`}
+    >
       {/* hazard stripe band */}
       <div className={`h-8 border-b-[3px] border-ink ${t.stripe}`} aria-hidden="true" />
 
       {/* headline block */}
       <div className="relative border-b-[3px] border-ink p-4 pb-3.5">
         <p className="plate text-inksoft">ढाल सुरक्षा जाँच · DHAAL NOTICE</p>
-        <h2 className={`type-verdict mt-1 font-display font-extrabold ${t.headline}`}>{vLabel}</h2>
-        <p className={`plate mt-1 ${t.sub}`}>{vLabelSub}</p>
-        <p className="mt-2.5 max-w-[26rem] font-semibold leading-snug">{vHint}</p>
+        <div className={slammed ? "stamp-in" : "invisible"}>
+          <h2 className={`type-verdict mt-1 font-display font-extrabold ${t.headline}`}>{vLabel}</h2>
+          <p className={`plate mt-1 ${t.sub}`}>{vLabelSub}</p>
+          <p className="mt-2.5 max-w-[26rem] font-semibold leading-snug">{vHint}</p>
+        </div>
 
         <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
           {cat && (
-            <span className="border-2 border-ink bg-paper2 px-2 py-0.5 text-sm font-semibold">
+            <span
+              className={`border-2 border-ink bg-paper2 px-2 py-0.5 text-sm font-semibold ${
+                slammed ? "" : "invisible"
+              }`}
+            >
               {pick(lang, cat)[0]} · {pick(lang, cat)[1]}
             </span>
           )}
           <span className="font-mono text-sm tabular-nums text-inksoft">
-            <span className="text-lg font-semibold text-ink">{check.score}</span>/100 RISK
+            <span className="text-lg font-semibold text-ink">{shownScore}</span>/100 RISK
           </span>
         </div>
 
         {/* community rubber-stamp seal */}
-        {community && (
+        {community && slammed && (
           <div
             aria-hidden="true"
-            className={`absolute -top-7 right-3 flex h-[92px] w-[92px] -rotate-6 flex-col items-center justify-center rounded-full border-[3px] bg-paper/80 outline outline-2 outline-offset-[3px] ${
+            className={`stamp-in absolute -top-7 right-3 flex h-[92px] w-[92px] -rotate-6 flex-col items-center justify-center rounded-full border-[3px] bg-paper/80 outline outline-2 outline-offset-[3px] ${
               v.tone === "danger"
                 ? "border-danger text-dangerdeep outline-danger"
                 : "border-caution text-cautiondeep outline-caution"
@@ -232,14 +290,18 @@ export default function VerdictCard({
           </p>
         ) : (
           <ul className="mt-1 divide-y-2 divide-line">
-            {check.signals.map((s) => (
-              <SignalRow key={s.id} s={s} lang={lang} />
+            {check.signals.slice(0, revealed).map((s) => (
+              <li key={s.id} className={staged ? "row-reveal row-sweep relative overflow-hidden" : ""}>
+                <SignalRow s={s} lang={lang} />
+              </li>
             ))}
           </ul>
         )}
       </div>
 
-      {actions && <div className="border-t-[3px] border-ink p-4">{actions}</div>}
+      {actions && slammed && (
+        <div className={`border-t-[3px] border-ink p-4 ${staged ? "chit-in" : ""}`}>{actions}</div>
+      )}
     </section>
   );
 }

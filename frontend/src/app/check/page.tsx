@@ -78,8 +78,25 @@ async function decodeQrImage(file: File): Promise<string | null> {
   }
 }
 
+// The engine's REAL detector families (backend/engine/*) — cycled while waiting,
+// so the ~5s Claude-narration wait reads as work, not lag.
+const DETECTORS = [
+  "UPI COLLECT PARSER",
+  "LOOKALIKE DOMAINS",
+  "URL HEURISTICS",
+  "SCAM-SCRIPT PATTERNS",
+  "COMMUNITY BLOCKLIST",
+  "CLAUDE NARRATION",
+];
+
 function ScanShield({ lang }: { lang: Lang }) {
   const [p, s] = pick(lang, S_CHECK.scanTitle);
+  const [di, setDi] = useState(0);
+  useEffect(() => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const t = setInterval(() => setDi((i) => (i + 1) % DETECTORS.length), 480);
+    return () => clearInterval(t);
+  }, []);
   return (
     <div className="flex flex-col items-center border-[3px] border-ink bg-paper p-6 shadow-poster-sm">
       <div className="h-16 w-14 text-ink">
@@ -98,6 +115,9 @@ function ScanShield({ lang }: { lang: Lang }) {
       </div>
       <p className="mt-3 font-display text-xl font-bold">{p}</p>
       <p className="plate mt-1 text-inksoft">{s}</p>
+      <p className="plate mt-3 border-t-2 border-line pt-2 text-saffdeep" aria-hidden="true">
+        ▸ {DETECTORS[di]}
+      </p>
     </div>
   );
 }
@@ -596,6 +616,7 @@ export default function CheckPage() {
           {result && !busy && (
             <VerdictCard
               check={result}
+              theater
               autoSpeak={resultFromVoice}
               actions={
                 <ReportButton
