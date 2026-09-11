@@ -21,7 +21,7 @@ Claim: `[ ]` → `[WIP-saud]` / `[WIP-parva]` / `[WIP-harsh]`, **push immediatel
 - [ ] **H12+** PPT + pitch script (own it); rehearse ×3.
 
 ### Engine — Harsh (`backend/`)
-- [WIP-harsh] **P0 H1–H4** Deterministic **signal engine** in code (this is the product's spine): UPI URI parser (collect vs pay, amount, payee), lookalike-domain detector (levenshtein vs seeded brand/bank domain list in `backend/data/brands.py`), URL heuristics (shorteners, IP literals, punycode, suspicious TLDs, redirect unwrap via httpx), scam-script keyword patterns (KYC expiry, lottery, digital arrest, electricity, OLX/army, fake customer care), blocklist lookup. Scoring function → verdict. **LLM has zero verdict weight.**
+- [x] **P0 H1–H4** Deterministic **signal engine** in code (this is the product's spine): UPI URI parser (collect vs pay, amount, payee), lookalike-domain detector (levenshtein vs seeded brand/bank domain list in `backend/data/brands.py`), URL heuristics (shorteners, IP literals, punycode, suspicious TLDs, redirect unwrap via httpx), scam-script keyword patterns (KYC expiry, lottery, digital arrest, electricity, OLX/army, fake customer care), blocklist lookup. Scoring function → verdict. **LLM has zero verdict weight.**
 - [ ] **P0 H4–H6** Claude layer: scam-category classification + `explanation_hi/en` generated FROM detected signals only (template fallback when API down) · wire `/api/check` fully to CONTRACTS shape · Mongo persistence (in-memory fallback stays).
 - [ ] **P0 H6–H8** Reports → verify → indicator upsert → live blocklist in `/api/check` · `/api/intel/trends` aggregations.
 - [ ] **P1 H8–H10** Sarvam: `/api/transcribe` (ASR) + TTS on `speak:true` (base64 wav) with auto-fallback.
@@ -40,6 +40,7 @@ Claim: `[ ]` → `[WIP-saud]` / `[WIP-parva]` / `[WIP-harsh]`, **push immediatel
 ## Requests (cross-lane asks — add, push, ping in person)
 
 - [ ] FOR harsh, FROM saud — **bump Mongo/Atlas (H6–H8) in priority**: backend is serverless now, so the in-memory store resets on cold starts/extra instances — reports, guardian links and the blocklist flywheel are only durable once `MONGODB_URI` is wired. Stub fallback stays for local dev.
+- [ ] FOR saud, FROM harsh — `backend/data/brands.py` is seeded (~30 official domains, brand tokens, shorteners, scam TLDs); extend it during your fixtures pass (H3–H5). After ANY edit to `backend/engine/` or `backend/data/`, run `backend/tests/run_engine_checks.py` — all golden-path beats are asserted there.
 
 ## Blockers (Saud clears these first)
 

@@ -68,7 +68,7 @@ API shapes, data models, env names. **Owning lane pushes the contract change BEF
 
 ### `GET /api/health` — live → `{"ok": true, "mock_mode": false, "store": "memory|atlas"}`
 
-### `POST /api/check` — stubbed
+### `POST /api/check` — **engine live** (deterministic signals + community blocklist; explanation still canned ⇒ `mocked: true` until Claude layer H4–H6)
 ```json
 {"type": "text|url|upi|qr_text|voice_transcript", "payload": "...", "lang": "hi-IN", "speak": false, "ward_link_id": null}
 ```
