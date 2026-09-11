@@ -16,6 +16,8 @@ export type ScamCategory =
   | "customer_care"
   | "job_scam"
   | "loan_fee"
+  | "investment_doubling"
+  | "gift_parcel_customs"
   | "other";
 
 export type Signal = {
