@@ -12,7 +12,12 @@ function modKey(): string {
   }
 }
 function askModKey(): string {
-  const k = window.prompt("Moderator key (टीम से लें):") ?? "";
+  let k = "";
+  try {
+    k = window.prompt("Moderator key (टीम से लें):") ?? "";
+  } catch {
+    return ""; // prompt unavailable (embedded/automated context)
+  }
   try {
     if (k) localStorage.setItem("dhaal-mod-key", k.trim());
   } catch {}
@@ -36,7 +41,15 @@ export async function api<T = unknown>(
       },
     });
   let res = await doFetch();
-  if (res.status === 401 && typeof window !== "undefined" && askModKey()) {
+  // the mod-key prompt belongs to MODERATION endpoints only — a guardian/ward
+  // 401 means a dead pairing token and must surface to the caller, not open
+  // a moderator-key dialog (H14).
+  if (
+    res.status === 401 &&
+    typeof window !== "undefined" &&
+    path.startsWith("/api/reports") &&
+    askModKey()
+  ) {
     res = await doFetch();
   }
   if (!res.ok) {
