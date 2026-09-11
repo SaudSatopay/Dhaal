@@ -17,6 +17,7 @@ load_dotenv()  # backend/.env; real env vars (Vercel) always win
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from starlette.concurrency import run_in_threadpool
 
@@ -238,8 +239,19 @@ def create_report(body: ReportIn):
     return STORE.insert("reports", doc)
 
 
+# Moderation is a WRITE into everyone's shield — it must not be open to anyone
+# with the URL (H12, external review: "make the trust model defensible").
+# When MOD_KEY is set (prod), the queue and verify require the X-Mod-Key header;
+# unset (local dev/tests) they stay open.
+def _mod_ok(request: Request) -> bool:
+    key = os.getenv("MOD_KEY", "").strip()
+    return (not key) or request.headers.get("x-mod-key", "") == key
+
+
 @app.get("/api/reports")
-def list_reports(status: str = "pending"):
+def list_reports(request: Request, status: str = "pending"):
+    if status == "pending" and not _mod_ok(request):
+        return JSONResponse({"error": "moderator key required"}, status_code=401)
     out = STORE.list("reports", {"status": status})
     return {"reports": sorted(out, key=lambda r: r["created_at"], reverse=True)}
 
@@ -249,10 +261,14 @@ class VerifyIn(BaseModel):
 
 
 @app.post("/api/reports/{rid}/verify")
-def verify_report(rid: str, body: VerifyIn):
+def verify_report(rid: str, body: VerifyIn, request: Request):
+    if not _mod_ok(request):
+        return JSONResponse({"error": "moderator key required"}, status_code=401)
     r = STORE.get("reports", rid)
     if not r:
         return {"error": "report not found"}
+    if r.get("status") == "verified":
+        return r  # idempotent: re-verifying must not re-increment the blocklist
     status = "verified" if body.action == "verify" else "rejected"
     r = STORE.update("reports", rid, {"status": status}) or r
     if status == "verified":

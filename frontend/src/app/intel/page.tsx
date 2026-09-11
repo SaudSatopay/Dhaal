@@ -167,6 +167,9 @@ function TrendsBoard({ trends }: { trends: Trends }) {
             +{trends.live_reports} VERIFIED LIVE THIS SESSION
           </div>
         )}
+        <div className="mt-1 font-mono text-[10px] tracking-wide text-paper/60">
+          DATA: SEEDED PILOT WEEK + TONIGHT&apos;S LIVE REPORTS
+        </div>
         {/* stamp ring, war-desk seal */}
         <div
           aria-hidden="true"

@@ -29,6 +29,21 @@ def run_signal_engine(
         text, url_info["hosts"], upi_info["vpas"], indicators or {}, signals
     )
 
+    # Dedup by signal id (H12, external review): two lookalike URLs must not
+    # stack the same signal twice — keep the first instance, note the count.
+    seen: dict[str, dict] = {}
+    for s in signals:
+        if s["id"] in seen:
+            seen[s["id"]]["occurrences"] = seen[s["id"]].get("occurrences", 1) + 1
+        else:
+            seen[s["id"]] = s
+    signals = list(seen.values())
+    for s in signals:
+        n = s.get("occurrences", 1)
+        if n > 1:
+            s["detail_en"] = s["detail_en"].rstrip() + f" (×{n} in this input)"
+            s["detail_hi"] = s["detail_hi"].rstrip() + f" (×{n})"
+
     score = min(100, sum(s["weight"] for s in signals))
     verdict = (
         "danger" if score >= DANGER_AT
