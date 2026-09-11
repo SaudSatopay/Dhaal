@@ -77,13 +77,15 @@ def text_to_speech(text: str, lang: str = "hi-IN") -> str | None:
     if not available() or not text.strip():
         return None
     snippet = text.strip()[:450]  # TTS input cap; explanations are 2-3 sentences
+    # bulbul:v2 deprecated 2026 (Sarvam 400s with "use bulbul:v3"); v3 speaker
+    # roster replaced the old names — ritu/priya are current-valid.
     r = _post("/text-to-speech",
               json={"text": snippet, "target_language_code": lang,
-                    "speaker": "anushka", "model": "bulbul:v2"})
+                    "speaker": "ritu", "model": "bulbul:v3"})
     if r is None or r.status_code >= 400:
-        r = _post("/text-to-speech",  # previous-gen shape
+        r = _post("/text-to-speech",  # alt field naming, same model gen
                   json={"inputs": [snippet], "target_language_code": lang,
-                        "speaker": "meera"})
+                        "speaker": "priya", "model": "bulbul:v3"})
     if r is None or r.status_code >= 400:
         return None
     try:
