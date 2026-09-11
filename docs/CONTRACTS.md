@@ -77,8 +77,9 @@ API shapes, data models, env names. **Owning lane pushes the contract change BEF
 ### `POST /api/transcribe` — stubbed
 multipart `audio` + `lang_hint`, or JSON `{"typed_text": "..."}` → `{"transcript": "...", "lang": "hi-IN", "mocked": false}` (then frontend calls `/api/check` with `voice_transcript`)
 
-### Guardian — stubbed
+### Guardian — live (store-backed)
 - `POST /api/guardian/links` `{"ward_name","guardian_name"}` → link with `pair_code`
+- `GET /api/guardian/links/resolve?pair_code=DHAAL-XXXX` → link object, or `{"error":"code not found"}`. Matching is case-insensitive, whitespace-trimmed, and accepts the bare code without the `DHAAL-` prefix ("ward types the code" flow).
 - `GET /api/guardian/requests?link_id=` → pending+recent for guardian screen (poll 3s)
 - `GET /api/guardian/requests/{id}` → ward polls decision
 - `POST /api/guardian/requests/{id}/decision` `{"decision":"allowed|blocked","note":""}` → updated request
