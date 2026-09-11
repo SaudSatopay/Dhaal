@@ -1,4 +1,59 @@
-# Engine evaluation — honest edition (v5, H16 sprint)
+# Engine evaluation — honest edition (H17 sprint)
+
+## -1 · Battery v5 — 120 cases (developer-authored blind · labels frozen pre-run · FROZEN result 84/120)
+
+**Method, stated plainly:** authored by a separate blind session AFTER the H17
+detection fixes were already committed — the author was barred from reading any
+repo file and wrote from scam-domain knowledge alone; labels + rationales
+frozen at authoring; grading rules pre-declared (identical to v3/v4); ran ONCE
+locally (TestClient, externals STUBBED OFF) at engine `514c67d`; published raw
+before any tuning. **Developer-authored, no human validation, no independence
+claim beyond the blind-session separation.** Raw: `docs/heldout_v5.json`
+(frozen at commit `b6250d1`), 36 misses preserved verbatim.
+
+| Frozen metric | Value | H17 target |
+|---|---|---|
+| Total | **84/120** | — |
+| Harmful recall | **30/48 (62.5%)** | ≥90% — **missed** |
+| Legitimate false positives | **3/48 (6.25%)** | ≤5% — **missed by one case** (one of the three is the v5-075 label dispute below) |
+| Danger-verdict precision | 13/14 | — |
+| Uncertainty handled | 9/15 · false reassurance 6/15 | — |
+| Unsupported handled | 2/9 (7 routed to "ask for context" instead) | — |
+| Over-abstention on assessable inputs | **3/96** | no excessive asking — met |
+| Pairs fully correct | 11/13 | — |
+| By language (hi/en/hinglish) | 29/40 · 26/40 · 29/40 | — |
+
+**Read:** the same honest headline as v4, one iteration later — the blind
+author again reached families the rulebook lacked (job-kit fees, reverse
+"we-refunded-you-by-mistake" plays, scan-my-QR-to-get-paid, crypto-doubling,
+policy-maturity release charges, courier callers asking for "6 ank ka
+number"), and recall collapsed exactly there while precision stayed excellent.
+Two engine BUGS also surfaced: the completed-action register was matching
+scammer claims ("loan अप्रूव हो गया") as victim self-reports, and the
+delivery-agent OTP exemption missed both directions (flagged the legit
+"share with the agent at the door", exempted the scam "courier boy bol raha
+hu… OTP batao").
+
+**Post-publication fixes (all families + both bugs above, as relations) → per
+the pre-declared rule this set is RECLASSIFIED as development/regression
+data.** The re-run — a regression measurement, NOT unseen accuracy — is
+`docs/heldout_v5_regression.json`: **105/120 · recall 47/48 (97.9%) · FP 1/48
+(2.1%) · danger precision 17/18 · over-abstention 3/96**. The remaining 15:
+seven unsupported-labeled inputs the engine answers with a clarifying
+question instead of "unsupported" (behaviorally safe; a labeling-philosophy
+gap, recorded), four context cases, three flag/clean edges, and v5-075.
+The frozen 84/120 stands as the last blind measurement; only a future blind
+battery can claim more.
+
+**Label dispute recorded (not silently "fixed"):** v5-075 is a user
+RETELLING a scam call they already cut ("…KYC ke liye OTP batao, maine turant
+kaat diya"). The author labeled it clean (threat avoided, no live demand); the
+engine flags the quoted demand — which the product brief itself requires for
+reported demands ("The caller told me to send my password" must still warn).
+Both defensible; the miss stays counted against us and the disagreement is
+recorded here, exactly like v4-105.
+
+---
 
 ## 0 · Battery v4 — 110 cases (developer-authored blind · labels frozen pre-run · FROZEN result 87/110)
 

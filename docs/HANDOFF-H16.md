@@ -1,4 +1,58 @@
-# H16 engineering handoff (post-hardening, pre-judging)
+# H16/H17 engineering handoff (post-hardening, pre-judging)
+
+## H17 addendum (judge-review round — read this first)
+
+State: commits through `d951094`, deployed to prod with owner authorization,
+all suites green (110 engine / 48 API / 71 channel / 33 guardian = **262**).
+
+**1 · Implemented and why**
+- **Detection families for the three externally-reproduced misses** (OTP
+  periphrasis "six digits that just arrived", inheritance advance-fee,
+  held-parcel customs bond) — as vocabulary families inside existing
+  relations, with Hindi/Hinglish/split-sentence paraphrases and 8 benign
+  guards as permanent checks. Plus an impersonal-news gate (police-warning
+  articles suppress; anything targeting "you/aap" still flags).
+- **v5 blind battery cycle**: 120 fresh cases authored by a repo-blind
+  session, labels frozen, single run published RAW (84/120), THEN family
+  fixes (job-kit fees, reverse-refund play, scan-to-receive QR,
+  crypto-doubling, policy-maturity, trial-payment card harvest, baited payee
+  display names) + two real bug fixes the battery exposed (completed-register
+  matching scammer claims; agent-exemption wrong in both directions), then a
+  relabelled regression re-run: 105/120, recall 47/48, FP 1/48. Full framing
+  incl. two label disputes: docs/EVAL.md §-1.
+- **Warning triage UX**: verdict card leads with DO-THIS-NOW (do / top
+  trigger with quoted evidence / verify next); signals show top-2 with a
+  native details expander. Progressive disclosure, zero information removed.
+- **Intel truthfulness**: 401/403 renders a moderator-lock card (typed
+  ApiError; polls stop while locked; key prompt only on explicit actions) —
+  an auth failure can no longer masquerade as an outage. Seeded indicators
+  carry per-row DEMO tags; header carries the data-mix chip.
+- **No-fabrication closed on the last path**: /api/transcribe returns an
+  honest 503 on ASR failure (fixture only under explicit MOCK_MODE); client
+  routes it into the speak-again/typed coaching flow.
+
+**2 · Verification** — the four suites above (262), the frozen v5 artifact +
+regression artifact, prod probes of all three judge cases (30/50/80), prod
+browser passes of triage card, expander, intel lock, /learn, /recover.
+
+**3 · Remaining failures / unverified**
+- Frozen v5 blind recall is 62.5% — the honest generalization number; the
+  105/120 is regression-only. Next blind battery (v6, post-event) is the only
+  path to a higher claim.
+- Unsupported-vs-context labeling philosophy (7 cases): engine asks a
+  clarifying question where labels say "unsupported" — behaviorally safe,
+  recorded in EVAL.md, not silently re-labeled.
+- Label disputes v4-105, v5-075 recorded, counted against us.
+- Live WhatsApp sends still gated on Meta number activation (token+policy);
+  live cron firing unobserved (daily window); usability sessions prepared,
+  not run (docs/USABILITY.md).
+
+**4 · Criteria reassessment** — see the session summary of 2026-09-12; no
+self-assigned scores, evidence links only.
+
+---
+
+# H16 engineering handoff (original)
 
 State at handoff: commits through `8003e65` deployed to prod
 (frontend `dhaal-delta.vercel.app`, backend `dhaal-api.vercel.app`), all

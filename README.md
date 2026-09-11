@@ -19,8 +19,8 @@ Paste any message, link, UPI ID, or QR photo — or just **speak** — and Dhaal
 ![Claude](https://img.shields.io/badge/Claude-narration_only,_zero_verdict_weight-C62828?style=flat-square)
 ![Sarvam AI](https://img.shields.io/badge/Sarvam_AI-voice_in%2Fout-14181F?style=flat-square)
 ![WhatsApp](https://img.shields.io/badge/WhatsApp-Cloud_API_channel-2E7D32?style=flat-square)
-![tests](https://img.shields.io/badge/checks-245_green-2E7D32?style=flat-square)
-![eval](https://img.shields.io/badge/blind_eval-87%2F110_frozen,_misses_published-14181F?style=flat-square)
+![tests](https://img.shields.io/badge/checks-262_green-2E7D32?style=flat-square)
+![eval](https://img.shields.io/badge/blind_evals-frozen_%2B_misses_published-14181F?style=flat-square)
 
 *Built overnight at **MUJ HackX 4.0** — Manipal University Jaipur, Sep 11–12 2026 · Fintech PS#7: Consumer Protection Against Payment Scams*
 
@@ -140,19 +140,14 @@ Seed intelligence (official domains, brand tokens, legit UPI suffixes) lives in 
 
 ## Honest evaluation — we publish our misses
 
-No cherry-picking: the blind battery's **raw first run is frozen and committed**, failures verbatim, *before* any tuning ([docs/heldout_v4.json](docs/heldout_v4.json), full method in [docs/EVAL.md](docs/EVAL.md)).
+No cherry-picking: each blind battery's **raw first run is frozen and committed**, failures verbatim, *before* any tuning — then the set is reclassified as regression data the moment it influences fixes, and only the NEXT blind battery can claim generalization. Two full cycles of that discipline so far (method + label disputes in [docs/EVAL.md](docs/EVAL.md)):
 
-| v4 blind battery (110 cases, labels frozen pre-run) | Frozen first run | After family fixes* |
-|---|:--:|:--:|
-| Overall | **87/110** | 100/110 |
-| Harmful-case recall | 27/41 | 33/41 |
-| Legitimate false positives | **2/43** | **0/43** |
-| Danger-verdict precision | 8/8 | 9/9 |
-| Uncertainty handled (asked, didn't guess) | 12/16 | 16/16 |
-| False reassurance on ambiguous input | 4/16 | **0/16** |
-| By language (hi / en / hinglish) | 27/35 · 30/40 · 30/35 | — |
+| Blind battery (labels frozen pre-run) | Frozen first run | Harmful recall | Legit FP | After family fixes (regression, not accuracy)* |
+|---|:--:|:--:|:--:|:--:|
+| **v5** · 120 fresh cases ([raw](docs/heldout_v5.json)) | **84/120** | 30/48 | 3/48 | 105/120 · recall 47/48 · FP 1/48 |
+| **v4** · 110 cases ([raw](docs/heldout_v4.json)) | **87/110** | 27/41 | 2/43 | 100/110 · recall 33/41 · FP 0/43 |
 
-\* *The moment we tuned against it, the set stopped being an eval: re-runs are labelled **regression data** ([docs/heldout_v4_regression.json](docs/heldout_v4_regression.json)), never quoted as unseen accuracy.* Cases are developer-authored (stated, not laundered as independent), externally-stubbed, deterministic; paired cases check that **semantics** move the verdict (disclose-OTP vs enter-OTP, threat vs discussing threats, pay-vs-receive on the same QR). Earlier batteries (v1–v3) and the mid-build adversarial sweep are preserved in [docs/EVAL.md](docs/EVAL.md) and [docs/SWEEP-H9.md](docs/SWEEP-H9.md).
+\* *Re-runs after tuning are labelled **regression data** ([v5](docs/heldout_v5_regression.json) · [v4](docs/heldout_v4_regression.json)), never quoted as unseen accuracy.* Cases are developer-authored by a separate blind session (stated, not laundered as independent), externally-stubbed, deterministic; paired cases check that **semantics** move the verdict (disclose-OTP vs enter-OTP, threat vs discussing threats, pay-vs-receive on the same QR); over-abstention is measured (3/96 — it doesn't dodge by asking). The recurring blind-run lesson is stated in EVAL.md instead of hidden: each fresh author finds scam families the rulebook hasn't met yet; precision holds, recall grows family by family. Earlier batteries (v1–v3) and the adversarial sweep: [docs/EVAL.md](docs/EVAL.md), [docs/SWEEP-H9.md](docs/SWEEP-H9.md).
 
 ## Reliable under failure
 
@@ -232,13 +227,13 @@ Optional `.env` at repo root unlocks the live paths: `ANTHROPIC_API_KEY` (real n
 
 ```bash
 cd backend
-python tests/run_engine_checks.py     # 95 — detection relations + offset-evidence contract (emoji+Hindi slice-back, overlaps, composites)
-python tests/run_api_checks.py        # 48 — API contracts, assessment outcomes, moderation auth
-python tests/run_channel_checks.py    # 69 — IVR-retired zero-compute, clarify loop, ledger + failure injection, WA outbox/dedupe/backoff/lease
+python tests/run_engine_checks.py     # 110 — detection relations + offset-evidence contract (emoji+Hindi slice-back, overlaps, composites) + judge-miss regressions
+python tests/run_api_checks.py        # 48 — API contracts, assessment outcomes, moderation auth, honest transcribe failure
+python tests/run_channel_checks.py    # 71 — IVR-retired zero-compute, no-fabrication 503s, clarify loop, ledger + failure injection, WA outbox/dedupe/backoff/lease
 python tests/run_guardian_auth_checks.py  # 33 — token hashing, header-only, 8-thread claim race
 ```
 
-**245 checks, all green at handoff** — plus the frozen 110-case blind battery (`tests/run_heldout_v4.py`), `npm run build` (strict tsc), and a prod browser walkthrough of the changed flows, documented in [docs/HANDOFF-H16.md](docs/HANDOFF-H16.md). External services are stubbed in all automated tests; nothing fabricates a live-service success.
+**262 checks, all green at handoff** — plus the frozen blind batteries (`tests/run_heldout_v4.py`, `tests/run_heldout_v5.py`), `npm run build` (strict tsc), and prod browser walkthroughs of the changed flows, documented in [docs/HANDOFF-H16.md](docs/HANDOFF-H16.md). External services are stubbed in all automated tests; nothing fabricates a live-service success.
 
 ## Roadmap
 
