@@ -281,6 +281,31 @@ export const S_REALITY = {
 export const S_VERDICT = {
   why: { hi: "ऐसा क्यों", en: "Why this verdict" },
   noSignals: { hi: "कोई खतरे का संकेत नहीं मिला", en: "No risk signals detected" },
+  // H17 triage — the three answers a stressed user needs before anything else
+  nowTitle: { hi: "अभी क्या करें", en: "Do this now" },
+  nowDoDanger: {
+    hi: "पैसे न भेजें · OTP/PIN किसी को न बताएँ · कोई link न खोलें",
+    en: "Send no money · share no OTP/PIN · open no link",
+  },
+  nowDoSusp: {
+    hi: "अभी कुछ न भेजें — पहले नीचे लिखा verify कर लें",
+    en: "Send nothing yet — do the verify step first",
+  },
+  nowDoClear: {
+    hi: "कोई ज्ञात खतरा नहीं — फिर भी नाम और रकम खुद जाँच कर ही भेजें",
+    en: "No known risk — still confirm the name and amount yourself before paying",
+  },
+  nowTrigger: { hi: "सबसे बड़ा संकेत", en: "Top trigger" },
+  nowVerify: {
+    hi: "खुद verify करें: official app खोलें या जाने-पहचाने नंबर पर call करें",
+    en: "Verify yourself: open the official app or call a number you already know",
+  },
+  nowVerifyDanger: {
+    hi: "खुद verify करें: official app / जाना-पहचाना नंबर · ठगी पक्की लगे तो 1930 पर report करें",
+    en: "Verify via the official app / a known number · if it is a scam, report it on 1930",
+  },
+  moreSignals: { hi: "और संकेत देखें", en: "MORE SIGNALS" },
+  lessSignals: { hi: "कम दिखाएँ", en: "SHOW LESS" },
   sealReports: { hi: "रिपोर्ट", en: "REPORTS" },
   mismatchPlate: { hi: "उम्मीद के उलट", en: "INTENT MISMATCH" },
   whatTheyWant: { hi: "यह क्या चाहता है", en: "What they want" },
@@ -394,6 +419,16 @@ export const S_INTEL = {
   },
   flashFail: { hi: "ACTION FAILED — दोबारा try करें", en: "ACTION FAILED — retry" },
   apiDown: { hi: "API नहीं मिल रही — RETRYING…", en: "API UNREACHABLE — RETRYING…" },
+  // H17: auth ≠ outage. The queue is moderator-gated; say THAT.
+  queueLocked: { hi: "MODERATOR DESK — key चाहिए", en: "Moderator desk — key required" },
+  queueLockedSub: {
+    hi: "Reports की जाँच सिर्फ moderator करते हैं — blocklist में कुछ भी बिना इंसानी verify के नहीं जुड़ता। Public नक्शा नीचे बिना key के चलता रहता है।",
+    en: "Only moderators review reports — nothing joins the blocklist without a human verify. The public map below works without a key.",
+  },
+  queueUnlock: { hi: "Key डालें", en: "Enter key" },
+  queueDown: { hi: "Queue अभी नहीं मिल रही — अगली कोशिश 3s में", en: "Queue unreachable — retrying in 3s" },
+  dataMix: { hi: "DATA: DEMO SEED + LIVE रिपोर्टें", en: "DATA: DEMO SEED + LIVE REPORTS" },
+  demoTag: { hi: "DEMO", en: "DEMO" },
 } satisfies Record<string, LangText>;
 
 /* ---------------- /guardian ---------------- */

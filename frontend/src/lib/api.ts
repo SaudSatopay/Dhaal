@@ -11,7 +11,7 @@ function modKey(): string {
     return "";
   }
 }
-function askModKey(): string {
+export function askModKey(): string {
   let k = "";
   try {
     k = window.prompt("Moderator key (टीम से लें):") ?? "";
@@ -24,20 +24,38 @@ function askModKey(): string {
   return k.trim();
 }
 
+// Typed failure: callers must be able to tell "you are not authorized" from
+// "the service is down" — an auth refusal shown as an outage banner is a lie
+// (H17 external review caught exactly that on /intel).
+export class ApiError extends Error {
+  status: number;
+  constructor(status: number, message: string) {
+    super(message);
+    this.status = status;
+  }
+}
+
+export type ApiInit = RequestInit & {
+  // Opt-in ONLY for explicit moderator ACTIONS (verify/reject). Background
+  // polls must never pop a key prompt — they throw ApiError(401) instead.
+  promptModKey?: boolean;
+};
+
 export async function api<T = unknown>(
   path: string,
-  init?: RequestInit
+  init?: ApiInit
 ): Promise<T> {
+  const { promptModKey, ...rest } = init ?? {};
   const doFetch = () =>
     fetch(`${API_BASE}${path}`, {
       // init first, merged headers LAST — otherwise a caller passing its own
       // headers (e.g. X-Guardian-Token) silently wipes Content-Type and the
       // backend sees a JSON string instead of an object (422).
-      ...init,
+      ...rest,
       headers: {
         "Content-Type": "application/json",
         ...(modKey() ? { "X-Mod-Key": modKey() } : {}),
-        ...(init?.headers ?? {}),
+        ...(rest.headers ?? {}),
       },
     });
   let res = await doFetch();
@@ -46,6 +64,7 @@ export async function api<T = unknown>(
   // a moderator-key dialog (H14).
   if (
     res.status === 401 &&
+    promptModKey &&
     typeof window !== "undefined" &&
     path.startsWith("/api/reports") &&
     askModKey()
@@ -54,7 +73,7 @@ export async function api<T = unknown>(
   }
   if (!res.ok) {
     const body = await res.text().catch(() => "");
-    throw new Error(`API ${res.status}: ${body || res.statusText}`);
+    throw new ApiError(res.status, `API ${res.status}: ${body || res.statusText}`);
   }
   return res.json() as Promise<T>;
 }

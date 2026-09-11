@@ -8,7 +8,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { api } from "@/lib/api";
+import { api, ApiError, askModKey } from "@/lib/api";
 import { CATEGORY_UI, S_INTEL } from "@/lib/labels";
 import { pick, useLang } from "@/lib/lang";
 import type { Report, ScamCategory, Trends } from "@/lib/types";
@@ -199,6 +199,11 @@ function TrendsBoard({ trends }: { trends: Trends }) {
               </span>
               <TypeMark type={ind.type} className="h-4 w-4 shrink-0 text-ink" />
               <span className="min-w-0 flex-1 truncate font-mono text-sm">{ind.value}</span>
+              {(ind._id ?? "").startsWith("ind_seed") && (
+                <span className="plate shrink-0 border border-line px-1 text-inksoft">
+                  {pick(lang, S_INTEL.demoTag)[0]}
+                </span>
+              )}
               <span className="shrink-0 border-2 border-saffdeep px-1.5 font-mono text-xs font-semibold tabular-nums text-saffdeep">
                 {ind.report_count}×
               </span>
@@ -284,6 +289,11 @@ export default function IntelPage() {
   const [trends, setTrends] = useState<Trends | null>(null);
   const [queue, setQueue] = useState<Report[] | null>(null);
   const [apiDown, setApiDown] = useState(false);
+  // H17: the queue is a MODERATOR surface. 401/403 = locked (not an outage);
+  // network failure = down (section-scoped). Public trends never inherit
+  // queue auth state — an auth refusal must not masquerade as a dead API.
+  const [queueState, setQueueState] = useState<"ok" | "locked" | "down">("ok");
+  const queueLockedRef = useRef(false);
   const [actingOn, setActingOn] = useState<string | null>(null);
   const [flash, setFlash] = useState<"" | "ok" | "fail">("");
   const flashTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -298,14 +308,27 @@ export default function IntelPage() {
   }, []);
 
   const loadQueue = useCallback(async () => {
+    if (queueLockedRef.current) return; // locked: stop polling, no prompt spam
     try {
       const res = await api<{ reports: Report[] }>("/api/reports?status=pending");
       setQueue(res.reports);
-      setApiDown(false);
-    } catch {
-      setApiDown(true);
+      setQueueState("ok");
+    } catch (e) {
+      if (e instanceof ApiError && (e.status === 401 || e.status === 403)) {
+        queueLockedRef.current = true;
+        setQueueState("locked");
+      } else {
+        setQueueState("down");
+      }
     }
   }, []);
+
+  const unlockQueue = useCallback(() => {
+    if (!askModKey()) return;
+    queueLockedRef.current = false;
+    setQueueState("ok");
+    loadQueue();
+  }, [loadQueue]);
 
   useEffect(() => {
     loadTrends();
@@ -325,6 +348,7 @@ export default function IntelPage() {
       await api(`/api/reports/${id}/verify`, {
         method: "POST",
         body: JSON.stringify({ action }),
+        promptModKey: true, // explicit moderator ACTION — prompting is fine here
       });
       setQueue((q) => (q ? q.filter((r) => r._id !== id) : q));
       if (action === "verify") {
@@ -360,6 +384,9 @@ export default function IntelPage() {
             <div className="plate truncate text-inksoft">{titleS} · WAR DESK</div>
           </div>
           <LangToggle />
+          <span className="plate hidden shrink-0 border border-line px-2 py-0.5 text-inksoft sm:inline">
+            {pick(lang, S_INTEL.dataMix)[0]}
+          </span>
           <span className="plate shrink-0 border border-saffdeep px-2 py-0.5 text-saffdeep">
             <span className="blink">●</span> LIVE
           </span>
@@ -402,7 +429,24 @@ export default function IntelPage() {
                 </span>
               )}
             </h2>
-            {queue === null ? (
+            {queueState === "locked" ? (
+              <div className="mt-3 border-2 border-ink bg-paper2 p-4">
+                <p className="plate text-inksoft">🔒 {pick(lang, S_INTEL.queueLocked)[0]}</p>
+                <p className="mt-1.5 text-sm leading-snug text-inksoft">
+                  {pick(lang, S_INTEL.queueLockedSub)[0]}
+                </p>
+                <button
+                  onClick={unlockQueue}
+                  className="mt-3 border-2 border-ink bg-paper px-3 py-1.5 font-bold shadow-poster-sm transition-transform active:translate-x-[2px] active:translate-y-[2px] active:shadow-none"
+                >
+                  {pick(lang, S_INTEL.queueUnlock)[0]}
+                </button>
+              </div>
+            ) : queueState === "down" ? (
+              <p className="plate mt-3 border-2 border-saffdeep bg-paper2 p-3 text-saffdeep">
+                {pick(lang, S_INTEL.queueDown)[0]}
+              </p>
+            ) : queue === null ? (
               <div className="mt-3 h-24 animate-pulse border-2 border-line bg-paper2" />
             ) : queue.length === 0 ? (
               <p className="mt-3 border-2 border-dashed border-ink p-4 text-center text-sm text-inksoft">

@@ -244,6 +244,21 @@ export default function VerdictCard({
   const heroShown = !staged || revealed >= 1;
   const shownRest = rest.slice(0, Math.max(0, revealed - (mismatch ? 1 : 0)));
 
+  // H17 triage inputs: the strongest signal (backend sorts by weight) and the
+  // first evidence quote linked to it — "what specifically triggered this"
+  const triageDo =
+    check.verdict === "danger"
+      ? S_VERDICT.nowDoDanger
+      : check.verdict === "suspicious"
+        ? S_VERDICT.nowDoSusp
+        : S_VERDICT.nowDoClear;
+  const triageVerify =
+    check.verdict === "danger" ? S_VERDICT.nowVerifyDanger : S_VERDICT.nowVerify;
+  const topSig = check.signals[0];
+  const topQuote = topSig
+    ? check.facts?.evidence?.find((e) => e.signal === topSig.id && e.quote)?.quote
+    : undefined;
+
   // H12+ structured analysis — "what they want", straight from the response
   const an = check.analysis;
   const anAsking = an?.asking_for ?? [];
@@ -323,6 +338,41 @@ export default function VerdictCard({
           <p className="mt-1 text-sm leading-snug text-inksoft">
             {lang === "en" ? mismatch.detail_hi : mismatch.detail_en}
           </p>
+        </div>
+      )}
+
+      {/* H17 triage — do-now / what-triggered / verify-next, before any detail */}
+      {check.assessment === "assessed" && check.verdict && slammed && (
+        <div className={`border-b-[3px] border-ink p-4 ${staged ? "row-reveal" : ""}`}>
+          <p className="plate text-inksoft">
+            {pick(lang, S_VERDICT.nowTitle)[0]} · {pick(lang, S_VERDICT.nowTitle)[1]}
+          </p>
+          <ol className="mt-2 space-y-2">
+            <li className="flex gap-2.5">
+              <span className="plate mt-0.5 h-fit shrink-0 border-2 border-ink px-1.5 py-0.5">1</span>
+              <span className="font-bold leading-snug">{pick(lang, triageDo)[0]}</span>
+            </li>
+            {topSig && (
+              <li className="flex gap-2.5">
+                <span className="plate mt-0.5 h-fit shrink-0 border-2 border-ink px-1.5 py-0.5">2</span>
+                <span className="min-w-0 leading-snug">
+                  <span className="plate text-inksoft">{pick(lang, S_VERDICT.nowTrigger)[0]} · </span>
+                  <span className="font-semibold">
+                    {lang === "en" ? topSig.title_en : topSig.title_hi}
+                  </span>
+                  {topQuote && (
+                    <span className="text-sm text-inksoft"> — “{topQuote.slice(0, 70)}”</span>
+                  )}
+                </span>
+              </li>
+            )}
+            <li className="flex gap-2.5">
+              <span className="plate mt-0.5 h-fit shrink-0 border-2 border-ink px-1.5 py-0.5">
+                {topSig ? 3 : 2}
+              </span>
+              <span className="text-sm leading-snug">{pick(lang, triageVerify)[0]}</span>
+            </li>
+          </ol>
         </div>
       )}
 
@@ -460,13 +510,36 @@ export default function VerdictCard({
             {pick(lang, S_VERDICT.noSignals)[0]}
           </p>
         ) : (
-          <ul className="mt-1 divide-y-2 divide-line">
-            {shownRest.map((s) => (
-              <li key={s.id} className={staged ? "row-reveal row-sweep relative overflow-hidden" : ""}>
-                <SignalRow s={s} lang={lang} />
-              </li>
-            ))}
-          </ul>
+          <>
+            <ul className="mt-1 divide-y-2 divide-line">
+              {shownRest.slice(0, 2).map((s) => (
+                <li key={s.id} className={staged ? "row-reveal row-sweep relative overflow-hidden" : ""}>
+                  <SignalRow s={s} lang={lang} />
+                </li>
+              ))}
+            </ul>
+            {/* H17 progressive disclosure: full weights one tap away, never
+                a wall — native <details> keeps it keyboard/screen-reader-safe */}
+            {shownRest.length > 2 && (
+              <details className="group border-t-2 border-line">
+                <summary className="plate cursor-pointer list-none py-2.5 text-inksoft hover:text-ink [&::-webkit-details-marker]:hidden">
+                  <span className="group-open:hidden">
+                    ▸ +{shownRest.length - 2} {pick(lang, S_VERDICT.moreSignals)[0]}
+                  </span>
+                  <span className="hidden group-open:inline">
+                    ▾ {pick(lang, S_VERDICT.lessSignals)[0]}
+                  </span>
+                </summary>
+                <ul className="divide-y-2 divide-line border-t border-line">
+                  {shownRest.slice(2).map((s) => (
+                    <li key={s.id}>
+                      <SignalRow s={s} lang={lang} />
+                    </li>
+                  ))}
+                </ul>
+              </details>
+            )}
+          </>
         )}
       </div>
 
