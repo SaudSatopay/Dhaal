@@ -237,15 +237,45 @@ def verify_report(rid: str, body: VerifyIn):
 
 @app.get("/api/intel/trends")
 def trends():
-    live_verified = STORE.list("reports", {"status": "verified"})
-    data = {k: (v.copy() if isinstance(v, dict) else list(v)) if isinstance(v, (dict, list)) else v
-            for k, v in FX.SEED_TRENDS.items()}
-    data["total_reports"] = FX.SEED_TRENDS["total_reports"] + len(live_verified)
-    data["top_indicators"] = sorted(
-        STORE.indicators_map().values(), key=lambda i: i["report_count"], reverse=True
-    )[:10]
-    data["live_reports"] = len(live_verified)
-    return data
+    # Fixture baseline + live overlay per category/city/day. Totals stay
+    # baseline+live (seed.py numbers were rehearsed against that semantics).
+    verified = STORE.list("reports", {"status": "verified"})
+    cat_counts: dict[str, int] = {}
+    city_counts: dict[str, int] = {}
+    for r in verified:
+        cat_counts[r.get("category") or "other"] = cat_counts.get(r.get("category") or "other", 0) + 1
+        city_counts[r.get("city") or "Jaipur"] = city_counts.get(r.get("city") or "Jaipur", 0) + 1
+
+    by_category = [dict(x) for x in FX.SEED_TRENDS["by_category"]]
+    for row in by_category:
+        row["count"] += cat_counts.pop(row["category"], 0)
+    by_category += [{"category": c, "count": n} for c, n in cat_counts.items()]
+    by_category.sort(key=lambda x: x["count"], reverse=True)
+
+    cities = [dict(x) for x in FX.SEED_TRENDS["cities"]]
+    for row in cities:
+        row["count"] += city_counts.pop(row["city"], 0)
+    cities += [{"city": c, "count": n} for c, n in city_counts.items()]
+    cities.sort(key=lambda x: x["count"], reverse=True)
+
+    today = _now()[:10]
+    by_day = [dict(x) for x in FX.SEED_TRENDS["by_day"]]
+    todays_live = sum(1 for r in verified if (r.get("created_at") or "").startswith(today))
+    if by_day and by_day[-1]["day"] == today:
+        by_day[-1]["count"] += todays_live
+    elif todays_live:
+        by_day.append({"day": today, "count": todays_live})
+
+    return {
+        "total_reports": FX.SEED_TRENDS["total_reports"] + len(verified),
+        "by_category": by_category,
+        "by_day": by_day[-7:],
+        "top_indicators": sorted(
+            STORE.indicators_map().values(),
+            key=lambda i: i["report_count"], reverse=True)[:10],
+        "cities": cities[:6],
+        "live_reports": len(verified),
+    }
 
 
 class RecoveryIn(BaseModel):

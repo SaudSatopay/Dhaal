@@ -66,6 +66,16 @@ counts = {i["value"]: i["report_count"] for i in tr["top_indicators"]}
 ok("indicator upsert increments", counts.get(num) == 2)
 ok("trends totals", tr["total_reports"] == FX.SEED_TRENDS["total_reports"] + 2
    and tr["live_reports"] == 2)
+cat = {x["category"]: x["count"] for x in tr["by_category"]}
+city = {x["city"]: x["count"] for x in tr["cities"]}
+base_cat = {x["category"]: x["count"] for x in FX.SEED_TRENDS["by_category"]}
+base_city = {x["city"]: x["count"] for x in FX.SEED_TRENDS["cities"]}
+ok("trends category overlay", cat["customer_care"] == base_cat["customer_care"] + 2)
+ok("trends city overlay", city["Jaipur"] == base_city["Jaipur"] + 1
+   and city["Kota"] == base_city["Kota"] + 1)
+ok("trends today bumped", tr["by_day"][-1]["count"]
+   == FX.SEED_TRENDS["by_day"][-1]["count"] + 2
+   or tr["by_day"][-1]["count"] == 2)  # holds even when demo day != fixture window
 
 # guardian loop: pair -> danger check with ward link -> pending -> block -> ward sees it
 gl = c.post("/api/guardian/links", json={"ward_name": "Sunita Devi",
