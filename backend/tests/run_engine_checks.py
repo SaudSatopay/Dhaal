@@ -472,5 +472,21 @@ check("H17 guard: impersonal police-warning news suppressed",
 check("H17 guard: victim report of demand still flags (second person present)",
       "The caller said my parcel is held and told me to send a customs bond for your release fee of Rs 350.",
       "danger")
+# --- H17b judging-morning field miss: participle conditional + jail threat ---
+check("H17b: 'na bhejne par jail' (Saud's live mic test) flags",
+      "2000 rupee na bhejne par tumhe jail me bharti krwa denge",
+      "suspicious", want_signal="coercion_extortion")
+check("H17b: Devanagari participle conditional flags",
+      "₹2000 न भेजने पर तुम्हें जेल में डाल देंगे",
+      "suspicious", want_signal="coercion_extortion")
+check("H17b: 'nahi dene par andar karwa' flags",
+      "paise nahi dene par andar karwa denge tumko",
+      "suspicious", want_signal="coercion_extortion")
+check("H17b guard: protective advice with jail words stays clean",
+      "ऐसे calls पर पैसे मत भेजो, कोई जेल नहीं भेज सकता बिना court के",
+      "no_known_risk", want_signal="reported_or_educational")
+check("H17b guard: casual jail mention stays sub-threshold",
+      "Movie me hero jail se bhaag gaya, kya scene tha yaar",
+      "no_known_risk", forbid_signal="coercion_extortion")
 
 print(f"\nALL {PASS} CHECKS PASSED")

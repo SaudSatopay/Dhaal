@@ -93,7 +93,13 @@ _AWARENESS = re.compile(
     r"|समाचार|ख़बर|खबर\s*:|\bkhabar\b|breaking\s*:|\breport\s*:"
     r"|toh\s+doston|दोस्तों|aaj\s+ke\s+session|is\s+video\s+me(?:in)?"
     r"|samjh(?:t|a)e?\s+hain|समझते\s+हैं|सीखेंगे|seekhenge|police\s+ne\s+.{0,30}(?:pakda|गिरफ़्तार|arrest)"
-    r"|almost\s+fell\s+for|fell\s+for\s+it|got\s+one\s+of\s+those|mere\s+dost\s+ko\s+aaya|friend\s+got",
+    r"|almost\s+fell\s+for|fell\s+for\s+it|got\s+one\s+of\s+those|mere\s+dost\s+ko\s+aaya|friend\s+got"
+    # advice register (H17): negative imperatives about MONEY are protective
+    # counsel, not a demand — "मत भेजो", "never pay". The gate still requires
+    # no live directive, so a scam mixing real asks with 'mat' words keeps
+    # flagging.
+    r"|(?:पैसे|paise|money)\s+(?:मत|mat)\s+(?:भेजो|भेजें|bhejo|do|दो)"
+    r"|(?:मत|mat)\s+(?:भेजो|भेजें|bhejo)|never\s+(?:pay|send\s+money)|kabhi\s+(?:na|mat)\s+(?:bhej|de)",
     re.I)
 
 
@@ -274,13 +280,21 @@ _CROSS = [
           "threaten", "threatened", "धमकी", "वरना", "warna", "नहीं भेजे तो",
           "नहीं भेजा तो", "नहीं दिए तो", "भेजो नहीं तो", "bhejo nahi to",
           "दो नहीं तो", "do nahi to", "पैसे माँग रह", "paise maang",
+          # H17 field miss: participle conditionals ("na bhejne par...") and
+          # jail-threat verb phrases, roman + Devanagari
+          "na bhejne par", "न भेजने पर", "nahi bhejne par", "नहीं भेजने पर",
+          "na dene par", "न देने पर", "nahi dene par", "नहीं देने पर",
+          "na karne par", "न करने पर",
+          "jail me bharti", "jail me daal", "jail bhej", "jail bhijwa",
+          "जेल में डाल", "जेल भिजवा", "जेल में भर्ती", "जेल में बंद",
+          "andar karwa", "अंदर करवा", "अंदर करा", "हवालात",
           "मजबूर कर", "डरा कर पैसे", "डरा रहे", "छुड़ाने के लिए",
           "chhudane ke liye", "bachane ke liye paise", "बचाने के लिए पैसे"])),
     ("threat_framing", 15, "Threat of penalty/action", "डराने-धमकाने की भाषा",
      "Fear of fines, arrest or disconnection is the pressure lever.",
      "जुर्माना, गिरफ़्तारी या कटौती का डर दिखाना ही इनका हथियार है।",
      _rx(["legal action", "कानूनी कार्रवाई", "जुर्माना", "penalty",
-          "case दर्ज", "blacklist",
+          "case दर्ज", "blacklist", "jail", "जेल", "थाने ले", "hawalat",
           # bare-menace vocabulary (held-out v3 miss: threat with no ask
           # scored 0 and got a green card)
           "अंजाम भुगत", "anjaam bhugat", "anjam bhugat", "भुगतना पड़ेगा",

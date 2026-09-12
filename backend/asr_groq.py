@@ -35,10 +35,11 @@ def speech_to_text(blob: bytes, filename: str = "audio.webm",
     if not available() or not blob:
         return None
     content_type = (content_type or "audio/webm").split(";")[0].strip() or "audio/webm"
+    # ALWAYS pin Hindi: Whisper's auto-detect routinely labels spoken Hindi
+    # as Urdu and emits Urdu script (H17 field report). Hindi-pinned Whisper
+    # still transcribes English speech fine for this bilingual audience.
     data = {"model": "whisper-large-v3-turbo", "response_format": "json",
-            "temperature": "0"}
-    if (lang_hint or "").lower().startswith("hi"):
-        data["language"] = "hi"
+            "temperature": "0", "language": "hi"}
     for attempt in (1, 2):
         t0 = time.perf_counter()
         try:
